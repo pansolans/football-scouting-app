@@ -162,11 +162,11 @@ const handleSmartSearch = async () => {
   };
 
   // Calcular promedio general
-  const calculateAverageScore = (reports: ScoutReport[]) => {
-    if (reports.length === 0) return '0';
-    const sum = reports.reduce((acc, report) => acc + report.overall_rating, 0);
-    return (sum / reports.length).toFixed(1);
-  };
+const calculateAverageScore = (reports: ScoutReport[]) => {
+  if (!reports || !Array.isArray(reports) || reports.length === 0) return '0';  // AGREGAR Array.isArray
+  const sum = reports.reduce((acc, report) => acc + report.overall_rating, 0);
+  return (sum / reports.length).toFixed(1);
+};
 // Obtener la última recomendación
 const getLatestRecommendation = (reports: ScoutReport[]) => {
   if (reports.length === 0) return null;
@@ -216,8 +216,10 @@ const getUniquePositions = () => {
 
 // Calcular promedios por categoría
 const calculateCategoryAverages = (reports: ScoutReport[]) => {
-  if (reports.length === 0) return { technical: '0', physical: '0', mental: '0' };
-  
+  if (!reports || !Array.isArray(reports) || reports.length === 0) {  // AGREGAR validación
+    return { technical: '0', physical: '0', mental: '0' };
+  }
+
   // Calcular promedios de categorías técnicas
   const technical = reports.reduce((acc, report) => {
     const techSum = (report.tecnica_individual + report.pase + report.primer_toque + 
@@ -430,8 +432,8 @@ const loadPlayerMatches = async (playerId: number) => {
   };
 
   // Calculate stats
-  const totalReports = scoutReports.length;
-  const avgRating = totalReports > 0 
+const totalReports = Array.isArray(scoutReports) ? scoutReports.length : 0;
+const avgRating = totalReports > 0 && Array.isArray(scoutReports)
     ? (scoutReports.reduce((sum, r) => sum + r.overall_rating, 0) / totalReports).toFixed(1)
     : '0';
 
