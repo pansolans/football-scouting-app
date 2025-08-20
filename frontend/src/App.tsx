@@ -103,7 +103,8 @@ const [loadingMatches, setLoadingMatches] = useState(false);
         setWyscoutStatus(wyscout);
         
         const reports = await scoutingService.getReports();
-        setScoutReports(reports);
+        setScoutReports(Array.isArray(reports) ? reports : []);
+        
         
         const areasData = await playerService.getAreas();
         setAreas(areasData);
