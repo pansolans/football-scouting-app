@@ -124,8 +124,9 @@ const handleSmartSearch = async () => {
   setLoading(true);
   try {
     // Just use regular player search and format as search results
-    const players = await playerService.searchPlayers(searchQuery);
-    const results = players.map(p => ({
+const players = await playerService.searchPlayers(searchQuery);
+const playersArray = Array.isArray(players) ? players : [];
+const results = playersArray.map(p => ({
       ...p,
       type: 'player',
       imageDataURL: null
