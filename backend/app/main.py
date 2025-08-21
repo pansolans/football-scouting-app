@@ -46,7 +46,7 @@ app.add_middleware(
         "https://football-scouting-app.vercel.app",
         "https://football-scouting-app-fawn.vercel.app",
         "https://football-scouting-backend-vd0x.onrender.com",
-        "https://*.vercel.app"  # Permite cualquier subdominio de Vercel
+        "https://*.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
