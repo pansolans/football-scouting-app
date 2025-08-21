@@ -402,11 +402,11 @@ const openReportForm = (player: Player) => {
 
 // Cargar partidos cuando se abre el formulario
 
+
 const loadPlayerMatches = async (playerId: number) => {
   setLoadingMatches(true);
   try {
-    const response = await api.get(`/api/player/${playerId}/recent-matches`);
-    const matches = response.data;
+    const matches = await playerService.getPlayerRecentMatches(playerId);
     setPlayerMatches(matches);
   } catch (error) {
     console.error('Failed to load matches:', error);
