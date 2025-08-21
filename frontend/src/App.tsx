@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { playerService, healthService, scoutingService, Player, ScoutReport, ScoutReportCreate, api } from './services/api';
+import { playerService, healthService, scoutingService, Player, ScoutReport, ScoutReportCreate, HealthStatus } from './services/api';
 
-interface HealthStatus {
-  status: string;
-  environment?: {
-    supabase_configured: boolean;
-    wyscout_configured: boolean;
-  };
-  message: string;
-}
+
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations'>('dashboard');
