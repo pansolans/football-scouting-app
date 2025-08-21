@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'football-scouting-backend-vd0x.onrender.com'
+  ? 'https://football-scouting-backend.onrender.com'
   : 'http://localhost:8000';
 
 export const api = axios.create({
