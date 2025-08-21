@@ -1,14 +1,16 @@
 import axios from 'axios';
 
+
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://football-scouting-backend.onrender.com'
+  ? 'https://football-scouting-backend-vd0x.onrender.com'  // URL CORRECTA
   : 'http://localhost:8000';
 
-export const api = axios.create({
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 export interface Player {
@@ -208,6 +210,16 @@ export const scoutingService = {
     return response.data;
   },
 };
+
+// HealthStatus interface - FIXED
+export interface HealthStatus {
+  status: string;
+  environment?: {
+    supabase_configured: boolean;
+    wyscout_configured: boolean;
+  };
+  message: string;
+}
 
 export const healthService = {
   checkHealth: async () => {
