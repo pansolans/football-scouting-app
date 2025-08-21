@@ -107,7 +107,7 @@ const [loadingMatches, setLoadingMatches] = useState(false);
         
         
         const areasData = await playerService.getAreas();
-        setAreas(areasData);
+        setAreas(Array.isArray(areasData) ? areasData : []);
       } catch (error) {
         console.error('Failed to load initial data:', error);
       }
@@ -259,7 +259,7 @@ const calculateCategoryAverages = (reports: ScoutReport[]) => {
         setLoading(true);
         try {
           const comps = await playerService.getCompetitions(selectedArea);
-          setCompetitions(comps);
+          setCompetitions(Array.isArray(comps) ? comps : []);
           setSelectedCompetition(null);
           setCompetitionTeams([]);
           setSelectedTeam(null);
@@ -281,7 +281,7 @@ const calculateCategoryAverages = (reports: ScoutReport[]) => {
         setLoading(true);
         try {
           const teams = await playerService.getCompetitionTeams(selectedCompetition);
-          setCompetitionTeams(teams);
+          setCompetitionTeams(Array.isArray(teams) ? teams : []);
           setSelectedTeam(null);
           setTeamPlayers([]);
         } catch (error) {
@@ -301,7 +301,7 @@ const calculateCategoryAverages = (reports: ScoutReport[]) => {
         setLoading(true);
         try {
           const players = await playerService.getTeamPlayers(selectedTeam);
-          setTeamPlayers(players);
+          setTeamPlayers(Array.isArray(players) ? players : []);
         } catch (error) {
           console.error('Failed to load players:', error);
         } finally {
