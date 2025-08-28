@@ -735,7 +735,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ display: 'flex', gap: '2rem', overflowX: 'auto' }}>
             {[
-              { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
+              { id: 'dashboard', label: '📊 Dashboard - DEV', icon: '📊' },
               { id: 'quick-search', label: '🔍 Quick Search', icon: '🔍' },
               { id: 'browse', label: '🌍 Browse by Area', icon: '🌍' },
               { id: 'reports', label: '📝 My Reports', icon: '📝' },
