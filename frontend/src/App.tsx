@@ -799,7 +799,7 @@ return (
                 fontWeight: 'bold', 
                 margin: 0,
                 background: 'linear-gradient(135deg, #006600 0%, #004d00 100%)',
-                WebkitBackgroundClip: 'text'
+                WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
                 ⚽ Scouting Pro -Club Atletico Banfield
