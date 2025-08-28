@@ -736,7 +736,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
           <div style={{ display: 'flex', gap: '2rem', overflowX: 'auto' }}>
             {[
               { id: 'dashboard', label: '📊 Dashboard - DEV', icon: '📊' },
-              { id: 'quick-search', label: '🔍 Quick Search', icon: '🔍' },
+              { id: 'quick-search', label: '🔍 Búsqueda Rápida', icon: '🔍' },
               { id: 'browse', label: '🌍 Browse by Area', icon: '🌍' },
               { id: 'reports', label: '📝 My Reports', icon: '📝' },
               { id: 'recommendations', label: '🎯 Recommendations', icon: '🎯' }
@@ -951,7 +951,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
               }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
-                  🔍 Quick Search
+                  🔍 Búsqueda Rápida
                 </h2>
                 
                 <div style={{ position: 'relative' }}>
