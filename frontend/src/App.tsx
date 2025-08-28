@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [competitionTeams, setCompetitionTeams] = useState<any[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [teamPlayers, setTeamPlayers] = useState<any[]>([]);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
   
 const [reportForm, setReportForm] = useState<ScoutReportCreate>({
   player_id: '',
