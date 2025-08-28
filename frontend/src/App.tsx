@@ -735,11 +735,11 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ display: 'flex', gap: '2rem', overflowX: 'auto' }}>
             {[
-              { id: 'dashboard', label: '📊 Dashboard - DEV', icon: '📊' },
+              { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
               { id: 'quick-search', label: '🔍 Búsqueda Rápida', icon: '🔍' },
-              { id: 'browse', label: '🌍 Browse by Area', icon: '🌍' },
-              { id: 'reports', label: '📝 My Reports', icon: '📝' },
-              { id: 'recommendations', label: '🎯 Recommendations', icon: '🎯' }
+              { id: 'browse', label: '🌍 Explorar por Liga', icon: '🌍' },
+              { id: 'reports', label: '📝 Mis Reportes', icon: '📝' },
+              { id: 'recommendations', label: '🎯 Recomendaciones', icon: '🎯' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1199,7 +1199,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
               }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
-                  🌍 Browse by Location
+                  🌍 Explorar por Liga
                 </h2>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
@@ -1422,7 +1422,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
             }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
-                📝 My Scout Reports
+                📝 Mis Reportes
               </h2>
               
               {scoutReports.length === 0 ? (
@@ -1548,7 +1548,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
             }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
-                🎯 Player Recommendations
+                🎯 Recomendaciones de Jugadores
               </h2>
               
               {/* Estadísticas rápidas */}
