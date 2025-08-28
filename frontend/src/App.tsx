@@ -335,7 +335,7 @@ const handleSubmitReport = async () => {
    
    console.log('Sending to backend:', reportData);
    
-   let result;
+   let result: ScoutReport;
    if (editingReportId) {
      // ACTUALIZAR reporte existente
      result = await scoutingService.updateReport(editingReportId, reportData);
