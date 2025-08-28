@@ -22,6 +22,8 @@ const App: React.FC = () => {
   const [filterLeague, setFilterLeague] = useState('');
   const [filterRecommendation, setFilterRecommendation] = useState('');
   const [filterPosition, setFilterPosition] = useState('');
+  const [filterPlayerName, setFilterPlayerName] = useState('');
+  const [filterTeam, setFilterTeam] = useState('');
   
   // Browse filters
   const [areas, setAreas] = useState<any[]>([]);
@@ -188,7 +190,28 @@ const getFilteredPlayers = () => {
       playerMap.set(report.player_name, report);
     }
   });
-  
+ 
+// Filtrar reportes por jugador, equipo o liga
+const getFilteredReports = () => {
+  return scoutReports.filter(report => {
+    // Filtro por nombre de jugador
+    if (filterPlayerName && !report.player_name.toLowerCase().includes(filterPlayerName.toLowerCase())) {
+      return false;
+    }
+    
+    // Filtro por equipo (usando el campo rival como referencia de equipo)
+    if (filterTeam && report.rival && !report.rival.toLowerCase().includes(filterTeam.toLowerCase())) {
+      return false;
+    }
+    
+    // Filtro por liga/competición
+    if (filterLeague && report.competicion !== filterLeague) {
+      return false;
+    }
+    
+    return true;
+  });
+};  
   // Convertir a array y filtrar
   return Array.from(playerMap.values()).filter(player => {
     if (filterLeague && player.competicion !== filterLeague) return false;
@@ -1491,14 +1514,118 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
      📝 Mis Reportes
    </h2>
    
-   {scoutReports.length === 0 ? (
+   {/* FILTROS */}
+   <div style={{
+     display: 'grid',
+     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+     gap: '1rem',
+     marginBottom: '2rem',
+     padding: '1.5rem',
+     background: '#f9fafb',
+     borderRadius: '12px'
+   }}>
+     <div>
+       <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+         🔍 Buscar Jugador
+       </label>
+       <input
+         type="text"
+         placeholder="Nombre del jugador..."
+         value={filterPlayerName}
+         onChange={(e) => setFilterPlayerName(e.target.value)}
+         style={{
+           width: '100%',
+           padding: '0.75rem',
+           border: '2px solid #e5e7eb',
+           borderRadius: '8px',
+           fontSize: '0.875rem'
+         }}
+       />
+     </div>
+     
+     <div>
+       <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+         🏟️ Filtrar por Equipo/Rival
+       </label>
+       <input
+         type="text"
+         placeholder="Nombre del equipo..."
+         value={filterTeam}
+         onChange={(e) => setFilterTeam(e.target.value)}
+         style={{
+           width: '100%',
+           padding: '0.75rem',
+           border: '2px solid #e5e7eb',
+           borderRadius: '8px',
+           fontSize: '0.875rem'
+         }}
+       />
+     </div>
+     
+     <div>
+       <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+         🏆 Filtrar por Liga
+       </label>
+       <select
+         value={filterLeague}
+         onChange={(e) => setFilterLeague(e.target.value)}
+         style={{
+           width: '100%',
+           padding: '0.75rem',
+           border: '2px solid #e5e7eb',
+           borderRadius: '8px',
+           fontSize: '0.875rem',
+           cursor: 'pointer'
+         }}
+       >
+         <option value="">Todas las ligas</option>
+         {getUniqueLeagues().map(league => (
+           <option key={league} value={league}>{league}</option>
+         ))}
+       </select>
+     </div>
+     
+     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+       <button
+         onClick={() => {
+           setFilterPlayerName('');
+           setFilterTeam('');
+           setFilterLeague('');
+         }}
+         style={{
+           padding: '0.75rem 1.5rem',
+           background: '#6b7280',
+           color: 'white',
+           border: 'none',
+           borderRadius: '8px',
+           fontSize: '0.875rem',
+           fontWeight: '600',
+           cursor: 'pointer',
+           width: '100%'
+         }}
+       >
+         🔄 Limpiar Filtros
+       </button>
+     </div>
+   </div>
+   
+   {/* CONTADOR DE RESULTADOS */}
+   <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+     Mostrando {getFilteredReports().length} de {scoutReports.length} reportes
+   </div>
+   
+   {getFilteredReports().length === 0 ? (
      <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
-       <p style={{ fontSize: '1rem' }}>No reports yet. Start scouting players!</p>
+       <p style={{ fontSize: '1rem' }}>
+         {scoutReports.length === 0 
+           ? "No hay reportes todavía. ¡Empieza a scoutear jugadores!"
+           : "No se encontraron reportes con estos filtros"}
+       </p>
      </div>
    ) : (
      <div style={{ display: 'grid', gap: '1.5rem' }}>
-       {scoutReports.map((report) => (
+       {getFilteredReports().map((report) => (
          <div key={report.id} style={{ 
            background: 'white',
            borderRadius: '12px',
