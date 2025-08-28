@@ -40,15 +40,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://football-scouting-app.vercel.app",
-        "https://football-scouting-app-fawn.vercel.app",
-        "https://football-scouting-backend-vd0x.onrender.com",
-        "https://football-scouting-app-git-desarrollo-pablos-projects-254236f3.vercel.app",
-        "https://*.vercel.app"
-    ],
+    allow_origins=["*"],  # Permite todas las URLs temporalmente
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
