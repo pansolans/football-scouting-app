@@ -2749,16 +2749,16 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
   <option value="Central Izquierdo - Asociativo">Central Izquierdo - Asociativo</option>
 </optgroup>
 <optgroup label="⚙️ Volantes Centrales">
-  <option value="Volante Central - De construcción/Defensivo">Volante Central - De construcción/Defensivo</option>
+  <option value="Volante Central - De construcción">Volante Central - De construcción</option>
   <option value="Volante Central - Defensivo">Volante Central - Defensivo</option>
 </optgroup>
 <optgroup label="📦 Volantes Internos">
-  <option value="Volante Interno - Box to box/Ofensivo">Volante Interno - Box to box/Ofensivo</option>
+  <option value="Volante Interno - Box to box">Volante Interno - Box to box</option>
   <option value="Volante Interno - Ofensivo">Volante Interno - Ofensivo</option>
 </optgroup>
 <optgroup label="🏃 Volantes por Afuera">
-  <option value="Volante por Afuera - Carrilero/Equilibrado">Volante por Afuera - Carrilero/Equilibrado</option>
-  <option value="Volante por Afuera - Equilibrado">Volante por Afuera - Equilibrado</option>
+  <option value="Volante por Afuera - Carrilero">Volante por Afuera - Carrilero</option>
+  <option value="Volante por Afuera - Ofensivo">Volante por Afuera - Ofensivo</option>
 </optgroup>
 <optgroup label="⚡ Extremos Derechos">
   <option value="Extremo Derecho - Finalizador">Extremo Derecho - Finalizador</option>
