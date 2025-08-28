@@ -194,7 +194,7 @@ const getFilteredPlayers = () => {
   // Crear resumen de cada jugador con promedio
   const playerSummaries = Array.from(playerMap.entries()).map(([playerName, reports]) => {
     // Calcular promedio de rating
-    const avgRating = reports.reduce((sum, r) => sum + r.overall_rating, 0) / reports.length;
+    const avgRating = reports.reduce((sum: number, r) => sum + r.overall_rating, 0) / reports.length;
     
     // Obtener el reporte más reciente para otros datos
     const latestReport = reports.sort((a, b) => {
