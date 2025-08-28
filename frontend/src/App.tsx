@@ -324,67 +324,80 @@ const viewPlayerProfile = async (playerId: number) => {
 
 // Submit scout report
 const handleSubmitReport = async () => {
-  if (!selectedPlayer) return;
-  
-  try {
-    const reportData = {
-      ...reportForm,
-      player_id: String(selectedPlayer.id),
-      player_name: selectedPlayer.name
-    };
-    
-    console.log('Sending to backend:', reportData);
-    
-    const newReport = await scoutingService.createReport(reportData);
-    
-    setScoutReports([...scoutReports, newReport]);
-    setShowReportForm(false);
-    
-    // Reset form con todos los campos nuevos
-    setReportForm({
-      player_id: '',
-      player_name: '',
-      match_context: '',
-      position_played: '',
-      overall_rating: 7,
-      tecnica_individual: 7,
-      pase: 7,
-      primer_toque: 7,
-      control_balon: 7,
-      vision_juego: 7,
-      velocidad: 7,
-      resistencia: 7,
-      fuerza: 7,
-      salto: 7,
-      agilidad: 7,
-      inteligencia_tactica: 7,
-      posicionamiento: 7,
-      concentracion: 7,
-      liderazgo: 7,
-      trabajo_equipo: 7,
-      notes: '',
-      fortalezas: '',
-      debilidades: '',
-      recomendacion: '',
-      condicion_mercado: '',
-      agente: '',
-      tags: [],
-      precio_estimado: 0,
-      fecha_observacion: new Date().toISOString().split('T')[0],
-      competicion: '',
-      rival: '',
-      resultado: '',
-      minutos_observados: 90
-    });
-    
-    setActiveTab('reports');
-    alert('Reporte creado exitosamente!');
-  } catch (error) {
-    console.error('Failed to create report:', error);
-    alert('Error al crear el reporte');
-  }
+ if (!selectedPlayer) return;
+ 
+ try {
+   const reportData = {
+     ...reportForm,
+     player_id: String(selectedPlayer.id),
+     player_name: selectedPlayer.name
+   };
+   
+   console.log('Sending to backend:', reportData);
+   
+   let result;
+   if (editingReportId) {
+     // ACTUALIZAR reporte existente
+     result = await scoutingService.updateReport(editingReportId, reportData);
+     // Actualizar en la lista local
+     setScoutReports(scoutReports.map(r => 
+       r.id === editingReportId ? result : r
+     ));
+     alert('Reporte actualizado exitosamente!');
+   } else {
+     // CREAR nuevo reporte
+     result = await scoutingService.createReport(reportData);
+     setScoutReports([...scoutReports, result]);
+     alert('Reporte creado exitosamente!');
+   }
+   
+   setShowReportForm(false);
+   setEditingReportId(null); // Limpiar el ID de edición
+   
+   // Reset form con todos los campos nuevos
+   setReportForm({
+     player_id: '',
+     player_name: '',
+     match_context: '',
+     position_played: '',
+     overall_rating: 7,
+     tecnica_individual: 7,
+     pase: 7,
+     primer_toque: 7,
+     control_balon: 7,
+     vision_juego: 7,
+     velocidad: 7,
+     resistencia: 7,
+     fuerza: 7,
+     salto: 7,
+     agilidad: 7,
+     inteligencia_tactica: 7,
+     posicionamiento: 7,
+     concentracion: 7,
+     liderazgo: 7,
+     trabajo_equipo: 7,
+     notes: '',
+     fortalezas: '',
+     debilidades: '',
+     recomendacion: '',
+     condicion_mercado: '',
+     agente: '',
+     tags: [],
+     precio_estimado: 0,
+     fecha_observacion: new Date().toISOString().split('T')[0],
+     tipo_visionado: '',
+     competicion: '',
+     rival: '',
+     resultado: '',
+     minutos_observados: 90
+   });
+   
+   setActiveTab('reports');
+ } catch (error) {
+   console.error('Failed to save report:', error);
+   alert(editingReportId ? 'Error al actualizar el reporte' : 'Error al crear el reporte');
+ }
 };
-
 // Función para editar un reporte existente
 const editReport = (report: ScoutReport) => {
   // Cargar el reporte en el formulario
