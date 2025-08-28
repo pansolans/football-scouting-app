@@ -766,18 +766,23 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
           </div>
         </div>
       </div>
-    );
+    )
   }
 
 
 
     
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
+return (
+  <div style={{ 
+    minHeight: '100vh', 
+    background: `
+      radial-gradient(ellipse at top, rgba(0, 100, 0, 0.92), rgba(0, 60, 0, 0.95)),
+      url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2070')`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  }}>
       {/* Header */}
       <header style={{ 
         background: 'rgba(255, 255, 255, 0.95)',
@@ -793,11 +798,11 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                 fontSize: '1.75rem', 
                 fontWeight: 'bold', 
                 margin: 0,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
+                background: 'linear-gradient(135deg, #006600 0%, #004d00 100%)',
+                WebkitBackgroundClip: 'text'
                 WebkitTextFillColor: 'transparent'
               }}>
-                ⚽ Football Scouting Pro
+                ⚽ Scouting Pro -Club Atletico Banfield
               </h1>
               {healthStatus && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -861,8 +866,8 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                   padding: '1rem 0',
                   border: 'none',
                   background: 'none',
-                  borderBottom: activeTab === tab.id ? '3px solid #667eea' : '3px solid transparent',
-                  color: activeTab === tab.id ? '#667eea' : '#6b7280',
+                  borderBottom: activeTab === tab.id ? '3px solid #006600' : '3px solid transparent',
+                  color: activeTab === tab.id ? '#006600' : '#6b7280',
                   cursor: 'pointer',
                   fontWeight: '600',
                   fontSize: '0.875rem',
@@ -900,7 +905,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                     <div style={{ 
                       width: '3rem', 
                       height: '3rem', 
-                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      background: 'linear-gradient(135deg, #006600, #004d00)',
                       borderRadius: '12px',
                       display: 'flex',
                       alignItems: 'center',
@@ -1158,7 +1163,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                                   </h3>
                                   <span style={{ 
                                     padding: '0.25rem 0.5rem',
-                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    background: 'linear-gradient(135deg, #006600, #004d00)',
                                     borderRadius: '6px',
                                     fontSize: '0.75rem',
                                     color: 'white',
@@ -1258,7 +1263,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                                 onClick={() => viewPlayerProfile(result.wyscout_id || result.id)}
                                 style={{
                                   padding: '0.5rem 1rem',
-                                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                  background: 'linear-gradient(135deg, #006600, #004d00)',
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '8px',
@@ -1491,7 +1496,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                             onClick={() => viewPlayerProfile(player.wyscout_id || player.id)}
                             style={{
                               padding: '0.5rem 0.75rem',
-                              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                              background: 'linear-gradient(135deg, #006600, #004d00)',
                               color: 'white',
                               border: 'none',
                               borderRadius: '6px',
@@ -1801,7 +1806,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                 </div>
                 
                 <div style={{ 
-                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  background: 'linear-gradient(135deg, #006600, #004d00)',
                   padding: '1rem',
                   borderRadius: '12px',
                   color: 'white',
@@ -2087,7 +2092,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                       <div style={{ 
                         width: '120px', 
                         height: '120px', 
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        background: 'linear-gradient(135deg, #006600, #004d00)',
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
@@ -2540,8 +2545,8 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
               padding: '1rem 1.5rem',
               border: 'none',
               background: formSection === tab.id ? 'white' : 'transparent',
-              borderBottom: formSection === tab.id ? '3px solid #667eea' : 'none',
-              color: formSection === tab.id ? '#667eea' : '#6b7280',
+              borderBottom: formSection === tab.id ? '3px solid #006600' : 'none',
+              color: formSection === tab.id ? '#006600' : '#6b7280',
               cursor: 'pointer',
               fontWeight: formSection === tab.id ? '600' : '400',
               fontSize: '0.875rem',
@@ -2806,7 +2811,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                 max="10"
                 value={reportForm.overall_rating}
                 onChange={(e) => setReportForm({...reportForm, overall_rating: parseInt(e.target.value)})}
-                style={{ width: '100%', accentColor: '#667eea' }}
+                style={{ width: '100%', accentColor: '#006600' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af' }}>
                 <span>1</span>
