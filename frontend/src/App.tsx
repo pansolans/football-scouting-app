@@ -776,8 +776,9 @@ return (
   <div style={{ 
     minHeight: '100vh', 
     background: `
-      radial-gradient(ellipse at top, rgba(0, 100, 0, 0.92), rgba(0, 60, 0, 0.95)),
-      url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2070')`,
+      linear-gradient(to bottom, rgba(248, 249, 250, 0.94), rgba(240, 247, 240, 0.92)),
+      radial-gradient(ellipse at center, rgba(0, 100, 0, 0.08), transparent 70%),
+      url('https://www.estadiosdeargentina.com.ar/wp-content/uploads/2020/01/Banfield-4.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -802,7 +803,7 @@ return (
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-                ⚽ Scouting Pro -Club Atletico Banfield
+                ⚽ Scouting Pro - Club Atletico Banfield
               </h1>
               {healthStatus && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
