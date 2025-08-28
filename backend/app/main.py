@@ -649,6 +649,38 @@ async def get_player_reports(player_wyscout_id: int):
     player_reports = [report for report in scout_reports if report.get("player_wyscout_id") == player_wyscout_id]
     return [ScoutReportResponse(**report) for report in player_reports]
 
+@app.put("/api/scout-reports/{report_id}")
+async def update_scout_report(report_id: str, report: ScoutReportCreate):
+    """Update an existing scout report"""
+    try:
+        # Si Supabase está configurado, actualizar ahí
+        if supabase_service:
+            updated_report = supabase_service.update_report(report_id, report.dict())
+            if updated_report:
+                logger.info(f"✅ Reporte actualizado en Supabase: {report_id}")
+                return ScoutReportResponse(**updated_report)
+            else:
+                raise HTTPException(status_code=404, detail="Report not found")
+        
+        # Fallback a memoria si Supabase no está configurado
+        logger.warning("⚠️ Actualizando en memoria")
+        for i, existing_report in enumerate(scout_reports):
+            if existing_report["id"] == report_id:
+                updated_report = {
+                    **report.dict(),
+                    "id": report_id,
+                    "created_at": existing_report.get("created_at"),
+                    "updated_at": datetime.now().isoformat()
+                }
+                scout_reports[i] = updated_report
+                return ScoutReportResponse(**updated_report)
+        
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    except Exception as e:
+        logger.error(f"Error updating scout report: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update scout report: {str(e)}")
+
 # AGREGAR AQUÍ EL NUEVO ENDPOINT 👇
 
 @app.get("/api/scout-reports/player/{player_id}/all")
