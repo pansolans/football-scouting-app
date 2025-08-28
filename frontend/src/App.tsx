@@ -197,7 +197,7 @@ const getFilteredPlayers = () => {
     const avgRating = reports.reduce((sum: number, r: any) => sum + r.overall_rating, 0) / reports.length;
     
     // Obtener el reporte más reciente para otros datos
-    const latestReport = reports.sort((a, b) => {
+    const latestReport = reports.sort((a: any, b: any) => {
       const dateA = new Date(a.fecha_observacion || a.created_at).getTime();
       const dateB = new Date(b.fecha_observacion || b.created_at).getTime();
       return dateB - dateA;
