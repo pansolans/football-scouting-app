@@ -181,23 +181,46 @@ const getLatestRecommendation = (reports: ScoutReport[]) => {
 
 // Función para obtener jugadores únicos con su último reporte
 const getFilteredPlayers = () => {
- // Agrupar reportes por jugador y tomar el más reciente
- const playerMap = new Map();
- 
- scoutReports.forEach(report => {
-   const existing = playerMap.get(report.player_name);
-   if (!existing || new Date(report.fecha_observacion || report.created_at) > new Date(existing.fecha_observacion || existing.created_at)) {
-     playerMap.set(report.player_name, report);
-   }
- });
- 
- // Convertir a array y filtrar
- return Array.from(playerMap.values()).filter(player => {
-   if (filterLeague && player.competicion !== filterLeague) return false;
-   if (filterRecommendation && player.recomendacion !== filterRecommendation) return false;
-   if (filterPosition && player.position_played !== filterPosition) return false;
-   return true;
- });
+  // Agrupar reportes por jugador
+  const playerMap = new Map();
+  
+  scoutReports.forEach(report => {
+    if (!playerMap.has(report.player_name)) {
+      playerMap.set(report.player_name, []);
+    }
+    playerMap.get(report.player_name).push(report);
+  });
+  
+  // Crear resumen de cada jugador con promedio
+  const playerSummaries = Array.from(playerMap.entries()).map(([playerName, reports]) => {
+    // Calcular promedio de rating
+    const avgRating = reports.reduce((sum, r) => sum + r.overall_rating, 0) / reports.length;
+    
+    // Obtener el reporte más reciente para otros datos
+    const latestReport = reports.sort((a, b) => {
+      const dateA = new Date(a.fecha_observacion || a.created_at).getTime();
+      const dateB = new Date(b.fecha_observacion || b.created_at).getTime();
+      return dateB - dateA;
+    })[0];
+    
+    return {
+      ...latestReport,
+      player_name: playerName,
+      overall_rating: Math.round(avgRating * 10) / 10, // Promedio redondeado a 1 decimal
+      total_reports: reports.length,
+      // Estos campos los necesitaremos agregar desde Wyscout idealmente
+      team: latestReport.rival || 'Sin equipo', // Por ahora usamos rival como referencia
+      age: null // Necesitaríamos obtener esto de Wyscout
+    };
+  });
+  
+  // Filtrar según los criterios seleccionados
+  return playerSummaries.filter(player => {
+    if (filterLeague && player.competicion !== filterLeague) return false;
+    if (filterRecommendation && player.recomendacion !== filterRecommendation) return false;
+    if (filterPosition && player.position_played !== filterPosition) return false;
+    return true;
+  });
 };
 
 // Filtrar reportes por jugador, equipo o liga
@@ -1936,50 +1959,50 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
                           fontSize: '1.125rem',
                           fontWeight: '600'
                         }}>
-                          {player.player_name}
-                        </h3>
-                        <p style={{ margin: '0.25rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
-                          {player.position_played || 'N/A'} • {player.competicion || 'N/A'}
-                        </p>
-                        {player.rival && (
-                          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.75rem' }}>
-                            vs {player.rival} • {player.fecha_observacion ? new Date(player.fecha_observacion).toLocaleDateString() : ''}
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ 
-                          fontSize: '1.5rem', 
-                          fontWeight: 'bold', 
-                          color: player.overall_rating >= 8 ? '#10b981' :
-                                 player.overall_rating >= 6 ? '#f59e0b' : '#ef4444'
-                        }}>
-                          {player.overall_rating}/10
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Rating</div>
-                      </div>
-                      
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#10b981' }}>
-                          €{player.precio_estimado ? (player.precio_estimado / 1000000).toFixed(1) + 'M' : 'N/A'}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Valor</div>
-                      </div>
-                      
-                      <div style={{ textAlign: 'center' }}>
-                        <span style={{
-                          background: player.recomendacion === 'Comprar' ? '#10b981' : 
-                                     player.recomendacion === 'Seguir' ? '#3b82f6' : '#ef4444',
-                          color: 'white',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '20px',
-                          fontSize: '0.875rem',
-                          fontWeight: 'bold'
-                        }}>
-                          {player.recomendacion?.toUpperCase() || 'N/A'}
-                        </span>
-                      </div>
+{player.player_name}
+                     </h3>
+                     <p style={{ margin: '0.25rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                       {player.position_played || 'N/A'} • {player.competicion || 'N/A'}
+                     </p>
+                     <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.75rem' }}>
+                       {player.team !== 'Sin equipo' ? `Equipo: ${player.team}` : ''} 
+                       {player.age ? ` • ${player.age} años` : ''} 
+                       • {player.total_reports} {player.total_reports === 1 ? 'reporte' : 'reportes'}
+                     </p>
+                   </div>
+                   
+                   <div style={{ textAlign: 'center' }}>
+                     <div style={{ 
+                       fontSize: '1.5rem', 
+                       fontWeight: 'bold', 
+                       color: player.overall_rating >= 8 ? '#10b981' :
+                              player.overall_rating >= 6 ? '#f59e0b' : '#ef4444'
+                     }}>
+                       {player.overall_rating}/10
+                     </div>
+                     <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Rating Promedio</div>
+                   </div>
+                   
+                   <div style={{ textAlign: 'center' }}>
+                     <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#10b981' }}>
+                       €{player.precio_estimado ? (player.precio_estimado / 1000000).toFixed(1) + 'M' : 'N/A'}
+                     </div>
+                     <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Valor</div>
+                   </div>
+                   
+                   <div style={{ textAlign: 'center' }}>
+                     <span style={{
+                       background: player.recomendacion === 'Comprar' ? '#10b981' : 
+                                  player.recomendacion === 'Seguir' ? '#3b82f6' : '#ef4444',
+                       color: 'white',
+                       padding: '0.5rem 1rem',
+                       borderRadius: '20px',
+                       fontSize: '0.875rem',
+                       fontWeight: 'bold'
+                     }}>
+                       {player.recomendacion?.toUpperCase() || 'N/A'}
+                     </span>
+                   </div>
                       
                       <button
                         onClick={() => openPlayerDetail(player.player_name)}
