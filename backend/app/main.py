@@ -46,6 +46,7 @@ app.add_middleware(
         "https://football-scouting-app.vercel.app",
         "https://football-scouting-app-fawn.vercel.app",
         "https://football-scouting-backend-vd0x.onrender.com",
+        "https://football-scouting-app-git-desarrollo-pablos-projects-254236f3.vercel.app",
         "https://*.vercel.app"
     ],
     allow_credentials=True,
