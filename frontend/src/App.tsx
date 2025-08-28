@@ -775,10 +775,15 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
 return (
   <div style={{ 
     minHeight: '100vh', 
-    background: `
-      linear-gradient(to bottom, rgba(248, 249, 250, 0.94), rgba(240, 247, 240, 0.92)),
-      radial-gradient(ellipse at center, rgba(0, 100, 0, 0.08), transparent 70%),
-      url('https://www.estadiosdeargentina.com.ar/wp-content/uploads/2020/01/Banfield-4.jpg')`,
+background: `
+  linear-gradient(180deg, #005500 0%, #004400 100%),
+  repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 100px,
+    rgba(255, 255, 255, 0.05) 100px,
+    rgba(255, 255, 255, 0.05) 200px
+  )`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
