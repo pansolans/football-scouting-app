@@ -181,44 +181,45 @@ const getLatestRecommendation = (reports: ScoutReport[]) => {
 
 // Función para obtener jugadores únicos con su último reporte
 const getFilteredPlayers = () => {
-  // Agrupar reportes por jugador y tomar el más reciente
-  const playerMap = new Map();
-  
-  scoutReports.forEach(report => {
-    const existing = playerMap.get(report.player_name);
-    if (!existing || new Date(report.fecha_observacion || report.created_at) > new Date(existing.fecha_observacion || existing.created_at)) {
-      playerMap.set(report.player_name, report);
-    }
-  });
+ // Agrupar reportes por jugador y tomar el más reciente
+ const playerMap = new Map();
  
+ scoutReports.forEach(report => {
+   const existing = playerMap.get(report.player_name);
+   if (!existing || new Date(report.fecha_observacion || report.created_at) > new Date(existing.fecha_observacion || existing.created_at)) {
+     playerMap.set(report.player_name, report);
+   }
+ });
+ 
+ // Convertir a array y filtrar
+ return Array.from(playerMap.values()).filter(player => {
+   if (filterLeague && player.competicion !== filterLeague) return false;
+   if (filterRecommendation && player.recomendacion !== filterRecommendation) return false;
+   if (filterPosition && player.position_played !== filterPosition) return false;
+   return true;
+ });
+};
+
 // Filtrar reportes por jugador, equipo o liga
 const getFilteredReports = () => {
-  return scoutReports.filter(report => {
-    // Filtro por nombre de jugador
-    if (filterPlayerName && !report.player_name.toLowerCase().includes(filterPlayerName.toLowerCase())) {
-      return false;
-    }
-    
-    // Filtro por equipo (usando el campo rival como referencia de equipo)
-    if (filterTeam && report.rival && !report.rival.toLowerCase().includes(filterTeam.toLowerCase())) {
-      return false;
-    }
-    
-    // Filtro por liga/competición
-    if (filterLeague && report.competicion !== filterLeague) {
-      return false;
-    }
-    
-    return true;
-  });
-};  
-  // Convertir a array y filtrar
-  return Array.from(playerMap.values()).filter(player => {
-    if (filterLeague && player.competicion !== filterLeague) return false;
-    if (filterRecommendation && player.recomendacion !== filterRecommendation) return false;
-    if (filterPosition && player.position_played !== filterPosition) return false;
-    return true;
-  });
+ return scoutReports.filter(report => {
+   // Filtro por nombre de jugador
+   if (filterPlayerName && !report.player_name.toLowerCase().includes(filterPlayerName.toLowerCase())) {
+     return false;
+   }
+   
+   // Filtro por equipo (usando el campo rival como referencia de equipo)
+   if (filterTeam && report.rival && !report.rival.toLowerCase().includes(filterTeam.toLowerCase())) {
+     return false;
+   }
+   
+   // Filtro por liga/competición
+   if (filterLeague && report.competicion !== filterLeague) {
+     return false;
+   }
+   
+   return true;
+ });
 };
 
 // Obtener ligas únicas de los reportes
