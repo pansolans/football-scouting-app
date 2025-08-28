@@ -193,6 +193,11 @@ export const scoutingService = {
     const response = await api.post('/api/scout-reports', report);
     return response.data;
   },
+
+  updateReport: async (reportId: string, report: ScoutReportCreate): Promise<ScoutReport> => {
+    const response = await api.put(`/api/scout-reports/${reportId}`, report);
+    return response.data;
+  },
   
   getReports: async (): Promise<ScoutReport[]> => {
     const response = await api.get('/api/scout-reports');
