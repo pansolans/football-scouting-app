@@ -24,7 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
 
-  const apiUrl = 'https://football-scouting-backend.onrender.com/api';
+const apiUrl = 'https://football-scouting-backend-vd0x.onrender.com/api';
 
   useEffect(() => {
     const checkAuth = async () => {
