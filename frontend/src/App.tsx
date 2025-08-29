@@ -1,9 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { playerService, healthService, scoutingService, Player, ScoutReport, ScoutReportCreate, HealthStatus } from './services/api';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Login from './components/Login';
+
+
+// Componente para proteger rutas
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  return <>{children}</>;
+};
 
 
 
-const App: React.FC = () => {
+const MainApp: React.FC = () => {
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -833,24 +853,36 @@ return (
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Scout Master</span>
-              <div style={{ 
-                width: '2.5rem', 
-                height: '2.5rem', 
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
-              }}>
-                SM
-              </div>
-            </div>
+<div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+  <div style={{ textAlign: 'right', color: 'white' }}>
+    <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+      {user?.name || 'Usuario'}
+    </div>
+    <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+      {user?.role === 'admin' ? 'Administrador' : 
+       user?.role === 'head_scout' ? 'Jefe Scout' :
+       user?.role === 'scout' ? 'Scout' : 
+       user?.role === 'viewer' ? 'Observador' : 'Scout'}
+    </div>
+  </div>
+  <button
+    onClick={logout}
+    style={{
+      padding: '8px 16px',
+      background: 'rgba(255,255,255,0.1)',
+      color: 'white',
+      border: '1px solid rgba(255,255,255,0.3)',
+      borderRadius: '6px',
+      cursor: 'pointer',
+      fontSize: '0.875rem',
+      transition: 'all 0.3s ease'
+    }}
+    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+  >
+    Cerrar Sesión
+  </button>
+</div>
           </div>
         </div>
       </header>
@@ -3187,5 +3219,23 @@ return (
     </div>
   );
 };
+
+// Nueva función App que maneja las rutas
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <MainApp />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
 
 export default App;
