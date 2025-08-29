@@ -568,7 +568,7 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
         <div style={{
           maxWidth: '1200px',
           margin: '0 auto',
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: 'white',
           borderRadius: '16px',
           padding: '2rem',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -775,41 +775,49 @@ const avgRating = totalReports > 0 && Array.isArray(scoutReports)
 return (
   <div style={{ 
     minHeight: '100vh', 
-background: `
-  linear-gradient(180deg, #005500 0%, #004400 100%),
-  repeating-linear-gradient(
-    90deg,
-    transparent,
-    transparent 100px,
-    rgba(255, 255, 255, 0.05) 100px,
-    rgba(255, 255, 255, 0.05) 200px
-  )`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundAttachment: 'fixed',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    background: '#f5f5f5',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    position: 'relative'
   }}>
-      {/* Header */}
-      <header style={{ 
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+    {/* Franja verde superior estilo Banfield */}
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '200px',
+      background: 'linear-gradient(135deg, #0a5f1c 0%, #0d7328 50%, #0a5f1c 100%)',
+      zIndex: 0
+    }}/>
+<header style={{ 
+        background: 'transparent',
         padding: '1rem 0',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+        position: 'relative',
+        zIndex: 10
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <h1 style={{ 
-                fontSize: '1.75rem', 
-                fontWeight: 'bold', 
-                margin: 0,
-                background: 'linear-gradient(135deg, #006600 0%, #004d00 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-                ⚽ Scouting Pro - Club Atletico Banfield
-              </h1>
+<div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <img 
+                  src="https://logodownload.org/wp-content/uploads/2020/05/banfield-logo-0.png" 
+                  alt="Club Atlético Banfield"
+                  style={{
+                    width: '45px',
+                    height: '45px',
+                    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
+                  }}
+                />
+                <h1 style={{ 
+                  fontSize: '1.75rem', 
+                  fontWeight: 'bold', 
+                  margin: 0,
+                  color: 'white',
+                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+                }}>
+                  Sistema de Scouting Profesional
+                </h1>
+              </div>
               {healthStatus && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{
@@ -819,7 +827,7 @@ background: `
                     backgroundColor: healthStatus.status === 'healthy' ? '#10b981' : '#ef4444',
                     boxShadow: `0 0 8px ${healthStatus.status === 'healthy' ? '#10b981' : '#ef4444'}`
                   }}></span>
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+                  <span style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '500' }}>
                     {healthStatus.status === 'healthy' ? 'System Online' : 'System Offline'}
                   </span>
                 </div>
@@ -848,13 +856,13 @@ background: `
       </header>
 
       {/* Navigation */}
-      <nav style={{ 
-        background: 'rgba(255, 255, 255, 0.9)',
-        backdropFilter: 'blur(5px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+<nav style={{ 
+        background: 'white',
+        borderBottom: '2px solid #e5e7eb',
         position: 'sticky',
         top: 0,
-        zIndex: 100
+        zIndex: 100,
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ display: 'flex', gap: '2rem', overflowX: 'auto' }}>
@@ -897,7 +905,7 @@ background: `
               {/* Stats Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
                 <div style={{ 
-                  background: 'rgba(255, 255, 255, 0.95)',
+                  background: 'white',
                   borderRadius: '16px',
                   padding: '1.5rem',
                   boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
@@ -911,7 +919,7 @@ background: `
                     <div style={{ 
                       width: '3rem', 
                       height: '3rem', 
-                      background: 'linear-gradient(135deg, #006600, #004d00)',
+                      background: 'linear-gradient(135deg, #0a5f1c, #0d7328)',
                       borderRadius: '12px',
                       display: 'flex',
                       alignItems: 'center',
@@ -928,7 +936,7 @@ background: `
                 </div>
 
                 <div style={{ 
-                  background: 'rgba(255, 255, 255, 0.95)',
+                  background: 'white',
                   borderRadius: '16px',
                   padding: '1.5rem',
                   boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
@@ -959,7 +967,7 @@ background: `
                 </div>
 
                 <div style={{ 
-                  background: 'rgba(255, 255, 255, 0.95)',
+                  background: 'white',
                   borderRadius: '16px',
                   padding: '1.5rem',
                   boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
@@ -994,7 +1002,7 @@ background: `
 
               {/* System Status */}
               <div style={{ 
-                background: 'rgba(255, 255, 255, 0.95)',
+                background: 'white',
                 borderRadius: '16px',
                 padding: '2rem',
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -1069,7 +1077,7 @@ background: `
           {activeTab === 'quick-search' && (
             <div style={{ display: 'grid', gap: '2rem' }}>
               <div style={{ 
-                background: 'rgba(255, 255, 255, 0.95)',
+                background: 'white',
                 borderRadius: '16px',
                 padding: '2rem',
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -1120,7 +1128,7 @@ background: `
                 <div style={{ display: 'grid', gap: '1rem' }}>
                   {searchResults.map((result: any) => (
                     <div key={`${result.type}-${result.id}`} style={{ 
-                      background: 'rgba(255, 255, 255, 0.95)',
+                      background: 'white',
                       borderRadius: '16px',
                       padding: '1.5rem',
                       boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
@@ -1169,7 +1177,7 @@ background: `
                                   </h3>
                                   <span style={{ 
                                     padding: '0.25rem 0.5rem',
-                                    background: 'linear-gradient(135deg, #006600, #004d00)',
+                                    background: 'linear-gradient(135deg, #0a5f1c, #0d7328)',
                                     borderRadius: '6px',
                                     fontSize: '0.75rem',
                                     color: 'white',
@@ -1269,7 +1277,7 @@ background: `
                                 onClick={() => viewPlayerProfile(result.wyscout_id || result.id)}
                                 style={{
                                   padding: '0.5rem 1rem',
-                                  background: 'linear-gradient(135deg, #006600, #004d00)',
+                                  background: 'linear-gradient(135deg, #0a5f1c, #0d7328)',
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '8px',
@@ -1317,7 +1325,7 @@ background: `
             <div style={{ display: 'grid', gap: '2rem' }}>
               {/* Filter Section */}
               <div style={{ 
-                background: 'rgba(255, 255, 255, 0.95)',
+                background: 'white',
                 borderRadius: '16px',
                 padding: '2rem',
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -1408,7 +1416,7 @@ background: `
               {/* Players List */}
               {teamPlayers.length > 0 && (
                 <div style={{ 
-                  background: 'rgba(255, 255, 255, 0.95)',
+                  background: 'white',
                   borderRadius: '16px',
                   padding: '2rem',
                   boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -1502,7 +1510,7 @@ background: `
                             onClick={() => viewPlayerProfile(player.wyscout_id || player.id)}
                             style={{
                               padding: '0.5rem 0.75rem',
-                              background: 'linear-gradient(135deg, #006600, #004d00)',
+                              background: 'linear-gradient(135deg, #0a5f1c, #0d7328)',
                               color: 'white',
                               border: 'none',
                               borderRadius: '6px',
@@ -1540,7 +1548,7 @@ background: `
 {/* My Reports Tab */}
 {activeTab === 'reports' && (
  <div style={{ 
-   background: 'rgba(255, 255, 255, 0.95)',
+   background: 'white',
    borderRadius: '16px',
    padding: '2rem',
    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -1787,7 +1795,7 @@ background: `
 {/* Recommendations Tab */}
           {activeTab === 'recommendations' && (
             <div style={{ 
-              background: 'rgba(255, 255, 255, 0.95)',
+              background: 'white',
               borderRadius: '16px',
               padding: '2rem',
               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -1812,7 +1820,7 @@ background: `
                 </div>
                 
                 <div style={{ 
-                  background: 'linear-gradient(135deg, #006600, #004d00)',
+                  background: 'linear-gradient(135deg, #0a5f1c, #0d7328)',
                   padding: '1rem',
                   borderRadius: '12px',
                   color: 'white',
@@ -2042,7 +2050,7 @@ background: `
           {/* Player Profile Tab */}
           {activeTab === 'player-profile' && (
             <div style={{ 
-              background: 'rgba(255, 255, 255, 0.95)',
+              background: 'white',
               borderRadius: '16px',
               padding: '2rem',
               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -2098,7 +2106,7 @@ background: `
                       <div style={{ 
                         width: '120px', 
                         height: '120px', 
-                        background: 'linear-gradient(135deg, #006600, #004d00)',
+                        background: 'linear-gradient(135deg, #0a5f1c, #0d7328)',
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
