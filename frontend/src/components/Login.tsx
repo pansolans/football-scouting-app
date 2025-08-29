@@ -16,6 +16,8 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
+      // Redirección automática después del login exitoso
+      window.location.href = '/';
     } catch (err: any) {
       setError('Email o contraseña incorrectos');
     } finally {
