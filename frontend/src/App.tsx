@@ -815,7 +815,7 @@ return (
                   color: 'white',
                   textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
                 }}>
-                  Sistema de Scouting Profesional
+                  Departamento de Scouting CA Banfield
                 </h1>
               </div>
               {healthStatus && (
@@ -1768,7 +1768,7 @@ return (
                  borderRadius: '8px',
                  border: '2px solid #10b98130'
                }}>
-                 <div style={{ fontSize: '0.875rem', color: '#059669', marginBottom: '0.5rem', fontWeight: '600' }}>✅ Strengths</div>
+                 <div style={{ fontSize: '0.875rem', color: '#059669', marginBottom: '0.5rem', fontWeight: '600' }}>✅ Fortalezas</div>
                  <p style={{ fontSize: '0.875rem', margin: 0, color: '#374151' }}>{report.fortalezas}</p>
                </div>
              )}
@@ -1779,7 +1779,7 @@ return (
                  borderRadius: '8px',
                  border: '2px solid #ef444430'
                }}>
-                 <div style={{ fontSize: '0.875rem', color: '#dc2626', marginBottom: '0.5rem', fontWeight: '600' }}>⚠️ Weaknesses</div>
+                 <div style={{ fontSize: '0.875rem', color: '#dc2626', marginBottom: '0.5rem', fontWeight: '600' }}>⚠️ Debilidades</div>
                  <p style={{ fontSize: '0.875rem', margin: 0, color: '#374151' }}>{report.debilidades}</p>
                </div>
              )}
