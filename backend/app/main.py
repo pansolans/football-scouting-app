@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
+
+from datetime import timedelta
+from app.auth import (
+    UserLogin, Token,
+    verify_password, create_access_token,
+    get_current_user, supabase
+)
 
 from app.services.wyscout_client import WyscoutClient
 from app.config import settings
@@ -154,6 +161,55 @@ async def health_check():
             "status": "error",
             "error": str(e)
         }
+
+# ============= ENDPOINTS DE AUTENTICACIÓN (NUEVO) =============
+@app.post("/api/auth/login", response_model=Token)
+async def login(user_credentials: UserLogin):
+    """Login endpoint"""
+    # Buscar usuario en scouts (no users)
+    response = supabase.table('scouts').select("*").eq('email', user_credentials.email).single().execute()
+    
+    if not response.data:
+        raise HTTPException(
+            status_code=401,
+            detail="Email o contraseña incorrectos"
+        )
+    
+    user = response.data
+    
+    # Verificar contraseña
+    if not verify_password(user_credentials.password, user['password_hash']):
+        raise HTTPException(
+            status_code=401,
+            detail="Email o contraseña incorrectos"
+        )
+    
+    # Verificar si está activo
+    if not user.get('is_active', True):
+        raise HTTPException(
+            status_code=403,
+            detail="Usuario desactivado"
+        )
+    
+    # Crear token
+    access_token = create_access_token(data={"sub": user['id']})
+    
+    # Quitar password del response
+    user.pop('password_hash', None)
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user
+    }
+
+@app.get("/api/auth/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    """Obtener usuario actual"""
+    current_user.pop('password_hash', None)
+    return current_user
+
+# ============= FIN ENDPOINTS AUTH =============
 
 @app.get("/api/test-wyscout")
 async def test_wyscout():
