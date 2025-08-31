@@ -135,6 +135,16 @@ export interface ScoutReportCreate {
   rival?: string;
   resultado?: string;
   minutos_observados?: number;
+  
+  created_by?: string;
+  created_by_name?: string;
+  created_by_email?: string;
+  created_by_role?: string;
+  updated_by?: string;
+  updated_by_name?: string;
+  
+  created_at: string;
+
 }
 export const playerService = {
   searchPlayers: async (query: string): Promise<Player[]> => {
