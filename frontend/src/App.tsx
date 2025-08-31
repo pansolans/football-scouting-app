@@ -1727,6 +1727,22 @@ return (
                onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}>
                  {report.player_name} 🔍
                </h3>
+               {report.created_by_name && (
+  <p style={{ 
+    fontSize: '0.75rem', 
+    color: '#6b7280', 
+    margin: '0.25rem 0 0 0',
+    fontStyle: 'italic'
+  }}>
+    👤 Evaluado por: {report.created_by_name} 
+    {report.created_by_role && ` (${
+      report.created_by_role === 'admin' ? 'Administrador' :
+      report.created_by_role === 'head_scout' ? 'Jefe Scout' : 
+      report.created_by_role === 'scout' ? 'Scout' : 
+      'Observador'
+    })`}
+  </p>
+)}
                {report.match_context && (
                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
                    📅 {report.match_context}
