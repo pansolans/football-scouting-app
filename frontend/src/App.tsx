@@ -1684,158 +1684,145 @@ return (
      </div>
    </div>
    
-{/* CONTADOR DE RESULTADOS */}
-<div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-  Mostrando {getFilteredReports().length} de {scoutReports.length} reportes
-</div>
-
-{getFilteredReports().length === 0 ? (
-  <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
-    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
-    <p style={{ fontSize: '1rem' }}>
-      {scoutReports.length === 0 
-        ? "No hay reportes todavía. ¡Empieza a scoutear jugadores!"
-        : "No se encontraron reportes con estos filtros"}
-    </p>
-  </div>
-) : (
-  <div style={{ display: 'grid', gap: '1.5rem' }}>
-    {getFilteredReports().map((report) => (
-      <div key={report.id} style={{ 
-        background: 'white',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        border: '1px solid #e5e7eb',
-        transition: 'transform 0.2s',
-        cursor: 'pointer'
-      }}
-      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-      onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-          <div>
-            <h3 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '600', 
-              margin: 0, 
-              color: '#3b82f6',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              transition: 'color 0.2s'
-            }}
-            onClick={() => openPlayerDetail(report.player_name)}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#1d4ed8'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}>
-              {report.player_name} 🔍
-            </h3>
-            {report.created_by_name && (
-              <p style={{ 
-                fontSize: '0.75rem', 
-                color: '#6b7280', 
-                margin: '0.25rem 0 0 0',
-                fontStyle: 'italic'
-              }}>
-                👤 Evaluado por: {report.created_by_name} 
-                {report.created_by_role && ` (${
-                  report.created_by_role === 'admin' ? 'Administrador' :
-                  report.created_by_role === 'head_scout' ? 'Jefe Scout' : 
-                  report.created_by_role === 'scout' ? 'Scout' : 
-                  'Observador'
-                })`}
-              </p>
-            )}
-            {report.match_context && (
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
-                📅 {report.match_context}
-              </p>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <button
-              onClick={() => editReport(report)}
-              style={{
-                padding: '0.5rem 0.75rem',
-                background: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}
-            >
-              ✏️ Editar
-            </button>
-            <div style={{ 
-              padding: '0.5rem 1rem',
-              background: `linear-gradient(135deg, ${
-                report.overall_rating >= 8 ? '#10b981, #059669' :
-                report.overall_rating >= 6 ? '#f59e0b, #d97706' :
-                '#ef4444, #dc2626'
-              })`,
-              borderRadius: '8px',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '1.25rem'
-            }}>
-              {report.overall_rating}/10
-            </div>
-          </div>
-        </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-          {[
-            { label: '⚽ Técnica', value: report.tecnica_individual, color: '#10b981' },
-            { label: '💪 Físico', value: report.velocidad, color: '#f59e0b' },
-            { label: '🧠 Mental', value: report.inteligencia_tactica, color: '#8b5cf6' }
-          ].map((rating) => (
-            <div key={rating.label} style={{ textAlign: 'center' }}>
-              <div style={{ 
-                fontSize: '1.5rem', 
-                fontWeight: 'bold',
-                color: rating.color
-              }}>
-                {rating.value}/10
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>{rating.label}</div>
-            </div>
-          ))}
-        </div>
-        
-        {report.notes && (
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', fontWeight: '600' }}>📝 Notes</div>
-            <p style={{ fontSize: '0.875rem', margin: 0, lineHeight: '1.6', color: '#374151' }}>{report.notes}</p>
-          </div>
-        )}
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-          {report.fortalezas && (
-            <div style={{ 
-              padding: '1rem',
-              background: 'linear-gradient(135deg, #10b98115, #10b98125)',
-              borderRadius: '8px',
-              border: '2px solid #10b98130'
-            }}>
-              <div style={{ fontSize: '0.875rem', color: '#059669', marginBottom: '0.5rem', fontWeight: '600' }}>✅ Fortalezas</div>
-              <p style={{ fontSize: '0.875rem', margin: 0, color: '#374151' }}>{report.fortalezas}</p>
-            </div>
-          )}
-          {report.debilidades && (
-            <div style={{ 
-              padding: '1rem',
-              background: 'linear-gradient(135deg, #ef444415, #ef444425)',
-              borderRadius: '8px',
-              border: '2px solid #ef444430'
-            }}>
-              <div style={{ fontSize: '0.875rem', color: '#dc2626', marginBottom: '0.5rem', fontWeight: '600' }}>⚠️ Debilidades</div>
-              <p style={{ fontSize: '0.875rem', margin: 0, color: '#374151' }}>{report.debilidades}</p>
-            </div>
-          )}
-        </div>
-      </div>
-    ))}
-  </div>
+   {/* CONTADOR DE RESULTADOS */}
+   <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+     Mostrando {getFilteredReports().length} de {scoutReports.length} reportes
+   </div>
+   
+   {getFilteredReports().length === 0 ? (
+     <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+       <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
+       <p style={{ fontSize: '1rem' }}>
+         {scoutReports.length === 0 
+           ? "No hay reportes todavía. ¡Empieza a scoutear jugadores!"
+           : "No se encontraron reportes con estos filtros"}
+       </p>
+     </div>
+   ) : (
+     <div style={{ display: 'grid', gap: '1.5rem' }}>
+       {getFilteredReports().map((report) => (
+         <div key={report.id} style={{ 
+           background: 'white',
+           borderRadius: '12px',
+           padding: '1.5rem',
+           border: '1px solid #e5e7eb',
+           transition: 'transform 0.2s',
+           cursor: 'pointer'
+         }}
+         onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+         onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+             <div>
+               <h3 style={{ 
+                 fontSize: '1.25rem', 
+                 fontWeight: '600', 
+                 margin: 0, 
+                 color: '#3b82f6',
+                 cursor: 'pointer',
+                 textDecoration: 'underline',
+                 transition: 'color 0.2s'
+               }}
+               onClick={() => openPlayerDetail(report.player_name)}
+               onMouseEnter={(e) => e.currentTarget.style.color = '#1d4ed8'}
+               onMouseLeave={(e) => e.currentTarget.style.color = '#3b82f6'}>
+                 {report.player_name} 🔍
+               </h3>
+               {report.match_context && (
+                 <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
+                   📅 {report.match_context}
+                 </p>
+               )}
+             </div>
+             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+               <button
+                 onClick={() => editReport(report)}
+                 style={{
+                   padding: '0.5rem 0.75rem',
+                   background: '#f59e0b',
+                   color: 'white',
+                   border: 'none',
+                   borderRadius: '6px',
+                   cursor: 'pointer',
+                   fontSize: '0.875rem',
+                   fontWeight: '600'
+                 }}
+               >
+                 ✏️ Editar
+               </button>
+               <div style={{ 
+                 padding: '0.5rem 1rem',
+                 background: `linear-gradient(135deg, ${
+                   report.overall_rating >= 8 ? '#10b981, #059669' :
+                   report.overall_rating >= 6 ? '#f59e0b, #d97706' :
+                   '#ef4444, #dc2626'
+                 })`,
+                 borderRadius: '8px',
+                 color: 'white',
+                 fontWeight: 'bold',
+                 fontSize: '1.25rem'
+               }}>
+                 {report.overall_rating}/10
+               </div>
+             </div>
+           </div>
+           
+           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+             {[
+               { label: '⚽ Técnica', value: report.tecnica_individual, color: '#10b981' },
+               { label: '💪 Físico', value: report.velocidad, color: '#f59e0b' },
+               { label: '🧠 Mental', value: report.inteligencia_tactica, color: '#8b5cf6' }
+             ].map((rating) => (
+               <div key={rating.label} style={{ textAlign: 'center' }}>
+                 <div style={{ 
+                   fontSize: '1.5rem', 
+                   fontWeight: 'bold',
+                   color: rating.color
+                 }}>
+                   {rating.value}/10
+                 </div>
+                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>{rating.label}</div>
+               </div>
+             ))}
+           </div>
+           
+           {report.notes && (
+             <div style={{ marginBottom: '1.5rem' }}>
+               <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', fontWeight: '600' }}>📝 Notes</div>
+               <p style={{ fontSize: '0.875rem', margin: 0, lineHeight: '1.6', color: '#374151' }}>{report.notes}</p>
+             </div>
+           )}
+           
+           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+             {report.fortalezas && (
+               <div style={{ 
+                 padding: '1rem',
+                 background: 'linear-gradient(135deg, #10b98115, #10b98125)',
+                 borderRadius: '8px',
+                 border: '2px solid #10b98130'
+               }}>
+                 <div style={{ fontSize: '0.875rem', color: '#059669', marginBottom: '0.5rem', fontWeight: '600' }}>✅ Fortalezas</div>
+                 <p style={{ fontSize: '0.875rem', margin: 0, color: '#374151' }}>{report.fortalezas}</p>
+               </div>
+             )}
+             {report.debilidades && (
+               <div style={{ 
+                 padding: '1rem',
+                 background: 'linear-gradient(135deg, #ef444415, #ef444425)',
+                 borderRadius: '8px',
+                 border: '2px solid #ef444430'
+               }}>
+                 <div style={{ fontSize: '0.875rem', color: '#dc2626', marginBottom: '0.5rem', fontWeight: '600' }}>⚠️ Debilidades</div>
+                 <p style={{ fontSize: '0.875rem', margin: 0, color: '#374151' }}>{report.debilidades}</p>
+               </div>
+             )}
+           </div>
+         </div>
+       ))}
+     </div>
+   )}
+ </div>
 )}
+
 
 {/* Recommendations Tab */}
           {activeTab === 'recommendations' && (
@@ -3233,7 +3220,7 @@ return (
   );
 };
 
-// Nueva función App que maneja las rutas
+// Nueva función App que maneja las rutas 
 function App() {
   return (
     <AuthProvider>
