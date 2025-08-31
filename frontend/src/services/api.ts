@@ -85,6 +85,13 @@ export interface ScoutReport {
   resultado?: string;
   minutos_observados?: number;
   
+  // AGREGAR ESTOS A ScoutReport:
+created_by?: string;
+created_by_name?: string;
+created_by_email?: string;
+created_by_role?: string;
+updated_by?: string;
+updated_by_name?: string;
   created_at: string;
 }
 
@@ -136,14 +143,7 @@ export interface ScoutReportCreate {
   resultado?: string;
   minutos_observados?: number;
   
-  created_by?: string;
-  created_by_name?: string;
-  created_by_email?: string;
-  created_by_role?: string;
-  updated_by?: string;
-  updated_by_name?: string;
-  
-  created_at: string;
+
 
 }
 export const playerService = {
