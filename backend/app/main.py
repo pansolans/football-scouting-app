@@ -644,8 +644,16 @@ class ScoutReportResponse(BaseModel):
     rival: Optional[str] = None
     resultado: Optional[str] = None
     minutos_observados: Optional[int] = None
+    # Campos del autor (AGREGAR ESTAS LÍNEAS)
+    created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
+    created_by_email: Optional[str] = None
+    created_by_role: Optional[str] = None
+    updated_by: Optional[str] = None
+    updated_by_name: Optional[str] = None
     
     created_at: str
+    
 
 # In-memory storage
 scout_reports = []
