@@ -653,16 +653,26 @@ scout_reports = []
 competition_cache = {}
 
 @app.post("/api/scout-reports", response_model=ScoutReportResponse)
-async def create_scout_report(report: ScoutReportCreate):
+async def create_scout_report(
+    report: ScoutReportCreate,
+    current_user: dict = Depends(get_current_user)  # AGREGAR ESTA LÍNEA
+):
     try:
         report_data = report.dict()
+        
+        # AGREGAR ESTAS LÍNEAS - Información del usuario
+        report_data['created_by'] = current_user['id']
+        report_data['created_by_name'] = current_user['name']
+        report_data['created_by_email'] = current_user['email']
+        report_data['created_by_role'] = current_user.get('role', 'scout')
         
         # Si Supabase está configurado, guardar ahí
         if supabase_service:
             new_report = supabase_service.create_report(report_data)
             if new_report:
-                logger.info(f"✅ Reporte guardado en Supabase: {new_report.get('id')}")
+                logger.info(f"✅ Reporte guardado en Supabase por: {current_user['name']}")
                 return ScoutReportResponse(**new_report)
+    
         
         # Fallback a memoria si Supabase no está configurado
         logger.warning("⚠️ Guardando en memoria (se perderá al reiniciar)")
@@ -706,12 +716,22 @@ async def get_player_reports(player_wyscout_id: int):
     return [ScoutReportResponse(**report) for report in player_reports]
 
 @app.put("/api/scout-reports/{report_id}")
-async def update_scout_report(report_id: str, report: ScoutReportCreate):
+async def update_scout_report(
+    report_id: str, 
+    report: ScoutReportCreate,
+    current_user: dict = Depends(get_current_user)  # AGREGAR ESTA LÍNEA
+):
     """Update an existing scout report"""
     try:
+        report_data = report.dict()
+        
+        # AGREGAR - Info de quién actualiza
+        report_data['updated_by'] = current_user['id']
+        report_data['updated_by_name'] = current_user['name']
+        
         # Si Supabase está configurado, actualizar ahí
         if supabase_service:
-            updated_report = supabase_service.update_report(report_id, report.dict())
+            updated_report = supabase_service.update_report(report_id, report_data)  # Cambiar a report_data
             if updated_report:
                 logger.info(f"✅ Reporte actualizado en Supabase: {report_id}")
                 return ScoutReportResponse(**updated_report)
