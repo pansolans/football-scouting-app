@@ -689,20 +689,23 @@ async def create_scout_report(
         raise HTTPException(status_code=500, detail=f"Failed to create scout report: {str(e)}")
 
 @app.get("/api/scout-reports", response_model=List[ScoutReportResponse])
-async def get_scout_reports():
+async def get_scout_reports(current_user: dict = Depends(get_current_user)):  # CAMBIO: agregar current_user
     try:
-        # Intentar obtener de Supabase primero
         if supabase_service:
             reports = supabase_service.get_all_reports()
+            
+            # NUEVO: logs para debug
+            if reports and len(reports) > 0:
+                logger.info(f"📊 Primer reporte tiene estas keys: {reports[0].keys()}")
+                logger.info(f"📊 created_by_name: {reports[0].get('created_by_name', 'NO EXISTE')}")
+            
             logger.info(f"📊 Obtenidos {len(reports)} reportes de Supabase")
             return [ScoutReportResponse(**report) for report in reports]
         
-        # Fallback a memoria
         logger.warning("⚠️ Usando reportes de memoria")
         return [ScoutReportResponse(**report) for report in scout_reports]
     except Exception as e:
         logger.error(f"Error getting reports: {e}")
-        # Si falla Supabase, devolver los de memoria
         return [ScoutReportResponse(**report) for report in scout_reports]
 
 @app.get("/api/scout-reports/player/{player_wyscout_id}", response_model=List[ScoutReportResponse])
