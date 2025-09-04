@@ -908,7 +908,7 @@ return (
 
       {/* Navigation */}
 <nav style={{ 
-        background: 'white',
+        background: currentClub.name === 'Boca Juniors' ? '#003f7f' : 'white',
         borderBottom: '2px solid #e5e7eb',
         position: 'sticky',
         top: 0,
@@ -932,7 +932,7 @@ return (
                   border: 'none',
                   background: 'none',
                   borderBottom: activeTab === tab.id ? `3px solid ${currentClub.primaryColor}` : '3px solid transparent',
-                  color: activeTab === tab.id ? currentClub.primaryColor : '#6b7280',
+                  color: activeTab === tab.id ? currentClub.primaryColor : currentClub.name === 'Boca Juniors' ? '#ffd700' : '#6b7280',
                   cursor: 'pointer',
                   fontWeight: '600',
                   fontSize: '0.875rem',
