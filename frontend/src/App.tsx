@@ -24,6 +24,24 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const MainApp: React.FC = () => {
   const { user, logout } = useAuth();
+  const userClub = user?.organization || 'Club Atlético Banfield';
+  
+  const clubConfig = {
+    'Club Atlético Banfield': {
+      primaryColor: '#0a5f1c',
+      secondaryColor: '#0d7328',
+      logo: 'https://logodownload.org/wp-content/uploads/2020/05/banfield-logo-0.png',
+      name: 'CA Banfield'
+    },
+    'Boca Juniors': {
+      primaryColor: '#003f7f', 
+      secondaryColor: '#ffd700',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Escudo_del_Club_Atl%C3%A9tico_Boca_Juniors.svg/1696px-Escudo_del_Club_Atl%C3%A9tico_Boca_Juniors.svg.png',
+      name: 'Boca Juniors'
+    }
+  };
+  
+  const currentClub = clubConfig[userClub as keyof typeof clubConfig] || clubConfig['Club Atlético Banfield'];
   const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -800,15 +818,15 @@ return (
     position: 'relative'
   }}>
     {/* Franja verde superior estilo Banfield */}
-    <div style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: '200px',
-      background: 'linear-gradient(135deg, #0a5f1c 0%, #0d7328 50%, #0a5f1c 100%)',
-      zIndex: 0
-    }}/>
+<div style={{
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  height: '200px',
+  background: `linear-gradient(135deg, ${currentClub.primaryColor} 0%, ${currentClub.secondaryColor} 50%, ${currentClub.primaryColor} 100%)`,
+  zIndex: 0
+}}/>
 <header style={{ 
         background: 'transparent',
         padding: '1rem 0',
@@ -819,24 +837,25 @@ return (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <img 
-                  src="https://logodownload.org/wp-content/uploads/2020/05/banfield-logo-0.png" 
-                  alt="Club Atlético Banfield"
-                  style={{
-                    width: '45px',
-                    height: '45px',
-                    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
-                  }}
-                />
-                <h1 style={{ 
-                  fontSize: '1.75rem', 
-                  fontWeight: 'bold', 
-                  margin: 0,
-                  color: 'white',
-                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
-                }}>
-                  Departamento de Scouting CA Banfield
-                </h1>
+<img 
+  src={currentClub.logo}
+  alt={currentClub.name}
+  style={{
+    width: '45px',
+    height: '45px',
+    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+    objectFit: 'contain'
+  }}
+/>
+<h1 style={{ 
+  fontSize: '1.75rem', 
+  fontWeight: 'bold', 
+  margin: 0,
+  color: 'white',
+  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+}}>
+  Departamento de Scouting {currentClub.name}
+</h1>
               </div>
               {healthStatus && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -912,8 +931,8 @@ return (
                   padding: '1rem 0',
                   border: 'none',
                   background: 'none',
-                  borderBottom: activeTab === tab.id ? '3px solid #006600' : '3px solid transparent',
-                  color: activeTab === tab.id ? '#006600' : '#6b7280',
+                  borderBottom: activeTab === tab.id ? `3px solid ${currentClub.primaryColor}` : '3px solid transparent',
+                  color: activeTab === tab.id ? currentClub.primaryColor : '#6b7280',
                   cursor: 'pointer',
                   fontWeight: '600',
                   fontSize: '0.875rem',

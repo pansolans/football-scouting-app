@@ -7,6 +7,8 @@ interface User {
   role: 'admin' | 'head_scout' | 'scout' | 'viewer';
   department?: string;
   is_active: boolean;
+  organization?: string;  // AGREGAR ESTA LÍNEA
+  club_id?: string;       // AGREGAR ESTA LÍNEA
 }
 
 interface AuthContextType {
