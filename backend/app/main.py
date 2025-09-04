@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
+from supabase import create_client  
 import httpx
 import os
 import base64
@@ -651,6 +652,7 @@ class ScoutReportResponse(BaseModel):
     created_by_role: Optional[str] = None
     updated_by: Optional[str] = None
     updated_by_name: Optional[str] = None
+    club_id: Optional[str] = None
     
     created_at: str
     
@@ -663,23 +665,27 @@ competition_cache = {}
 @app.post("/api/scout-reports", response_model=ScoutReportResponse)
 async def create_scout_report(
     report: ScoutReportCreate,
-    current_user: dict = Depends(get_current_user)  # AGREGAR ESTA LÍNEA
+    current_user: dict = Depends(get_current_user)
 ):
     try:
         report_data = report.dict()
         
-        # AGREGAR ESTAS LÍNEAS - Información del usuario
+        # Información del usuario
         report_data['created_by'] = current_user['id']
         report_data['created_by_name'] = current_user['name']
         report_data['created_by_email'] = current_user['email']
         report_data['created_by_role'] = current_user.get('role', 'scout')
         
-        # Si Supabase está configurado, guardar ahí
+        # NUEVO: Agregar club_id
+        report_data['club_id'] = current_user.get('club_id')
+        
         if supabase_service:
             new_report = supabase_service.create_report(report_data)
             if new_report:
                 logger.info(f"✅ Reporte guardado en Supabase por: {current_user['name']}")
                 return ScoutReportResponse(**new_report)
+        
+        # Resto del código igual...
     
         
         # Fallback a memoria si Supabase no está configurado
@@ -697,24 +703,33 @@ async def create_scout_report(
         raise HTTPException(status_code=500, detail=f"Failed to create scout report: {str(e)}")
 
 @app.get("/api/scout-reports", response_model=List[ScoutReportResponse])
-async def get_scout_reports(current_user: dict = Depends(get_current_user)):  # CAMBIO: agregar current_user
+async def get_scout_reports(current_user: dict = Depends(get_current_user)):
     try:
         if supabase_service:
-            reports = supabase_service.get_all_reports()
+            # NUEVO: Filtrar por club
+            club_id = current_user.get('club_id')
             
-            # NUEVO: logs para debug
-            if reports and len(reports) > 0:
-                logger.info(f"📊 Primer reporte tiene estas keys: {reports[0].keys()}")
-                logger.info(f"📊 created_by_name: {reports[0].get('created_by_name', 'NO EXISTE')}")
+            if club_id:
+                # Solo reportes del club del usuario
+                response = supabase.table('scout_reports')\
+                    .select("*")\
+                    .eq('club_id', club_id)\
+                    .order('created_at', desc=True)\
+                    .execute()
+                reports = response.data or []
+                logger.info(f"📊 Obtenidos {len(reports)} reportes del club")
+            else:
+                # Si no tiene club, ver todos (para compatibilidad)
+                reports = supabase_service.get_all_reports()
+                logger.info(f"📊 Obtenidos {len(reports)} reportes (sin filtro de club)")
             
-            logger.info(f"📊 Obtenidos {len(reports)} reportes de Supabase")
             return [ScoutReportResponse(**report) for report in reports]
         
         logger.warning("⚠️ Usando reportes de memoria")
         return [ScoutReportResponse(**report) for report in scout_reports]
     except Exception as e:
         logger.error(f"Error getting reports: {e}")
-        return [ScoutReportResponse(**report) for report in scout_reports]
+        return []
 
 @app.get("/api/scout-reports/player/{player_wyscout_id}", response_model=List[ScoutReportResponse])
 async def get_player_reports(player_wyscout_id: int):
