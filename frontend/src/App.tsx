@@ -38,7 +38,13 @@ const MainApp: React.FC = () => {
       secondaryColor: '#ffd700',
       logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Escudo_del_Club_Atl%C3%A9tico_Boca_Juniors.svg/1696px-Escudo_del_Club_Atl%C3%A9tico_Boca_Juniors.svg.png',
       name: 'Boca Juniors'
-    }
+    },
+      'Santa Fe Fútbol Club': {  
+    primaryColor: '#003f7f',
+    secondaryColor: '#ffd700', 
+    logo: 'https://santafefc.do/wp-content/uploads/2021/08/logo_sf_footer_300x300-16.png',
+    name: 'Santa Fe FC'
+  }
   };
   
   const currentClub = clubConfig[userClub as keyof typeof clubConfig] || clubConfig['Club Atlético Banfield'];

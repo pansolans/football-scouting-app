@@ -22,6 +22,18 @@ roles = {
 }
 role = roles.get(role_option, "viewer")
 
+print("\nClub del usuario:")
+print("1. Club Atlético Banfield")
+print("2. Boca Juniors")
+print("3. Santa Fe Fútbol Club")  # AGREGAR ESTA LÍNEA
+club_option = input("\nElige club (1-3): ")  # CAMBIAR A 1-3
+clubs = {
+    "1": "Club Atlético Banfield",
+    "2": "Boca Juniors",
+    "3": "Santa Fe Fútbol Club"  # AGREGAR ESTA LÍNEA
+}
+club = clubs.get(club_option, "Club Atlético Banfield")
+
 department = input("Departamento/Área: ")
 
 # Generar hash
@@ -40,14 +52,16 @@ sql = f"""INSERT INTO scouts (
     role, 
     organization,
     department,
+    club_id,
     is_active
 ) VALUES (
     '{email}',
     '{hashed.decode('utf-8')}',
     '{name}',
     '{role}',
-    'Club Atlético Banfield',
+    '{club}',
     '{department}',
+    (SELECT id FROM clubs WHERE name = '{club}'),
     true
 );"""
 
@@ -56,4 +70,5 @@ print("\n" + "="*50)
 print(f"Usuario: {email}")
 print(f"Contraseña: {password}")
 print(f"Rol: {role}")
+print(f"Club: {club}")
 print("="*50)
