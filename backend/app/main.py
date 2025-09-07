@@ -1173,6 +1173,84 @@ async def get_player_recent_matches(player_id: int, limit: int = 50):
                 "player_team": "home"
             }
         ]
+    
+# ========== ENDPOINTS PARA JUGADORES MANUALES ==========
+
+from typing import Optional, Dict, Any
+from datetime import datetime
+import uuid
+
+class ManualPlayerCreate(BaseModel):
+    firstName: str
+    lastName: str
+    birthDate: str
+    birthArea: str
+    passportArea: Optional[str] = None
+    height: Optional[int] = None
+    weight: Optional[int] = None
+    foot: Optional[str] = "right"
+    position: str
+    currentTeamName: Optional[str] = None
+    currentTeamArea: Optional[str] = None
+    contractExpiration: Optional[str] = None
+    marketValue: Optional[float] = None
+    agent: Optional[str] = None
+    imageUrl: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.post("/api/players/manual")
+async def create_manual_player(player_data: ManualPlayerCreate):
+    """Crear un jugador manualmente"""
+    try:
+        # Generar ID único
+        manual_player_id = str(uuid.uuid4())
+        
+        # Calcular edad
+        birth_date = datetime.strptime(player_data.birthDate, "%Y-%m-%d")
+        age = (datetime.now() - birth_date).days // 365
+        
+        # Preparar datos
+        player_insert = {
+            "manual_id": manual_player_id,
+            "wyscout_id": None,
+            "first_name": player_data.firstName,
+            "last_name": player_data.lastName,
+            "name": f"{player_data.firstName} {player_data.lastName}",
+            "birth_date": player_data.birthDate,
+            "birth_area": player_data.birthArea,
+            "passport_area": player_data.passportArea or player_data.birthArea,
+            "age": age,
+            "height": player_data.height,
+            "weight": player_data.weight,
+            "foot": player_data.foot,
+            "position": player_data.position,
+            "current_team_name": player_data.currentTeamName,
+            "current_team_area": player_data.currentTeamArea,
+            "contract_expiration": player_data.contractExpiration,
+            "market_value": player_data.marketValue,
+            "agent": player_data.agent,
+            "image_url": player_data.imageUrl or "/default-player.png",
+            "notes": player_data.notes,
+            "source": "manual",
+            "manually_created": True,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        # Insertar en Supabase
+        result = supabase.table("players").insert(player_insert).execute()
+        
+        if result.data:
+            return {
+                "success": True,
+                "message": "Jugador creado exitosamente",
+                "player_id": result.data[0]["id"]
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Error al crear jugador")
+            
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
    import uvicorn
