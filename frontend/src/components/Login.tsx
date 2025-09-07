@@ -44,7 +44,7 @@ const Login: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚽</div>
           <h2 style={{ color: '#333', marginBottom: '10px' }}>Sistema de Scouting Profesional</h2>
-          <p style={{ color: '#666' }}>Plataforma Multi-Club</p>
+          <p style={{ color: '#666' }}>Plataforma Oficial</p>
         </div>
 
         {error && (
