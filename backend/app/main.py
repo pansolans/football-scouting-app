@@ -714,7 +714,7 @@ async def get_scout_reports(current_user: dict = Depends(get_current_user)):
                 response = supabase.table('scout_reports')\
                     .select("*")\
                     .eq('club_id', club_id)\
-                    .order('created_at', desc=True)\
+                    .order('created_at')\
                     .execute()
                 reports = response.data or []
                 logger.info(f"📊 Obtenidos {len(reports)} reportes del club")
@@ -1313,7 +1313,7 @@ async def get_manual_players_filters(current_user: dict = Depends(get_current_us
         print(f"Error getting filter options: {str(e)}")
         return {"teams": [], "countries": [], "positions": []}
     
-    
+
 if __name__ == "__main__":
    import uvicorn
    uvicorn.run(app, host="0.0.0.0", port=8000)
