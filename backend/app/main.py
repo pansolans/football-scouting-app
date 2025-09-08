@@ -1251,6 +1251,29 @@ async def create_manual_player(player_data: ManualPlayerCreate):
     except Exception as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/players/manual")
+async def get_manual_players(current_user: dict = Depends(get_current_user)):
+    """Obtener jugadores creados manualmente"""
+    try:
+        # Obtener el club_id del usuario
+        club_id = current_user.get('club_id')
+        
+        # Query base
+        query = supabase.table("players").select("*").eq('manually_created', True)
+        
+        # Si el usuario tiene club_id, filtrar por ese club
+        if club_id:
+            query = query.eq('organization_id', club_id)
+        
+        # Ejecutar query
+        result = query.execute()
+        
+        return result.data or []
+        
+    except Exception as e:
+        print(f"Error getting manual players: {str(e)}")
+        return []
 
 if __name__ == "__main__":
    import uvicorn
