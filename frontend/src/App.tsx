@@ -3,6 +3,7 @@ import { playerService, healthService, scoutingService, Player, ScoutReport, Sco
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
+import PlayerForm from './components/PlayerForm';
 
 
 // Componente para proteger rutas
@@ -48,7 +49,7 @@ const MainApp: React.FC = () => {
   };
   
   const currentClub = clubConfig[userClub as keyof typeof clubConfig] || clubConfig['Club Atlético Banfield'];
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations' | 'add-player'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -928,7 +929,8 @@ return (
               { id: 'quick-search', label: '🔍 Búsqueda Rápida', icon: '🔍' },
               { id: 'browse', label: '🌍 Explorar por Liga', icon: '🌍' },
               { id: 'reports', label: '📝 Mis Reportes', icon: '📝' },
-              { id: 'recommendations', label: '🎯 Recomendaciones', icon: '🎯' }
+              { id: 'recommendations', label: '🎯 Recomendaciones', icon: '🎯' },
+              { id: 'add-player', label: '➕ Agregar Jugador', icon: '➕' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -3257,6 +3259,21 @@ return (
   </div>
 )}
 
+          {/* Add Player Tab */}
+          {activeTab === 'add-player' && (
+  <div style={{ 
+    background: 'white',
+    borderRadius: '16px',
+    padding: '2rem',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
+  }}>
+    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
+      ➕ Agregar Nuevo Jugador
+    </h2>
+    <PlayerForm />
+  </div>
+)}
+          
     </div>
   );
 };
