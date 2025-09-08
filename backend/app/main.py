@@ -1275,6 +1275,45 @@ async def get_manual_players(current_user: dict = Depends(get_current_user)):
         print(f"Error getting manual players: {str(e)}")
         return []
 
+
+@app.get("/api/players/manual/filters")
+async def get_manual_players_filters(current_user: dict = Depends(get_current_user)):
+    """Obtener opciones únicas para filtros"""
+    try:
+        club_id = current_user.get('club_id')
+        
+        # Query base
+        query = supabase.table("players").select("current_team_name, passport_area, position").eq('manually_created', True)
+        
+        if club_id:
+            query = query.eq('organization_id', club_id)
+        
+        result = query.execute()
+        
+        # Extraer valores únicos
+        teams = set()
+        countries = set()
+        positions = set()
+        
+        for player in result.data or []:
+            if player.get('current_team_name'):
+                teams.add(player['current_team_name'])
+            if player.get('passport_area'):
+                countries.add(player['passport_area'])
+            if player.get('position'):
+                positions.add(player['position'])
+        
+        return {
+            "teams": sorted(list(teams)),
+            "countries": sorted(list(countries)),
+            "positions": sorted(list(positions))
+        }
+        
+    except Exception as e:
+        print(f"Error getting filter options: {str(e)}")
+        return {"teams": [], "countries": [], "positions": []}
+    
+    
 if __name__ == "__main__":
    import uvicorn
    uvicorn.run(app, host="0.0.0.0", port=8000)

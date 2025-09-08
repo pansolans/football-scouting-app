@@ -91,8 +91,14 @@ const MainApp: React.FC = () => {
     maxAge: '',
     position: ''
   });
-  const [loadingManualPlayers, setLoadingManualPlayers] = useState(false);
+const [loadingManualPlayers, setLoadingManualPlayers] = useState(false);
+const [filterOptions, setFilterOptions] = useState({
+  teams: [] as string[],
+  countries: [] as string[],
+  positions: [] as string[]
+});
   
+
   
 const [reportForm, setReportForm] = useState<ScoutReportCreate>({
   player_id: '',
@@ -623,6 +629,26 @@ const loadManualPlayers = async () => {
   }
 };
 
+// Cargar opciones de filtros
+const loadFilterOptions = async () => {
+  try {
+    const response = await fetch(`${API_URL}/api/players/manual/filters`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setFilterOptions(data);
+    }
+  } catch (error) {
+    console.error('Error loading filter options:', error);
+  }
+};
+
 // Filtrar jugadores manuales
 const filterManualPlayers = () => {
   let filtered = [...manualPlayers];
@@ -666,6 +692,7 @@ const filterManualPlayers = () => {
 useEffect(() => {
   if (activeTab === 'manual-players') {
     loadManualPlayers();
+    loadFilterOptions(); // Agregar esta línea
   }
 }, [activeTab]);
 
@@ -3419,69 +3446,77 @@ return (
           />
         </div>
         
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-            🏟️ Equipo
-          </label>
-          <input
-            type="text"
-            placeholder="Filtrar por equipo..."
-            value={manualPlayerFilters.team}
-            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, team: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '0.875rem'
-            }}
-          />
-        </div>
-        
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-            🌍 Nacionalidad
-          </label>
-          <input
-            type="text"
-            placeholder="Filtrar por país..."
-            value={manualPlayerFilters.nationality}
-            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, nationality: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '0.875rem'
-            }}
-          />
-        </div>
-        
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-            ⚽ Posición
-          </label>
-          <select
-            value={manualPlayerFilters.position}
-            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, position: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '0.875rem',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="">Todas las posiciones</option>
-            <option value="Arquero">Arquero</option>
-            <option value="Defensor">Defensor</option>  
-            <option value="Lateral">Lateral</option>
-            <option value="Mediocampista">Mediocampista</option>
-            <option value="Extremo">Extremo</option>
-            <option value="Delantero">Delantero</option>
-          </select>
-        </div>
+{/* Reemplaza el input de equipo por un select */}
+<div>
+  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+    🏟️ Equipo
+  </label>
+  <select
+    value={manualPlayerFilters.team}
+    onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, team: e.target.value})}
+    style={{
+      width: '100%',
+      padding: '0.75rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '0.875rem',
+      cursor: 'pointer'
+    }}
+  >
+    <option value="">Todos los equipos</option>
+    {filterOptions.teams.map(team => (
+      <option key={team} value={team}>{team}</option>
+    ))}
+  </select>
+</div>
+
+{/* Reemplaza el input de nacionalidad por un select */}
+<div>
+  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+    🌍 Nacionalidad
+  </label>
+  <select
+    value={manualPlayerFilters.nationality}
+    onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, nationality: e.target.value})}
+    style={{
+      width: '100%',
+      padding: '0.75rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '0.875rem',
+      cursor: 'pointer'
+    }}
+  >
+    <option value="">Todos los países</option>
+    {filterOptions.countries.map(country => (
+      <option key={country} value={country}>{country}</option>
+    ))}
+  </select>
+</div>
+
+{/* El select de posición ya existente, actualízalo para usar las opciones dinámicas */}
+<div>
+  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+    ⚽ Posición
+  </label>
+  <select
+    value={manualPlayerFilters.position}
+    onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, position: e.target.value})}
+    style={{
+      width: '100%',
+      padding: '0.75rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '0.875rem',
+      cursor: 'pointer'
+    }}
+  >
+    <option value="">Todas las posiciones</option>
+    {filterOptions.positions.map(position => (
+      <option key={position} value={position}>{position}</option>
+    ))}
+  </select>
+</div>
         
         <div>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
@@ -3722,6 +3757,7 @@ function App() {
       </Router>
     </AuthProvider>
   );
+  
 }
 
 export default App;
