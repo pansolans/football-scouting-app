@@ -60,11 +60,9 @@ const PlayerForm: React.FC = () => {
   };
 
   return (
-    <div style={{
-      maxHeight: 'calc(100vh - 200px)',
-      overflowY: 'auto',
-      padding: '1rem'
-    }}>
+<div style={{
+  padding: '1rem'
+}}>
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
         {/* Mensaje de estado */}
         {message && (
