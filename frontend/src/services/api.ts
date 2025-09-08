@@ -204,6 +204,11 @@ export const playerService = {
     const response = await api.get(`/api/players/${playerId}/matches`);
     return response.data;
   },
+  
+  createManualPlayer: async (playerData: any): Promise<any> => {
+    const response = await api.post('/api/players/manual', playerData);
+    return response.data;
+  },
 };
 
 export const scoutingService = {
@@ -254,4 +259,5 @@ export const healthService = {
     const response = await api.get('/api/test-wyscout');
     return response.data;
   },
+  
 };
