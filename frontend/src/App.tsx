@@ -3390,13 +3390,9 @@ return (
 )}
 
           {/* Add Player Tab */}
-          {activeTab === 'add-player' && (
-  <div style={{ 
-    background: 'white',
-    borderRadius: '16px',
-    padding: '2rem',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
-  }}>
+{/* DESPUÉS - sin espacio en blanco */}
+{activeTab === 'add-player' && (
+  <div>
     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
       ➕ Agregar Nuevo Jugador
     </h2>
@@ -3404,14 +3400,9 @@ return (
   </div>
 )}
 
-{/* Manual Players Tab */}
+{/* DESPUÉS */}
 {activeTab === 'manual-players' && (
-  <div style={{ 
-    background: 'white',
-    borderRadius: '16px',
-    padding: '2rem',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
-  }}>
+  <div>
     <div style={{ marginBottom: '2rem' }}>
       <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1rem' }}>
         👥 Jugadores Creados Manualmente
