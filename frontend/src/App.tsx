@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PlayerForm from './components/PlayerForm';
+const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
 
 
 // Componente para proteger rutas
@@ -49,7 +50,7 @@ const MainApp: React.FC = () => {
   };
   
   const currentClub = clubConfig[userClub as keyof typeof clubConfig] || clubConfig['Club Atlético Banfield'];
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations' | 'add-player'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations' | 'add-player' | 'manual-players'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -70,6 +71,7 @@ const MainApp: React.FC = () => {
   const [filterPlayerName, setFilterPlayerName] = useState('');
   const [filterTeam, setFilterTeam] = useState('');
   
+  
   // Browse filters
   const [areas, setAreas] = useState<any[]>([]);
   const [selectedArea, setSelectedArea] = useState<number | null>(null);
@@ -79,6 +81,18 @@ const MainApp: React.FC = () => {
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [teamPlayers, setTeamPlayers] = useState<any[]>([]);
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [manualPlayers, setManualPlayers] = useState<any[]>([]);
+  const [filteredManualPlayers, setFilteredManualPlayers] = useState<any[]>([]);
+  const [manualPlayerFilters, setManualPlayerFilters] = useState({
+    name: '',
+    team: '',
+    nationality: '',
+    minAge: '',
+    maxAge: '',
+    position: ''
+  });
+  const [loadingManualPlayers, setLoadingManualPlayers] = useState(false);
+  
   
 const [reportForm, setReportForm] = useState<ScoutReportCreate>({
   player_id: '',
@@ -573,6 +587,80 @@ const loadPlayerMatches = async (playerId: number) => {
     setLoadingMatches(false);
   }
 };
+
+// Cargar jugadores manuales
+const loadManualPlayers = async () => {
+  setLoadingManualPlayers(true);
+  try {
+    const response = await fetch(`${API_URL}/api/players/manual`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    const data = await response.json();
+    setManualPlayers(data);
+    setFilteredManualPlayers(data);
+  } catch (error) {
+    console.error('Error loading manual players:', error);
+    setManualPlayers([]);
+    setFilteredManualPlayers([]);
+  } finally {
+    setLoadingManualPlayers(false);
+  }
+};
+
+// Filtrar jugadores manuales
+const filterManualPlayers = () => {
+  let filtered = [...manualPlayers];
+  
+  if (manualPlayerFilters.name) {
+    filtered = filtered.filter(p => 
+      p.name.toLowerCase().includes(manualPlayerFilters.name.toLowerCase())
+    );
+  }
+  
+  if (manualPlayerFilters.team) {
+    filtered = filtered.filter(p => 
+      p.current_team_name?.toLowerCase().includes(manualPlayerFilters.team.toLowerCase())
+    );
+  }
+  
+  if (manualPlayerFilters.nationality) {
+    filtered = filtered.filter(p => 
+      (p.passport_area || p.birth_area || '').toLowerCase().includes(manualPlayerFilters.nationality.toLowerCase())
+    );
+  }
+  
+  if (manualPlayerFilters.position) {
+    filtered = filtered.filter(p => 
+      p.position?.toLowerCase().includes(manualPlayerFilters.position.toLowerCase())
+    );
+  }
+  
+  if (manualPlayerFilters.minAge) {
+    filtered = filtered.filter(p => p.age >= parseInt(manualPlayerFilters.minAge));
+  }
+  
+  if (manualPlayerFilters.maxAge) {
+    filtered = filtered.filter(p => p.age <= parseInt(manualPlayerFilters.maxAge));
+  }
+  
+  setFilteredManualPlayers(filtered);
+};
+
+// useEffect para cargar jugadores manuales cuando se selecciona el tab
+useEffect(() => {
+  if (activeTab === 'manual-players') {
+    loadManualPlayers();
+  }
+}, [activeTab]);
+
+// useEffect para aplicar filtros
+useEffect(() => {
+  filterManualPlayers();
+}, [manualPlayerFilters, manualPlayers]);
+
+
 // Helper function for position badge color
   // Helper function for position badge color
   const getPositionColor = (position: string) => {
@@ -930,7 +1018,8 @@ return (
               { id: 'browse', label: '🌍 Explorar por Liga', icon: '🌍' },
               { id: 'reports', label: '📝 Mis Reportes', icon: '📝' },
               { id: 'recommendations', label: '🎯 Recomendaciones', icon: '🎯' },
-              { id: 'add-player', label: '➕ Agregar Jugador', icon: '➕' }
+              { id: 'add-player', label: '➕ Agregar Jugador', icon: '➕' },
+              { id: 'manual-players', label: '👥 Jugadores Creados', icon: '👥' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -3273,10 +3362,96 @@ return (
     <PlayerForm />
   </div>
 )}
-          
+
+{/* Manual Players Tab */}
+{activeTab === 'manual-players' && (
+  <div style={{ 
+    background: 'white',
+    borderRadius: '16px',
+    padding: '2rem',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
+  }}>
+    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1.5rem' }}>
+      👥 Jugadores Creados Manualmente
+    </h2>
+    
+    <button
+      onClick={() => loadManualPlayers()}
+      style={{
+        padding: '0.75rem 1.5rem',
+        background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        fontSize: '0.875rem',
+        fontWeight: '600',
+        cursor: 'pointer',
+        marginBottom: '2rem'
+      }}
+    >
+      🔄 Cargar Jugadores
+    </button>
+    
+    {loadingManualPlayers ? (
+      <div style={{ textAlign: 'center', padding: '3rem' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚽</div>
+        <p style={{ color: '#6b7280' }}>Cargando jugadores...</p>
+      </div>
+    ) : manualPlayers.length === 0 ? (
+      <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+        <p>No hay jugadores creados todavía.</p>
+        <p>Usa el botón "➕ Agregar Jugador" para crear uno.</p>
+      </div>
+    ) : (
+      <div style={{ display: 'grid', gap: '1rem' }}>
+        {manualPlayers.map((player: any) => (
+          <div key={player.id || player.manual_id} style={{ 
+            padding: '1rem', 
+            border: '1px solid #e5e7eb', 
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <h3 style={{ margin: 0 }}>{player.name}</h3>
+              <p style={{ margin: '0.5rem 0', color: '#6b7280' }}>
+                {player.position} • {player.age} años • {player.current_team_name}
+              </p>
+            </div>
+            <button
+              onClick={() => openReportForm({
+                id: player.id || player.manual_id,
+                name: player.name,
+                position: player.position || '',
+                team: player.current_team_name || '',
+                wyscout_id: undefined
+              })}
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              📝 Crear Reporte
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+
     </div>
   );
 };
+
+
 
 // Nueva función App que maneja las rutas 
 function App() {
