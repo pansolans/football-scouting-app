@@ -1087,7 +1087,7 @@ return (
 
       {/* Main Content */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
-        <div style={{ minHeight: 'calc(100vh - 200px)' }}>
+        <div>
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div style={{ display: 'grid', gap: '2rem' }}>
