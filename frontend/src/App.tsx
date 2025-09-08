@@ -593,13 +593,27 @@ const loadManualPlayers = async () => {
   setLoadingManualPlayers(true);
   try {
     const response = await fetch(`${API_URL}/api/players/manual`, {
+      method: 'GET',  // Asegúrate de que sea GET
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
       }
     });
+    
+    if (!response.ok) {
+      console.error('Error response:', response.status);
+      setManualPlayers([]);
+      setFilteredManualPlayers([]);
+      return;
+    }
+    
     const data = await response.json();
-    setManualPlayers(data);
-    setFilteredManualPlayers(data);
+    console.log('Data received:', data); // Para debug
+    
+    // Asegurarse de que data sea un array
+    const playersArray = Array.isArray(data) ? data : [];
+    setManualPlayers(playersArray);
+    setFilteredManualPlayers(playersArray);
   } catch (error) {
     console.error('Error loading manual players:', error);
     setManualPlayers([]);
