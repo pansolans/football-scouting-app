@@ -3385,75 +3385,314 @@ return (
     padding: '2rem',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
   }}>
-    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1.5rem' }}>
-      👥 Jugadores Creados Manualmente
-    </h2>
+    <div style={{ marginBottom: '2rem' }}>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1rem' }}>
+        👥 Jugadores Creados Manualmente
+      </h2>
+      
+      {/* Filtros */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '1rem',
+        padding: '1.5rem',
+        background: '#f9fafb',
+        borderRadius: '12px',
+        marginBottom: '1.5rem'
+      }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+            🔍 Nombre
+          </label>
+          <input
+            type="text"
+            placeholder="Buscar por nombre..."
+            value={manualPlayerFilters.name}
+            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, name: e.target.value})}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
+        </div>
+        
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+            🏟️ Equipo
+          </label>
+          <input
+            type="text"
+            placeholder="Filtrar por equipo..."
+            value={manualPlayerFilters.team}
+            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, team: e.target.value})}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
+        </div>
+        
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+            🌍 Nacionalidad
+          </label>
+          <input
+            type="text"
+            placeholder="Filtrar por país..."
+            value={manualPlayerFilters.nationality}
+            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, nationality: e.target.value})}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
+        </div>
+        
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+            ⚽ Posición
+          </label>
+          <select
+            value={manualPlayerFilters.position}
+            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, position: e.target.value})}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">Todas las posiciones</option>
+            <option value="Arquero">Arquero</option>
+            <option value="Defensor">Defensor</option>  
+            <option value="Lateral">Lateral</option>
+            <option value="Mediocampista">Mediocampista</option>
+            <option value="Extremo">Extremo</option>
+            <option value="Delantero">Delantero</option>
+          </select>
+        </div>
+        
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+            📅 Edad Mínima
+          </label>
+          <input
+            type="number"
+            placeholder="Desde..."
+            value={manualPlayerFilters.minAge}
+            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, minAge: e.target.value})}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
+        </div>
+        
+        <div>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+            📅 Edad Máxima
+          </label>
+          <input
+            type="number"
+            placeholder="Hasta..."
+            value={manualPlayerFilters.maxAge}
+            onChange={(e) => setManualPlayerFilters({...manualPlayerFilters, maxAge: e.target.value})}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
+          <button
+            onClick={() => {
+              setManualPlayerFilters({
+                name: '',
+                team: '',
+                nationality: '',
+                minAge: '',
+                maxAge: '',
+                position: ''
+              });
+            }}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            🔄 Limpiar
+          </button>
+          
+          <button
+            onClick={loadManualPlayers}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            🔄 Recargar
+          </button>
+        </div>
+      </div>
+      
+      {/* Contador de resultados */}
+      <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+        Mostrando {filteredManualPlayers.length} de {manualPlayers.length} jugadores
+      </div>
+    </div>
     
-    <button
-      onClick={() => loadManualPlayers()}
-      style={{
-        padding: '0.75rem 1.5rem',
-        background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '0.875rem',
-        fontWeight: '600',
-        cursor: 'pointer',
-        marginBottom: '2rem'
-      }}
-    >
-      🔄 Cargar Jugadores
-    </button>
-    
+    {/* Lista de jugadores */}
     {loadingManualPlayers ? (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚽</div>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'spin 1s linear infinite' }}>⚽</div>
         <p style={{ color: '#6b7280' }}>Cargando jugadores...</p>
       </div>
-    ) : manualPlayers.length === 0 ? (
+    ) : filteredManualPlayers.length === 0 ? (
       <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
-        <p>No hay jugadores creados todavía.</p>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
+        <p>
+          {manualPlayers.length === 0 
+            ? "No hay jugadores creados manualmente todavía"
+            : "No se encontraron jugadores con estos filtros"}
+        </p>
         <p>Usa el botón "➕ Agregar Jugador" para crear uno.</p>
       </div>
     ) : (
       <div style={{ display: 'grid', gap: '1rem' }}>
-        {manualPlayers.map((player: any) => (
-          <div key={player.id || player.manual_id} style={{ 
-            padding: '1rem', 
-            border: '1px solid #e5e7eb', 
-            borderRadius: '8px',
+        {filteredManualPlayers.map((player) => (
+          <div key={player.id || player.manual_id} style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '2px solid #e5e7eb',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            transition: 'all 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
           }}>
-            <div>
-              <h3 style={{ margin: 0 }}>{player.name}</h3>
-              <p style={{ margin: '0.5rem 0', color: '#6b7280' }}>
-                {player.position} • {player.age} años • {player.current_team_name}
-              </p>
-            </div>
-            <button
-              onClick={() => openReportForm({
-                id: player.id || player.manual_id,
-                name: player.name,
-                position: player.position || '',
-                team: player.current_team_name || '',
-                wyscout_id: undefined
-              })}
-              style={{
-                padding: '0.5rem 1rem',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+              {/* Avatar */}
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              📝 Crear Reporte
-            </button>
+                fontWeight: 'bold',
+                fontSize: '1.25rem'
+              }}>
+                {player.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
+              
+              {/* Info del jugador */}
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+                  {player.name}
+                </h3>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                  {player.position && (
+                    <span style={{
+                      fontSize: '0.875rem',
+                      padding: '0.25rem 0.75rem',
+                      background: '#3b82f620',
+                      color: '#3b82f6',
+                      borderRadius: '12px',
+                      fontWeight: '500'
+                    }}>
+                      ⚽ {player.position}
+                    </span>
+                  )}
+                  {player.age && (
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      📅 {player.age} años
+                    </span>
+                  )}
+                  {(player.passport_area || player.birth_area) && (
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      🌍 {player.passport_area || player.birth_area}
+                    </span>
+                  )}
+                </div>
+                {player.current_team_name && (
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    🏟️ {player.current_team_name}
+                    {player.current_team_area && ` (${player.current_team_area})`}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {/* Botones de acción */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openReportForm({
+                    id: player.manual_id || player.id,
+                    name: player.name,
+                    position: player.position || '',
+                    team: player.current_team_name || '',
+                    wyscout_id: undefined
+                  });
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                📝 Crear Reporte
+              </button>
+            </div>
           </div>
         ))}
       </div>
