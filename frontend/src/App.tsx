@@ -145,7 +145,8 @@ const [reportForm, setReportForm] = useState<ScoutReportCreate>({
   competicion: '',
   rival: '',
   resultado: '',
-  minutos_observados: 90
+  minutos_observados: 90,
+  video_url: ''
 });
 
 // Agregar estado para la sección activa del formulario
@@ -501,7 +502,8 @@ const handleSubmitReport = async () => {
      competicion: '',
      rival: '',
      resultado: '',
-     minutos_observados: 90
+     minutos_observados: 90,
+     video_url: ''
    });
    
    setActiveTab('reports');
@@ -547,7 +549,8 @@ const editReport = (report: ScoutReport) => {
     competicion: report.competicion || '',
     rival: report.rival || '',
     resultado: report.resultado || '',
-    minutos_observados: report.minutos_observados || 90
+    minutos_observados: report.minutos_observados || 90,
+    video_url: report.video_url || '' 
   });
   
   setSelectedPlayer({
@@ -1905,6 +1908,21 @@ return (
                    📅 {report.match_context}
                  </p>
                )}
+               {report.video_url && (
+                 <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                   <a 
+                     href={report.video_url} 
+                     target="_blank" 
+                     rel="noopener noreferrer"
+                     style={{ 
+                       color: '#2563eb', 
+                       textDecoration: 'underline'
+                     }}
+                   >
+                     🎥 Ver video
+                   </a>
+                 </p>
+               )}               
              </div>
              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                <button
@@ -2998,7 +3016,7 @@ return (
   <option value="Delantero - De área">Delantero - De área</option>
   <option value="Delantero - Mediapunta">Delantero - Mediapunta</option>
 </optgroup>
-                </select>
+</select>
               </div>
               
               <div>
@@ -3017,6 +3035,28 @@ return (
                     fontSize: '0.875rem'
                   }}
                 />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  🎥 Video
+                </label>
+                <input
+                  type="url"
+                  value={reportForm.video_url || ''}
+                  onChange={(e) => setReportForm({...reportForm, video_url: e.target.value})}
+                  placeholder="https://youtube.com/watch?v=..."
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                  Opcional: Link de YouTube, Vimeo, etc.
+                </p>
               </div>
             </div>
             

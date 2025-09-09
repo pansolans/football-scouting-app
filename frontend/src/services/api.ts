@@ -92,6 +92,7 @@ export interface ScoutReport {
   rival?: string;
   resultado?: string;
   minutos_observados?: number;
+  video_url?: string;
   
   // AGREGAR ESTOS A ScoutReport:
 created_by?: string;
@@ -150,6 +151,7 @@ export interface ScoutReportCreate {
   rival?: string;
   resultado?: string;
   minutos_observados?: number;
+  video_url?: string;
   
 
 

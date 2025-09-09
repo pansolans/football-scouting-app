@@ -108,6 +108,8 @@ class ScoutReportCreate(BaseModel):
     notes: str
     strengths: Optional[str] = None
     weaknesses: Optional[str] = None
+    video_url: Optional[str] = None
+
 
 class ScoutReportResponse(BaseModel):
     id: str
@@ -121,6 +123,7 @@ class ScoutReportResponse(BaseModel):
     strengths: Optional[str]
     weaknesses: Optional[str]
     created_at: str
+    video_url: Optional[str] = None
 
 # Helper functions
 def calculate_age(birth_date: str) -> Optional[int]:
@@ -596,6 +599,7 @@ class ScoutReportCreate(BaseModel):
     rival: Optional[str] = ""
     resultado: Optional[str] = ""
     minutos_observados: Optional[int] = 90
+    video_url: Optional[str] = None
 
 class ScoutReportResponse(BaseModel):
     id: str
@@ -645,6 +649,7 @@ class ScoutReportResponse(BaseModel):
     rival: Optional[str] = None
     resultado: Optional[str] = None
     minutos_observados: Optional[int] = None
+    video_url: Optional[str] = None
     # Campos del autor (AGREGAR ESTAS LÍNEAS)
     created_by: Optional[str] = None
     created_by_name: Optional[str] = None
