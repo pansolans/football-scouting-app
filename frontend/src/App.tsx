@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { playerService, healthService, scoutingService, Player, ScoutReport, ScoutReportCreate, HealthStatus } from './services/api';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import MarketSystem from './components/MarketSystem';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PlayerForm from './components/PlayerForm';
@@ -50,7 +51,7 @@ const MainApp: React.FC = () => {
   };
   
   const currentClub = clubConfig[userClub as keyof typeof clubConfig] || clubConfig['Club Atlético Banfield'];
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations' | 'add-player' | 'manual-players'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations' | 'add-player' | 'manual-players' | 'markets'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -1063,7 +1064,8 @@ return (
               { id: 'reports', label: '📝 Mis Reportes', icon: '📝' },
               { id: 'recommendations', label: '🎯 Recomendaciones', icon: '🎯' },
               { id: 'add-player', label: '➕ Agregar Jugador', icon: '➕' },
-              { id: 'manual-players', label: '👥 Jugadores Creados', icon: '👥' }
+              { id: 'manual-players', label: '👥 Jugadores Creados', icon: '👥' },
+              { id: 'markets', label: '💰 Mercados', icon: '💰' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -3765,6 +3767,9 @@ return (
     )}
   </div>
 )}
+
+{/* Mercados Tab */}
+{activeTab === 'markets' && <MarketSystem />}
 
     </div>
   );
