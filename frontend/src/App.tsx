@@ -3769,7 +3769,7 @@ return (
 )}
 
 {/* Mercados Tab */}
-{activeTab === 'markets' && <MarketSystem />}
+{activeTab === 'markets' && (<MarketSystem />)}
 
     </div>
   );
