@@ -1319,6 +1319,66 @@ async def get_manual_players_filters(current_user: dict = Depends(get_current_us
         return {"teams": [], "countries": [], "positions": []}
     
 
+
+# ========== ENDPOINTS PARA SISTEMA DE MERCADOS ==========
+
+@app.get("/api/markets")
+async def get_markets(current_user: dict = Depends(get_current_user)):
+    """Obtener todos los mercados del club"""
+    try:
+        club_id = current_user.get('club_id')
+        query = supabase.table('markets').select("*").eq('club_id', club_id).order('created_at', desc=True)
+        result = query.execute()
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Error getting markets: {e}")
+        return []
+
+@app.post("/api/markets")
+async def create_market(market_data: dict, current_user: dict = Depends(get_current_user)):
+    """Crear nuevo mercado"""
+    try:
+        market_data['club_id'] = current_user.get('club_id')
+        market_data['created_by'] = current_user['id']
+        result = supabase.table('markets').insert(market_data).execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        logger.error(f"Error creating market: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/markets/{market_id}/players")
+async def get_market_players(market_id: str, current_user: dict = Depends(get_current_user)):
+    """Obtener jugadores de un mercado"""
+    try:
+        result = supabase.table('market_players').select("*").eq('market_id', market_id).execute()
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Error getting market players: {e}")
+        return []
+
+@app.post("/api/markets/{market_id}/players")
+async def add_player_to_market(market_id: str, player_data: dict, current_user: dict = Depends(get_current_user)):
+    """Agregar jugador a mercado"""
+    try:
+        player_data['market_id'] = market_id
+        player_data['added_by'] = current_user['id']
+        result = supabase.table('market_players').insert(player_data).execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        logger.error(f"Error adding player to market: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/api/markets/players/{player_id}")
+async def update_market_player_status(player_id: str, update_data: dict, current_user: dict = Depends(get_current_user)):
+    """Actualizar estado de jugador en mercado"""
+    try:
+        result = supabase.table('market_players').update(update_data).eq('id', player_id).execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        logger.error(f"Error updating market player: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
    import uvicorn
    uvicorn.run(app, host="0.0.0.0", port=8000)
