@@ -2297,6 +2297,34 @@ const openMarketModal = async (player: any) => {
                       </div>
 
                       <button
+                        onClick={() => {
+                          const playerForMarket = {
+                            name: player.player_name,
+                            position: player.position_played || '',
+                            age: player.age || null,
+                            team: player.team || '',
+                            manual_id: player.manual_id || null,
+                            wyscout_id: player.player_wyscout_id || player.player_id || null
+                          };
+                          openMarketModal(playerForMarket);
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          color: 'white',
+                          border: 'none',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap',
+                          marginRight: '0.5rem'
+                        }}
+                      >
+                        💰 A Mercado
+                      </button>
+
+                      <button
                         onClick={() => openPlayerDetail(player.player_name)}
                         style={{
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
