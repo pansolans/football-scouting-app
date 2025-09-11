@@ -54,17 +54,18 @@ const MarketModalManager: React.FC<MarketModalManagerProps> = ({ show, player, o
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
+body: JSON.stringify({
+          player_id: player.wyscout_id || player.manual_id || `temp_${Date.now()}`,
           player_name: player.name,
-          player_position: player.position,
-          player_age: player.age,
-          player_team: player.team,
-          wyscout_id: player.wyscout_id,
-          manual_player_id: player.manual_id,
+          player_type: player.wyscout_id ? 'wyscout' : 'manual',
+          status: 'seguimiento',
           priority: marketForm.priority,
           estimated_price: marketForm.estimated_price ? parseFloat(marketForm.estimated_price) : null,
-          notes: marketForm.notes,
-          status: 'seguimiento'
+          max_price: null,
+          position: player.position || '',
+          age: player.age || null,
+          current_team: player.team || '',
+          notes: marketForm.notes || ''
         })
       });
 
