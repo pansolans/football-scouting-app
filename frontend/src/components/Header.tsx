@@ -83,3 +83,31 @@ const Header: React.FC<HeaderProps> = ({ currentClub, user, healthStatus, onLogo
                    user?.role === 'scout' ? 'Scout' : 
                    user?.role === 'viewer' ? 'Observador' : 'Scout'}
                 </div>
+                </div>
+              
+              <button
+                onClick={onLogout}
+                style={{
+                  padding: '8px 16px',
+                  background: 'rgba(255,255,255,0.1)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+    </>
+  );
+};
+
+export default Header;
