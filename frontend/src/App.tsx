@@ -988,16 +988,18 @@ const openMarketModal = async (player: any) => {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       position: 'relative'
     }}>
-      {/* Franja verde superior estilo Banfield */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '200px',
-        background: `linear-gradient(135deg, ${currentClub.primaryColor} 0%, ${currentClub.secondaryColor} 50%, ${currentClub.primaryColor} 100%)`,
-        zIndex: 0
-      }} />
+{/* Franja verde superior estilo Banfield */}
+{!(activeTab === 'add-player' || activeTab === 'manual-players' || activeTab === 'markets') && (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '200px',
+    background: `linear-gradient(135deg, ${currentClub.primaryColor} 0%, ${currentClub.secondaryColor} 50%, ${currentClub.primaryColor} 100%)`,
+    zIndex: 0
+  }}/>
+)}
       <header style={{
         background: 'transparent',
         padding: '1rem 0',
