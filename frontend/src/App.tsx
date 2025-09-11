@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { playerService, healthService, scoutingService, Player, ScoutReport, ScoutReportCreate, HealthStatus } from './services/api';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-//import MarketSystem from './components/MarketSystem';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PlayerForm from './components/PlayerForm';
 const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
 
 
-// Componente para proteger rutas
+// Componente para proteger rutas 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
   
@@ -146,8 +145,7 @@ const [reportForm, setReportForm] = useState<ScoutReportCreate>({
   competicion: '',
   rival: '',
   resultado: '',
-  minutos_observados: 90,
-  video_url: ''
+  minutos_observados: 90
 });
 
 // Agregar estado para la sección activa del formulario
@@ -503,8 +501,7 @@ const handleSubmitReport = async () => {
      competicion: '',
      rival: '',
      resultado: '',
-     minutos_observados: 90,
-     video_url: ''
+     minutos_observados: 90
    });
    
    setActiveTab('reports');
@@ -550,8 +547,7 @@ const editReport = (report: ScoutReport) => {
     competicion: report.competicion || '',
     rival: report.rival || '',
     resultado: report.resultado || '',
-    minutos_observados: report.minutos_observados || 90,
-    video_url: report.video_url || '' 
+    minutos_observados: report.minutos_observados || 90
   });
   
   setSelectedPlayer({
@@ -1064,8 +1060,7 @@ return (
               { id: 'reports', label: '📝 Mis Reportes', icon: '📝' },
               { id: 'recommendations', label: '🎯 Recomendaciones', icon: '🎯' },
               { id: 'add-player', label: '➕ Agregar Jugador', icon: '➕' },
-              { id: 'manual-players', label: '👥 Jugadores Creados', icon: '👥' },
-             // { id: 'markets', label: '💰 Mercados', icon: '💰' }
+              { id: 'manual-players', label: '👥 Jugadores Creados', icon: '👥' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1092,7 +1087,7 @@ return (
 
       {/* Main Content */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
-        <div>
+        <div style={{ minHeight: 'calc(100vh - 200px)' }}>
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div style={{ display: 'grid', gap: '2rem' }}>
@@ -1910,21 +1905,6 @@ return (
                    📅 {report.match_context}
                  </p>
                )}
-               {report.video_url && (
-                 <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                   <a 
-                     href={report.video_url} 
-                     target="_blank" 
-                     rel="noopener noreferrer"
-                     style={{ 
-                       color: '#2563eb', 
-                       textDecoration: 'underline'
-                     }}
-                   >
-                     🎥 Ver video
-                   </a>
-                 </p>
-               )}               
              </div>
              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                <button
@@ -3018,7 +2998,7 @@ return (
   <option value="Delantero - De área">Delantero - De área</option>
   <option value="Delantero - Mediapunta">Delantero - Mediapunta</option>
 </optgroup>
-</select>
+                </select>
               </div>
               
               <div>
@@ -3037,28 +3017,6 @@ return (
                     fontSize: '0.875rem'
                   }}
                 />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-                  🎥 Video
-                </label>
-                <input
-                  type="url"
-                  value={reportForm.video_url || ''}
-                  onChange={(e) => setReportForm({...reportForm, video_url: e.target.value})}
-                  placeholder="https://youtube.com/watch?v=..."
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem'
-                  }}
-                />
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                  Opcional: Link de YouTube, Vimeo, etc.
-                </p>
               </div>
             </div>
             
@@ -3768,14 +3726,13 @@ return (
   </div>
 )}
 
-
     </div>
   );
 };
 
 
 
-// Nueva función App que maneja las rutas  
+// Nueva función App que maneja las rutas 
 function App() {
   return (
     <AuthProvider>
