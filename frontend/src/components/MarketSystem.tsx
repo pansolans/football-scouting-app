@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { scoutingService } from '../services/api';
 import MarketEditor from './MarketEditor';
 import MarketPlayerSelector from './MarketPlayerSelector';
+import MarketPitchView from './MarketPitchView';
 
 const API_URL = process.env.NODE_ENV === 'production' 
   ? 'https://football-scouting-backend-vd0x.onrender.com'
@@ -373,80 +374,12 @@ const MarketSystem: React.FC = () => {
         </div>
       </div>
 
-      {marketPlayers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem', background: 'white', borderRadius: '12px' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
-          <p style={{ color: '#6b7280' }}>No hay jugadores en este mercado</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          {marketPlayers.map(player => (
-            <div key={player.id} style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              border: '2px solid #e5e7eb'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-                    {player.player_name}
-                  </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {player.position} • {player.age} años • {player.current_team}
-                  </p>
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem' }}>
-                      💰 Est: €{player.estimated_price?.toLocaleString() || '0'}
-                    </span>
-                    <span style={{ fontSize: '0.875rem' }}>
-                      📈 Max: €{player.max_price?.toLocaleString() || '0'}
-                    </span>
-                  </div>
-                  {player.notes && (
-                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                      📝 {player.notes}
-                    </p>
-                  )}
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    background: `${getPriorityColor(player.priority)}20`,
-                    color: getPriorityColor(player.priority),
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600'
-                  }}>
-                    Prioridad {player.priority}
-                  </span>
-                  
-                  <select
-                    value={player.status}
-                    onChange={(e) => updatePlayerStatus(player.id, e.target.value)}
-                    style={{
-                      padding: '0.5rem',
-                      borderRadius: '8px',
-                      border: '2px solid',
-                      borderColor: getStatusColor(player.status),
-                      color: getStatusColor(player.status),
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      background: 'white'
-                    }}
-                  >
-                    <option value="seguimiento">📋 Seguimiento</option>
-                    <option value="negociando">💬 Negociando</option>
-                    <option value="descartado">❌ Descartado</option>
-                    <option value="fichado">✅ Fichado</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <MarketPitchView 
+        marketPlayers={marketPlayers}
+        onUpdateFormation={(formation) => {
+          console.log('Formación actualizada:', formation);
+        }}
+      />
     </div>
   );
 
@@ -593,7 +526,7 @@ const MarketSystem: React.FC = () => {
         </div>
       )}
 
-{/* Modal Agregar Jugador */}
+      {/* Modal Agregar Jugador */}
       {showAddPlayer && selectedMarket && (
         <MarketPlayerSelector
           show={showAddPlayer}
