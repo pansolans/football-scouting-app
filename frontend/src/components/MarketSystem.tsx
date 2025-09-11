@@ -427,15 +427,14 @@ const MarketSystem: React.FC = () => {
   );
 
   return (
-    <div style={{ 
-      background: 'white',
-      borderRadius: '16px',
-      padding: '2rem',
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-      marginTop: '-150px',  // <-- AGREGAR ESTO
-      position: 'relative',  // <-- AGREGAR ESTO
-      zIndex: 1  // <-- AGREGAR ESTO
-    }}>
+<div style={{ 
+  background: 'white',
+  borderRadius: '16px',
+  padding: '2rem',
+  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+  minHeight: 'auto',  // <-- AGREGAR
+  height: 'auto'      // <-- AGREGAR
+}}>
       {activeView === 'list' ? <MarketListView /> : <MarketDetailView />}
 
       {/* Modal Crear Mercado */}
