@@ -3682,15 +3682,14 @@ const openMarketModal = async (player: any) => {
 )}
 
       {/* Add Player Tab */}
-      {/* DESPUÉS - sin espacio en blanco */}
-      {activeTab === 'add-player' && (
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
-            ➕ Agregar Nuevo Jugador
-          </h2>
-          <PlayerForm />
-        </div>
-      )}
+{activeTab === 'add-player' && (
+  <div style={{ marginTop: '-150px', position: 'relative', zIndex: 1 }}>
+    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
+      ➕ Agregar Nuevo Jugador
+    </h2>
+    <PlayerForm />
+  </div>
+)}
 
  {/* DESPUÉS */}
       {activeTab === 'manual-players' && (
