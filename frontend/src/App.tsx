@@ -3681,9 +3681,13 @@ const openMarketModal = async (player: any) => {
   </div>
 )}
 
-      {/* Add Player Tab */}
 {activeTab === 'add-player' && (
-  <div style={{ marginTop: '-150px', position: 'relative', zIndex: 1 }}>
+  <div style={{
+    background: 'white',
+    borderRadius: '16px',
+    padding: '2rem',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
+  }}>
     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
       ➕ Agregar Nuevo Jugador
     </h2>
