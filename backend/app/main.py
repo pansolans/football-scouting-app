@@ -1377,6 +1377,16 @@ async def update_market_player_status(player_id: str, update_data: dict, current
     except Exception as e:
         logger.error(f"Error updating market player: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.patch("/api/markets/{market_id}")
+async def update_market(market_id: str, update_data: dict, current_user: dict = Depends(get_current_user)):
+    """Actualizar mercado """
+    try:
+        result = supabase.table('markets').update(update_data).eq('id', market_id).execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        logger.error(f"Error updating market: {e}")
+        raise HTTPException(status_code=500, detail=str(e))    
 
 
 if __name__ == "__main__":
