@@ -1387,6 +1387,49 @@ async def update_market(market_id: str, update_data: dict, current_user: dict = 
     except Exception as e:
         logger.error(f"Error updating market: {e}")
         raise HTTPException(status_code=500, detail=str(e))    
+    
+
+# ========== ENDPOINT PARA JUGADORES MANUALES ==========
+@app.get("/api/manual-players")
+async def get_manual_players(current_user: dict = Depends(get_current_user)):
+    """Obtener todos los jugadores manuales del club"""
+    try:
+        club_id = current_user.get('club_id')
+        query = supabase.table('manual_players').select("*").eq('club_id', club_id).order('created_at', desc=True)
+        result = query.execute()
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Error getting manual players: {e}")
+        return []
+
+# ========== ENDPOINT PARA BUSCAR EN WYSCOUT ==========
+@app.get("/api/wyscout/search")
+async def search_wyscout_players(query: str, current_user: dict = Depends(get_current_user)):
+    """Buscar jugadores en Wyscout"""
+    try:
+        if not query or len(query) < 2:
+            return {"players": []}
+        
+        # Usar el endpoint existente de Wyscout
+        wyscout_headers = {
+            'Authorization': 'Basic ' + base64.b64encode(f'{WYSCOUT_USERNAME}:{WYSCOUT_PASSWORD}'.encode()).decode()
+        }
+        
+        # Buscar jugadores por nombre
+        response = requests.get(
+            f'https://apirest.wyscout.com/v3/search/players?name={query}',
+            headers=wyscout_headers
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {"players": data.get('players', [])}
+        else:
+            return {"players": []}
+            
+    except Exception as e:
+        logger.error(f"Error searching Wyscout: {e}")
+        return {"players": []}
 
 
 if __name__ == "__main__":
