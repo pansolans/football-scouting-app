@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ currentClub, user, healthStatus, onLogo
         top: 0,
         left: 0,
         right: 0,
-        height: '200px',
+        height: '50px',
         background: `linear-gradient(135deg, ${currentClub.primaryColor} 0%, ${currentClub.secondaryColor} 50%, ${currentClub.primaryColor} 100%)`,
         zIndex: 0
       }}/>
