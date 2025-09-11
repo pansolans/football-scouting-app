@@ -431,7 +431,10 @@ const MarketSystem: React.FC = () => {
       background: 'white',
       borderRadius: '16px',
       padding: '2rem',
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
+      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+      marginTop: '-150px',  // <-- AGREGAR ESTO
+      position: 'relative',  // <-- AGREGAR ESTO
+      zIndex: 1  // <-- AGREGAR ESTO
     }}>
       {activeView === 'list' ? <MarketListView /> : <MarketDetailView />}
 
