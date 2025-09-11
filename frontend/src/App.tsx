@@ -3775,7 +3775,7 @@ return (
 
 
 
-// Nueva función App que maneja las rutas 
+// Nueva función App que maneja las rutas  
 function App() {
   return (
     <AuthProvider>
