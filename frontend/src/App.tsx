@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PlayerForm from './components/PlayerForm';
 import MarketSystem from './components/MarketSystem';
+import MarketModalManager from './components/MarketModalManager';
 const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
 
 
@@ -3846,6 +3847,15 @@ const openMarketModal = async (player: any) => {
       {activeTab === 'markets' && (
         <MarketSystem />
       )}
+
+      <MarketModalManager 
+        show={showMarketModal} 
+        player={selectedMarketPlayer}
+        onClose={() => {
+          setShowMarketModal(false);
+          setSelectedMarketPlayer(null);
+        }}
+      />
 
     </div>
   );
