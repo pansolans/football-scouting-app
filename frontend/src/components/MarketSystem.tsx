@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { scoutingService } from '../services/api';
 import MarketEditor from './MarketEditor';
+import MarketPlayerSelector from './MarketPlayerSelector';
 
 const API_URL = process.env.NODE_ENV === 'production' 
   ? 'https://football-scouting-backend-vd0x.onrender.com'
@@ -592,232 +593,17 @@ const MarketSystem: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Agregar Jugador */}
-      {showAddPlayer && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            width: '90%',
-            maxWidth: '600px',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
-              Agregar Jugador al Mercado
-            </h3>
-            
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                    Nombre del Jugador *
-                  </label>
-                  <input
-                    type="text"
-                    value={playerForm.player_name}
-                    onChange={(e) => setPlayerForm({...playerForm, player_name: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                    Posición
-                  </label>
-                  <input
-                    type="text"
-                    value={playerForm.position}
-                    onChange={(e) => setPlayerForm({...playerForm, position: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                    Edad
-                  </label>
-                  <input
-                    type="number"
-                    value={playerForm.age}
-                    onChange={(e) => setPlayerForm({...playerForm, age: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                  Equipo Actual
-                </label>
-                <input
-                  type="text"
-                  value={playerForm.current_team}
-                  onChange={(e) => setPlayerForm({...playerForm, current_team: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                    Estado
-                  </label>
-                  <select
-                    value={playerForm.status}
-                    onChange={(e) => setPlayerForm({...playerForm, status: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  >
-                    <option value="seguimiento">Seguimiento</option>
-                    <option value="negociando">Negociando</option>
-                    <option value="descartado">Descartado</option>
-                    <option value="fichado">Fichado</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                    Prioridad
-                  </label>
-                  <select
-                    value={playerForm.priority}
-                    onChange={(e) => setPlayerForm({...playerForm, priority: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  >
-                    <option value="alta">Alta</option>
-                    <option value="media">Media</option>
-                    <option value="baja">Baja</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                    Precio Estimado (€)
-                  </label>
-                  <input
-                    type="number"
-                    value={playerForm.estimated_price}
-                    onChange={(e) => setPlayerForm({...playerForm, estimated_price: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                    Precio Máximo (€)
-                  </label>
-                  <input
-                    type="number"
-                    value={playerForm.max_price}
-                    onChange={(e) => setPlayerForm({...playerForm, max_price: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                  Notas
-                </label>
-                <textarea
-                  value={playerForm.notes}
-                  onChange={(e) => setPlayerForm({...playerForm, notes: e.target.value})}
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowAddPlayer(false)}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: '#6b7280',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={addPlayerToMarket}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}
-              >
-                Agregar Jugador
-              </button>
-            </div>
-          </div>
-        </div>
+{/* Modal Agregar Jugador */}
+      {showAddPlayer && selectedMarket && (
+        <MarketPlayerSelector
+          show={showAddPlayer}
+          marketId={selectedMarket.id}
+          onClose={() => setShowAddPlayer(false)}
+          onPlayerAdded={() => {
+            loadMarketPlayers(selectedMarket.id);
+            setShowAddPlayer(false);
+          }}
+        />
       )}
 
       {showEditMarket && marketToEdit && (
