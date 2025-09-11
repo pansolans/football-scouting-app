@@ -99,7 +99,17 @@ const MainApp: React.FC = () => {
     positions: [] as string[]
   });
 
-
+  // Estados para el sistema de mercados - AGREGAR ESTOS
+  const [selectedMarketPlayer, setSelectedMarketPlayer] = useState<any>(null);
+  const [showMarketModal, setShowMarketModal] = useState(false);
+  const [availableMarkets, setAvailableMarkets] = useState<any[]>([]);
+  const [marketForm, setMarketForm] = useState({
+    market_id: '',
+    priority: 'media',
+    estimated_price: '',
+    max_price: '',
+    notes: ''
+  });
 
   const [reportForm, setReportForm] = useState<ScoutReportCreate>({
     player_id: '',
@@ -218,6 +228,30 @@ const MainApp: React.FC = () => {
     setPlayerDetailReports(playerReports);
     setSelectedPlayerForDetail(playerName);
   };
+
+// Función para abrir modal de mercado
+const openMarketModal = async (player: any) => {
+  setSelectedMarketPlayer(player);
+  
+  // Cargar mercados activos
+  try {
+    const response = await fetch(`${API_URL}/api/markets`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const markets = await response.json();
+      setAvailableMarkets(markets.filter((m: any) => m.status === 'active'));
+      setShowMarketModal(true);
+    }
+  } catch (error) {
+    console.error('Error loading markets:', error);
+    alert('Error al cargar mercados');
+  }
+};
 
   // Función para cerrar vista detallada
   const closePlayerDetail = () => {
@@ -1499,7 +1533,25 @@ const MainApp: React.FC = () => {
                                 onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                                 onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                               >
-                                📝 Create Report
+📝 Create Report
+                              </button>
+                              <button
+                                onClick={() => openMarketModal(result)}
+                                style={{
+                                  padding: '0.5rem 1rem',
+                                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  transition: 'transform 0.1s'
+                                }}
+                                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                💰 A Mercado
                               </button>
                             </>
                           )}
@@ -1726,7 +1778,22 @@ const MainApp: React.FC = () => {
                               cursor: 'pointer'
                             }}
                           >
-                            📝 Report
+📝 Report
+                          </button>
+                          <button
+                            onClick={() => openMarketModal(player)}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            💰 Mercado
                           </button>
                         </div>
                       </div>
@@ -3390,6 +3457,230 @@ const MainApp: React.FC = () => {
         </div>
       )}
 
+{/* Modal para agregar a mercado */}
+{showMarketModal && (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  }}>
+    <div style={{
+      background: 'white',
+      borderRadius: '16px',
+      padding: '2rem',
+      width: '90%',
+      maxWidth: '500px'
+    }}>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+        Agregar {selectedMarketPlayer?.name} a Mercado
+      </h3>
+      
+      {availableMarkets.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <p style={{ marginBottom: '1rem' }}>No hay mercados activos disponibles.</p>
+          <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            Ve a la pestaña Mercados para crear uno nuevo.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+              Seleccionar Mercado
+            </label>
+            <select
+              value={marketForm.market_id}
+              onChange={(e) => setMarketForm({...marketForm, market_id: e.target.value})}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px'
+              }}
+            >
+              <option value="">Seleccionar...</option>
+              {availableMarkets.map(market => (
+                <option key={market.id} value={market.id}>
+                  {market.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+              Prioridad
+            </label>
+            <select
+              value={marketForm.priority}
+              onChange={(e) => setMarketForm({...marketForm, priority: e.target.value})}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px'
+              }}
+            >
+              <option value="alta">Alta</option>
+              <option value="media">Media</option>
+              <option value="baja">Baja</option>
+            </select>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+                Precio Estimado (€M)
+              </label>
+              <input
+                type="number"
+                value={marketForm.estimated_price}
+                onChange={(e) => setMarketForm({...marketForm, estimated_price: e.target.value})}
+                placeholder="15.5"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              />
+            </div>
+            
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+                Precio Máximo (€M)
+              </label>
+              <input
+                type="number"
+                value={marketForm.max_price}
+                onChange={(e) => setMarketForm({...marketForm, max_price: e.target.value})}
+                placeholder="20"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
+              Notas
+            </label>
+            <textarea
+              value={marketForm.notes}
+              onChange={(e) => setMarketForm({...marketForm, notes: e.target.value})}
+              rows={3}
+              placeholder="Observaciones sobre el jugador..."
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px'
+              }}
+            />
+          </div>
+        </div>
+      )}
+      
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+        <button
+          onClick={() => {
+            setShowMarketModal(false);
+            setMarketForm({
+              market_id: '',
+              priority: 'media',
+              estimated_price: '',
+              max_price: '',
+              notes: ''
+            });
+          }}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: '#6b7280',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+        >
+          Cancelar
+        </button>
+        {availableMarkets.length > 0 && (
+          <button
+            onClick={async () => {
+              if (!marketForm.market_id) {
+                alert('Por favor selecciona un mercado');
+                return;
+              }
+              
+              try {
+                const response = await fetch(`${API_URL}/api/markets/${marketForm.market_id}/players`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    player_id: selectedMarketPlayer.wyscout_id || selectedMarketPlayer.id || selectedMarketPlayer.manual_id,
+                    player_name: selectedMarketPlayer.name,
+                    player_type: selectedMarketPlayer.wyscout_id ? 'wyscout' : 'manual',
+                    position: selectedMarketPlayer.position || selectedMarketPlayer.position_played,
+                    age: selectedMarketPlayer.age,
+                    current_team: selectedMarketPlayer.team || selectedMarketPlayer.current_team_name,
+                    status: 'seguimiento',
+                    priority: marketForm.priority,
+                    estimated_price: parseFloat(marketForm.estimated_price) * 1000000 || 0,
+                    max_price: parseFloat(marketForm.max_price) * 1000000 || 0,
+                    notes: marketForm.notes
+                  })
+                });
+                
+                if (response.ok) {
+                  alert('Jugador agregado al mercado exitosamente');
+                  setShowMarketModal(false);
+                  setMarketForm({
+                    market_id: '',
+                    priority: 'media',
+                    estimated_price: '',
+                    max_price: '',
+                    notes: ''
+                  });
+                } else {
+                  alert('Error al agregar jugador al mercado');
+                }
+              } catch (error) {
+                console.error('Error:', error);
+                alert('Error al agregar jugador al mercado');
+              }
+            }}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            Agregar a Mercado
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
       {/* Add Player Tab */}
       {/* DESPUÉS - sin espacio en blanco */}
       {activeTab === 'add-player' && (
@@ -3717,7 +4008,25 @@ const MainApp: React.FC = () => {
                         cursor: 'pointer'
                       }}
                     >
-                      📝 Crear Reporte
+📝 Crear Reporte
+                    </button>
+                    <button
+                      onClick={(e) => {
+                      e.stopPropagation();
+                      openMarketModal(player);
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      💰 A Mercado
                     </button>
                   </div>
                 </div>
