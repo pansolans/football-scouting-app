@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { scoutingService } from '../services/api';
+import MarketEditor from './MarketEditor';
 
 const API_URL = process.env.NODE_ENV === 'production' 
   ? 'https://football-scouting-backend-vd0x.onrender.com'
@@ -40,6 +41,8 @@ const MarketSystem: React.FC = () => {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeView, setActiveView] = useState<'list' | 'detail'>('list');
+  const [showEditMarket, setShowEditMarket] = useState(false);
+  const [marketToEdit, setMarketToEdit] = useState<Market | null>(null);
   
   // Formulario para nuevo mercado
   const [marketForm, setMarketForm] = useState({
@@ -291,16 +294,36 @@ const MarketSystem: React.FC = () => {
                     </p>
                   )}
                 </div>
-                <span style={{
-                  padding: '0.5rem 1rem',
-                  background: market.status === 'active' ? '#10b98120' : '#6b728020',
-                  color: market.status === 'active' ? '#059669' : '#4b5563',
-                  borderRadius: '20px',
-                  fontSize: '0.875rem',
-                  fontWeight: '600'
-                }}>
-                  {market.status === 'active' ? 'Activo' : 'Cerrado'}
-                </span>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMarketToEdit(market);
+                      setShowEditMarket(true);
+                    }}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️ Editar
+                  </button>
+                  <span style={{
+                    padding: '0.5rem 1rem',
+                    background: market.status === 'active' ? '#10b98120' : '#6b728020',
+                    color: market.status === 'active' ? '#059669' : '#4b5563',
+                    borderRadius: '20px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}>
+                    {market.status === 'active' ? 'Activo' : 'Cerrado'}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -432,8 +455,8 @@ const MarketSystem: React.FC = () => {
   borderRadius: '16px',
   padding: '2rem',
   boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-  minHeight: 'auto',  // <-- AGREGAR
-  height: 'auto'      // <-- AGREGAR
+  minHeight: 'auto',
+  height: 'auto'
 }}>
       {activeView === 'list' ? <MarketListView /> : <MarketDetailView />}
 
@@ -795,6 +818,17 @@ const MarketSystem: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showEditMarket && marketToEdit && (
+        <MarketEditor
+          market={marketToEdit}
+          onUpdate={loadMarkets}
+          onClose={() => {
+            setShowEditMarket(false);
+            setMarketToEdit(null);
+          }}
+        />
       )}
     </div>
   );
