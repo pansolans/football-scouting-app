@@ -1,101 +1,149 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useDrop } from 'react-dnd';
 import { createClient } from '@supabase/supabase-js';
+
+const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
 
 // Configuración de Supabase
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || '';
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-interface Player {
-  id: string;
-  player_id: string;
-  player_name: string;
-  position?: string;
-  pitch_position?: { top: number; left: number }; // Posición en la cancha
-  image_url?: string;
-  nationality?: string;
-  age?: number;
-  birth_date?: string;
-  current_team?: string;
-  short_name?: string;
-}
-
 interface MarketPitchViewProps {
-  marketId: string;
-  players: Player[];
-  onPositionUpdate: (playerId: string, position: string) => void;
-  onRemovePlayer?: (playerId: string) => void;
+  marketPlayers: any[];
+  onUpdateFormation: (formation: any) => void;
+  marketId?: string; // Agregar marketId para guardar posiciones
 }
 
-const MarketPitchView: React.FC<MarketPitchViewProps> = ({
-  marketId,
-  players,
-  onPositionUpdate,
-  onRemovePlayer
-}) => {
-  const [editMode, setEditMode] = useState(true); // Siempre en modo edición
-  const [positions, setPositions] = useState<Array<{ id: string; top: number; left: number; label: string }>>([]);
-  const [hoveredPlayer, setHoveredPlayer] = useState<string | null>(null);
-  const [playerImages, setPlayerImages] = useState<Record<string, string>>({});
-  const [playerPositions, setPlayerPositions] = useState<Record<string, { top: number; left: number }>>({});
-  const [isDragging, setIsDragging] = useState<string | null>(null);
+const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpdateFormation, marketId }) => {
+  const [formation, setFormation] = useState<{[key: string]: any[]}>({
+    GK: [],
+    LB: [], CB1: [], CB2: [], RB: [],
+    CDM1: [], CDM2: [],
+    CM: [], LM: [], RM: [],
+    LW: [], ST: [], RW: []
+  });
+
+  const [draggedPlayer, setDraggedPlayer] = useState<any>(null);
+  const [draggedPosition, setDraggedPosition] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'pitch'>('list');
+  const [selectedFormation, setSelectedFormation] = useState('custom');
+  const [playerDetails, setPlayerDetails] = useState<{[key: string]: any}>({});
+  const [hoveredPlayer, setHoveredPlayer] = useState<any>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [editMode, setEditMode] = useState(false);
   const pitchRef = useRef<HTMLDivElement>(null);
+  
+  // Posiciones personalizables
+  const [customPositions, setCustomPositions] = useState<{[key: string]: {top: string, left: string}}>({
+    GK: { top: '90%', left: '50%' },
+    LB: { top: '75%', left: '15%' },
+    CB1: { top: '75%', left: '35%' },
+    CB2: { top: '75%', left: '65%' },
+    RB: { top: '75%', left: '85%' },
+    CDM1: { top: '55%', left: '35%' },
+    CDM2: { top: '55%', left: '65%' },
+    CM: { top: '45%', left: '50%' },
+    LM: { top: '45%', left: '15%' },
+    RM: { top: '45%', left: '85%' },
+    LW: { top: '20%', left: '20%' },
+    ST: { top: '15%', left: '50%' },
+    RW: { top: '20%', left: '80%' }
+  });
 
-  // Posiciones iniciales (11 cajas vacías)
-  const initialPositions = [
-    { id: 'pos1', top: 90, left: 50, label: 'GK' },
-    { id: 'pos2', top: 75, left: 20, label: 'DEF' },
-    { id: 'pos3', top: 75, left: 40, label: 'DEF' },
-    { id: 'pos4', top: 75, left: 60, label: 'DEF' },
-    { id: 'pos5', top: 75, left: 80, label: 'DEF' },
-    { id: 'pos6', top: 50, left: 30, label: 'MED' },
-    { id: 'pos7', top: 50, left: 50, label: 'MED' },
-    { id: 'pos8', top: 50, left: 70, label: 'MED' },
-    { id: 'pos9', top: 25, left: 25, label: 'DEL' },
-    { id: 'pos10', top: 25, left: 50, label: 'DEL' },
-    { id: 'pos11', top: 25, left: 75, label: 'DEL' },
-  ];
+  // Diferentes formaciones tácticas predefinidas
+  const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
+    '4-3-3': {
+      GK: { top: '90%', left: '50%' },
+      LB: { top: '75%', left: '15%' },
+      CB1: { top: '75%', left: '35%' },
+      CB2: { top: '75%', left: '65%' },
+      RB: { top: '75%', left: '85%' },
+      CDM1: { top: '55%', left: '50%' },
+      CM: { top: '45%', left: '35%' },
+      RM: { top: '45%', left: '65%' },
+      LW: { top: '20%', left: '20%' },
+      ST: { top: '15%', left: '50%' },
+      RW: { top: '20%', left: '80%' }
+    },
+    '4-4-2': {
+      GK: { top: '90%', left: '50%' },
+      LB: { top: '75%', left: '15%' },
+      CB1: { top: '75%', left: '35%' },
+      CB2: { top: '75%', left: '65%' },
+      RB: { top: '75%', left: '85%' },
+      LM: { top: '50%', left: '15%' },
+      CDM1: { top: '50%', left: '35%' },
+      CDM2: { top: '50%', left: '65%' },
+      RM: { top: '50%', left: '85%' },
+      ST: { top: '20%', left: '35%' },
+      RW: { top: '20%', left: '65%' }
+    },
+    '3-5-2': {
+      GK: { top: '90%', left: '50%' },
+      CB1: { top: '75%', left: '25%' },
+      CB2: { top: '75%', left: '50%' },
+      RB: { top: '75%', left: '75%' },
+      LM: { top: '50%', left: '10%' },
+      CDM1: { top: '50%', left: '35%' },
+      CM: { top: '40%', left: '50%' },
+      CDM2: { top: '50%', left: '65%' },
+      RM: { top: '50%', left: '90%' },
+      ST: { top: '20%', left: '35%' },
+      RW: { top: '20%', left: '65%' }
+    },
+    'custom': {} // Se usarán las posiciones personalizadas
+  };
 
-  // Inicializar posiciones
+  // Cargar posiciones guardadas y formación al montar
   useEffect(() => {
-    setPositions(initialPositions);
-    loadPlayerPositions();
+    if (marketId) {
+      loadSavedFormation();
+    }
   }, [marketId]);
 
-  // Cargar posiciones guardadas de los jugadores
-  const loadPlayerPositions = async () => {
+  // Cargar formación guardada de Supabase
+  const loadSavedFormation = async () => {
+    if (!marketId) return;
+    
     try {
+      // Cargar jugadores con sus posiciones guardadas
       const { data, error } = await supabase
         .from('market_players')
-        .select('id, pitch_position')
-        .eq('market_id', marketId)
-        .not('pitch_position', 'is', null);
+        .select('*')
+        .eq('market_id', marketId);
 
       if (data && !error) {
-        const positionsMap: Record<string, { top: number; left: number }> = {};
-        data.forEach(item => {
-          if (item.pitch_position) {
-            positionsMap[item.id] = item.pitch_position;
+        const newFormation: {[key: string]: any[]} = {};
+        
+        // Inicializar todas las posiciones vacías
+        Object.keys(customPositions).forEach(pos => {
+          newFormation[pos] = [];
+        });
+        
+        // Asignar jugadores a sus posiciones guardadas
+        data.forEach(player => {
+          if (player.position && player.position in newFormation) {
+            newFormation[player.position].push(player);
           }
         });
-        setPlayerPositions(positionsMap);
+        
+        setFormation(newFormation);
       }
     } catch (error) {
-      console.error('Error loading player positions:', error);
+      console.error('Error loading saved formation:', error);
     }
   };
 
-  // Guardar posición del jugador en la base de datos
-  const savePlayerPosition = async (playerId: string, position: { top: number; left: number }) => {
+  // Guardar posición del jugador en Supabase
+  const savePlayerPosition = async (playerId: string, position: string) => {
+    if (!marketId) return;
+    
     try {
       const { error } = await supabase
         .from('market_players')
-        .update({ 
-          pitch_position: position,
-          position: `custom_${position.top}_${position.left}` // Guardamos también como string para compatibilidad
-        })
-        .eq('id', playerId);
+        .update({ position })
+        .eq('id', playerId)
+        .eq('market_id', marketId);
 
       if (error) throw error;
     } catch (error) {
@@ -103,340 +151,649 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({
     }
   };
 
-  // Cargar imágenes de jugadores
-  useEffect(() => {
-    const fetchPlayerImages = async () => {
-      const imagePromises = players.map(async (player) => {
-        if (player.player_id && !player.image_url) {
-          try {
-            const response = await fetch(
-              `https://football-scouting-backend-vd0x.onrender.com/api/player/${player.player_id}/profile`
-            );
-            if (response.ok) {
-              const data = await response.json();
-              return { id: player.id, imageUrl: data.imageDataURL };
-            }
-          } catch (error) {
-            console.error('Error fetching player image:', error);
-          }
+  // Función para obtener detalles de Wyscout
+  const fetchPlayerDetails = async (playerId: string) => {
+    if (playerDetails[playerId] || !playerId) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/player/${playerId}/profile`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-        return { id: player.id, imageUrl: player.image_url || '' };
       });
-
-      const results = await Promise.all(imagePromises);
-      const imagesMap = results.reduce((acc, { id, imageUrl }) => {
-        if (imageUrl) acc[id] = imageUrl;
-        return acc;
-      }, {} as Record<string, string>);
-
-      setPlayerImages(imagesMap);
-    };
-
-    if (players.length > 0) {
-      fetchPlayerImages();
+      
+      if (response.ok) {
+        const details = await response.json();
+        console.log('Details for player', playerId, ':', details);
+        setPlayerDetails(prev => ({...prev, [playerId]: details}));
+      }
+    } catch (error) {
+      console.error('Error fetching player details:', error);
     }
-  }, [players]);
+  };
 
-  // Manejar el arrastre de posiciones vacías
-  const handlePositionDrag = (posId: string, e: React.MouseEvent) => {
-    if (!pitchRef.current) return;
+  // UseEffect para cargar detalles cuando cambien los jugadores
+  useEffect(() => {
+    marketPlayers.forEach(player => {
+      if (player.player_type === 'wyscout' && player.player_id) {
+        fetchPlayerDetails(player.player_id);
+      }
+    });
+  }, [marketPlayers]);
+
+  // Manejar arrastre de posiciones vacías
+  const handlePositionDragStart = (e: React.MouseEvent, position: string) => {
+    if (!editMode || !pitchRef.current) return;
     
     e.preventDefault();
-    setIsDragging(posId);
-
+    setDraggedPosition(position);
+    
     const pitch = pitchRef.current.getBoundingClientRect();
     const startX = e.clientX;
     const startY = e.clientY;
-    const position = positions.find(p => p.id === posId);
-    if (!position) return;
-
-    const startLeft = position.left;
-    const startTop = position.top;
-
+    const startTop = parseFloat(customPositions[position].top);
+    const startLeft = parseFloat(customPositions[position].left);
+    
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
       
       const newLeft = Math.max(5, Math.min(95, startLeft + (deltaX / pitch.width) * 100));
       const newTop = Math.max(5, Math.min(95, startTop + (deltaY / pitch.height) * 100));
-
-      setPositions(prev => prev.map(p => 
-        p.id === posId ? { ...p, top: newTop, left: newLeft } : p
-      ));
+      
+      setCustomPositions(prev => ({
+        ...prev,
+        [position]: { top: `${newTop}%`, left: `${newLeft}%` }
+      }));
     };
-
+    
     const handleMouseUp = () => {
-      setIsDragging(null);
+      setDraggedPosition(null);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-
+    
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Agregar nueva posición
-  const addPosition = () => {
-    const newPosition = {
-      id: `pos${positions.length + 1}`,
-      top: 50,
-      left: 50,
-      label: 'NUEVA'
-    };
-    setPositions([...positions, newPosition]);
+  const handleDragStart = (player: any) => {
+    setDraggedPlayer(player);
   };
 
-  // Eliminar posición
-  const removePosition = (posId: string) => {
-    setPositions(positions.filter(p => p.id !== posId));
-  };
-
-  // Obtener jugadores en una posición específica
-  const getPlayersAtPosition = (posId: string) => {
-    const position = positions.find(p => p.id === posId);
-    if (!position) return [];
-    
-    return players.filter(player => {
-      const playerPos = playerPositions[player.id] || player.pitch_position;
-      if (!playerPos) return false;
+  const handleDrop = (position: string) => {
+    if (draggedPlayer) {
+      const currentPositionPlayers = formation[position] || [];
+      // Permitir hasta 3 jugadores por posición (excepto portero)
+      const maxPlayers = position === 'GK' ? 1 : 3;
       
-      // Verificar si el jugador está cerca de esta posición (tolerancia de 5%)
-      const distance = Math.sqrt(
-        Math.pow(playerPos.top - position.top, 2) + 
-        Math.pow(playerPos.left - position.left, 2)
-      );
-      return distance < 10;
-    });
-  };
-
-  const calculateAge = (birthDate: string | undefined) => {
-    if (!birthDate) return null;
-    const birth = new Date(birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
+      if (currentPositionPlayers.length < maxPlayers) {
+        // Remover jugador de su posición anterior si existe
+        const newFormation = { ...formation };
+        Object.keys(newFormation).forEach(pos => {
+          newFormation[pos] = newFormation[pos].filter((p: any) => p.id !== draggedPlayer.id);
+        });
+        
+        // Agregar a la nueva posición
+        newFormation[position] = [...(newFormation[position] || []), draggedPlayer];
+        setFormation(newFormation);
+        
+        // Guardar en Supabase
+        savePlayerPosition(draggedPlayer.id, position);
+      } else {
+        alert(`Máximo ${maxPlayers} jugador(es) en esta posición`);
+      }
+      setDraggedPlayer(null);
     }
-    return age;
   };
 
-  // Renderizar una posición/caja
-  const renderPosition = (position: { id: string; top: number; left: number; label: string }) => {
-    const playersHere = getPlayersAtPosition(position.id);
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
 
-    const [{ isOver }, drop] = useDrop(() => ({
-      accept: 'player',
-      drop: (item: { playerId: string }) => {
-        // Guardar la posición del jugador
-        const newPosition = { top: position.top, left: position.left };
-        setPlayerPositions(prev => ({
-          ...prev,
-          [item.playerId]: newPosition
-        }));
-        savePlayerPosition(item.playerId, newPosition);
-        onPositionUpdate(item.playerId, position.id);
-      },
-      collect: (monitor) => ({
-        isOver: !!monitor.isOver(),
-      }),
-    }));
+  const removeFromFormation = (position: string, playerId: string) => {
+    const newFormation = { ...formation };
+    newFormation[position] = newFormation[position].filter((p: any) => p.id !== playerId);
+    setFormation(newFormation);
+    
+    // Limpiar posición en Supabase
+    savePlayerPosition(playerId, '');
+  };
 
+  const changeFormation = (formationName: string) => {
+    setSelectedFormation(formationName);
+    if (formationName !== 'custom' && formations[formationName]) {
+      setCustomPositions(formations[formationName]);
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch(priority) {
+      case 'alta': return '#ef4444';
+      case 'media': return '#f59e0b';
+      case 'baja': return '#10b981';
+      default: return '#6b7280';
+    }
+  };
+
+  // Función para obtener la imagen del jugador
+  const getPlayerImage = (player: any): string | undefined => {
+    const details = playerDetails[player.player_id];
+    return details?.basic_info?.imageDataURL || details?.imageDataURL;
+  };
+
+  // Función para obtener el nombre corto
+  const getPlayerShortName = (player: any): string => {
+    const details = playerDetails[player.player_id];
+    return details?.basic_info?.shortName || player.player_name;
+  };
+
+  // Función para calcular edad desde fecha de nacimiento
+  const getPlayerAge = (player: any): number | string => {
+    const details = playerDetails[player.player_id];
+    if (details?.basic_info?.birthDate) {
+      const birthDate = new Date(details.basic_info.birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    }
+    return player.age || '?';
+  };
+
+  // Función para obtener la nacionalidad
+  const getPlayerNationality = (player: any): string | undefined => {
+    const details = playerDetails[player.player_id];
+    return details?.basic_info?.passportArea?.name || details?.basic_info?.birthArea?.name;
+  };
+
+  // Función para obtener código de país de 2 letras
+  const getCountryCode = (nationality: string): string => {
+    const countryMap: {[key: string]: string} = {
+      'Argentina': 'ar',
+      'Brazil': 'br',
+      'Spain': 'es',
+      'France': 'fr',
+      'Germany': 'de',
+      'Italy': 'it',
+      'England': 'gb',
+      'United Kingdom': 'gb',
+      'Portugal': 'pt',
+      'Netherlands': 'nl',
+      'Belgium': 'be',
+      'Uruguay': 'uy',
+      'Colombia': 'co',
+      'Mexico': 'mx',
+      'Poland': 'pl',
+      'Croatia': 'hr',
+      'Serbia': 'rs'
+    };
+    
+    return countryMap[nationality] || nationality?.toLowerCase().substring(0, 2) || '';
+  };
+
+  if (viewMode === 'list') {
     return (
-      <div
-        ref={drop}
-        key={position.id}
-        className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-move
-          ${isDragging === position.id ? 'z-50' : 'z-10'}`}
-        style={{
-          top: `${position.top}%`,
-          left: `${position.left}%`,
-          width: '120px',
-          minHeight: '60px',
-        }}
-        onMouseDown={(e) => handlePositionDrag(position.id, e)}
-      >
-        <div
-          className={`
-            border-2 border-dashed rounded-lg p-2
-            ${isOver ? 'border-blue-500 bg-blue-50' : 'border-white bg-white/20'}
-            ${playersHere.length > 0 ? 'bg-white' : ''}
-          `}
+      <div>
+        <button
+          onClick={() => setViewMode('pitch')}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            marginBottom: '1rem'
+          }}
         >
-          <div className="text-xs font-bold text-center text-white mb-1">
-            {position.label}
-          </div>
-          
-          {playersHere.length === 0 && (
-            <div className="text-xs text-white/70 text-center">Vacío</div>
-          )}
-
-          <div className="space-y-1">
-            {playersHere.slice(0, 3).map((player) => {
-              const age = calculateAge(player.birth_date);
-              const imageUrl = playerImages[player.id] || player.image_url;
-              
-              return (
-                <div
-                  key={player.id}
-                  className="relative"
-                  onMouseEnter={() => setHoveredPlayer(player.id)}
-                  onMouseLeave={() => setHoveredPlayer(null)}
-                >
-                  <div className="flex items-center gap-1 bg-white rounded p-1 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                    {imageUrl && (
-                      <img
-                        src={imageUrl}
-                        alt={player.short_name || player.player_name}
-                        className="w-6 h-6 rounded-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium truncate text-gray-800">
-                        {player.short_name || player.player_name.split(' ').slice(-1)[0]}
-                      </div>
-                      {player.nationality && (
-                        <div className="flex items-center gap-1">
-                          <img
-                            src={`https://flagcdn.com/24x18/${player.nationality.toLowerCase()}.png`}
-                            alt={player.nationality}
-                            className="w-4 h-3"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                          {age && <span className="text-xs text-gray-500">({age})</span>}
-                        </div>
-                      )}
-                    </div>
-                    {onRemovePlayer && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Eliminar posición del jugador
-                          setPlayerPositions(prev => {
-                            const newPositions = { ...prev };
-                            delete newPositions[player.id];
-                            return newPositions;
-                          });
-                          savePlayerPosition(player.id, { top: 0, left: 0 });
-                          onRemovePlayer(player.id);
-                        }}
-                        className="text-red-500 hover:text-red-700 text-xs"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-
-                  {hoveredPlayer === player.id && (
-                    <div className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64 bottom-full mb-2 left-1/2 transform -translate-x-1/2">
-                      <div className="flex items-start gap-3">
-                        {imageUrl && (
-                          <img
-                            src={imageUrl}
-                            alt={player.player_name}
-                            className="w-16 h-16 rounded-full object-cover"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h4 className="font-bold text-sm">{player.player_name}</h4>
-                          {player.current_team && (
-                            <p className="text-xs text-gray-600">{player.current_team}</p>
-                          )}
-                          {player.nationality && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <img
-                                src={`https://flagcdn.com/24x18/${player.nationality.toLowerCase()}.png`}
-                                alt={player.nationality}
-                                className="w-4 h-3"
-                              />
-                              <span className="text-xs">{player.nationality.toUpperCase()}</span>
-                            </div>
-                          )}
-                          {age && (
-                            <p className="text-xs text-gray-600 mt-1">Edad: {age} años</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+          ⚽ Ver en Cancha
+        </button>
+        
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {marketPlayers.map(player => (
+            <div key={player.id} style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              border: '2px solid #e5e7eb'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+                    {player.player_name}
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    {player.position} • {getPlayerAge(player)} años • {player.current_team}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-
-          {playersHere.length > 3 && (
-            <div className="text-xs text-gray-500 text-center mt-1">
-              +{playersHere.length - 3} más
+                <span style={{
+                  padding: '0.25rem 0.75rem',
+                  background: `${getPriorityColor(player.priority)}20`,
+                  color: getPriorityColor(player.priority),
+                  borderRadius: '12px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600'
+                }}>
+                  Prioridad {player.priority}
+                </span>
+              </div>
             </div>
-          )}
-
-          {editMode && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                removePosition(position.id);
-              }}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-700"
-            >
-              ×
-            </button>
-          )}
+          ))}
         </div>
       </div>
     );
+  }
+
+  const playerImage = (player: any) => {
+    const imgSrc = getPlayerImage(player);
+    if (!imgSrc) return null;
+    
+    return (
+      <img 
+        src={imgSrc}
+        alt={player.player_name}
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          objectFit: 'cover'
+        }}
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    );
+  };
+
+  const playerImageSmall = (player: any) => {
+    const imgSrc = getPlayerImage(player);
+    if (!imgSrc) return null;
+    
+    const playersInPosition = Object.values(formation).flat().filter((p: any) => 
+      Object.values(formation).some(pos => pos.includes(player) && pos.length > 2)
+    ).length > 0;
+    
+    return (
+      <img 
+        src={imgSrc}
+        alt={player.player_name}
+        style={{
+          width: playersInPosition ? '30px' : '35px',
+          height: playersInPosition ? '30px' : '35px',
+          borderRadius: '50%',
+          objectFit: 'cover',
+          border: '2px solid white',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    );
+  };
+
+  // Obtener las posiciones actuales según el modo
+  const getCurrentPositions = () => {
+    return selectedFormation === 'custom' ? customPositions : formations[selectedFormation];
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4">
-      <div className="mb-4 flex justify-between items-center">
-        <h3 className="text-lg font-bold">Vista de Cancha</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={addPosition}
-            className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600"
+    <div>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
+        <button
+          onClick={() => setViewMode('list')}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: '#6b7280',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+        >
+          ← Ver Lista
+        </button>
+        
+        <select
+          value={selectedFormation}
+          onChange={(e) => changeFormation(e.target.value)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600'
+          }}
+        >
+          <option value="custom">Personalizada</option>
+          <option value="4-3-3">4-3-3</option>
+          <option value="4-4-2">4-4-2</option>
+          <option value="3-5-2">3-5-2</option>
+        </select>
+        
+        <button
+          onClick={() => setEditMode(!editMode)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: editMode ? '#ef4444' : '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600'
+          }}
+        >
+          {editMode ? '✓ Guardar Posiciones' : '✏️ Editar Posiciones'}
+        </button>
+        
+        {editMode && (
+          <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+            Arrastra las posiciones vacías para reorganizarlas
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '2rem' }}>
+        {/* Panel izquierdo - Jugadores disponibles */}
+        <div style={{ width: '350px' }}>
+          <h3 style={{ marginBottom: '1rem' }}>Jugadores Disponibles</h3>
+          <div style={{
+            background: '#f9fafb',
+            borderRadius: '8px',
+            padding: '1rem',
+            maxHeight: '700px',
+            overflow: 'auto'
+          }}>
+            {marketPlayers
+              .filter(p => !Object.values(formation).flat().some((f: any) => f?.id === p.id))
+              .map(player => (
+                <div
+                  key={player.id}
+                  draggable
+                  onDragStart={() => handleDragStart(player)}
+                  style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    marginBottom: '0.5rem',
+                    cursor: 'grab',
+                    border: '2px solid #e5e7eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}
+                >
+                  {playerImage(player)}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', fontSize: '0.875rem' }}>
+                      {getPlayerShortName(player)}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      {player.position} • {getPlayerAge(player)} años
+                    </div>
+                    <span style={{
+                      display: 'inline-block',
+                      marginTop: '0.25rem',
+                      padding: '0.125rem 0.5rem',
+                      background: `${getPriorityColor(player.priority)}20`,
+                      color: getPriorityColor(player.priority),
+                      borderRadius: '8px',
+                      fontSize: '0.625rem',
+                      fontWeight: '600'
+                    }}>
+                      {player.priority}
+                    </span>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Cancha */}
+        <div style={{ flex: 1 }}>
+          <div 
+            ref={pitchRef}
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '1100px',
+              margin: '0 auto',
+              aspectRatio: '1.2',
+              background: 'linear-gradient(to bottom, #10b981 0%, #059669 50%, #10b981 100%)',
+              borderRadius: '12px',
+              border: '3px solid white',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+            }}
           >
-            + Agregar Posición
-          </button>
-          <button
-            onClick={() => setPositions(initialPositions)}
-            className="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-          >
-            Resetear
-          </button>
+            {/* Líneas del campo */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '10%',
+              right: '10%',
+              height: '2px',
+              background: 'rgba(255,255,255,0.5)'
+            }} />
+            
+            {/* Círculo central */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '100px',
+              height: '100px',
+              border: '2px solid rgba(255,255,255,0.5)',
+              borderRadius: '50%'
+            }} />
+
+            {/* Área grande */}
+            <div style={{
+              position: 'absolute',
+              bottom: '0',
+              left: '25%',
+              right: '25%',
+              height: '20%',
+              border: '2px solid rgba(255,255,255,0.5)',
+              borderBottom: 'none'
+            }} />
+
+            {/* Área chica */}
+            <div style={{
+              position: 'absolute',
+              bottom: '0',
+              left: '35%',
+              right: '35%',
+              height: '10%',
+              border: '2px solid rgba(255,255,255,0.5)',
+              borderBottom: 'none'
+            }} />
+
+            {/* Posiciones de jugadores */}
+            {Object.entries(getCurrentPositions()).map(([pos, coords]) => (
+              <div
+                key={pos}
+                onDrop={() => handleDrop(pos)}
+                onDragOver={handleDragOver}
+                onMouseDown={(e) => handlePositionDragStart(e, pos)}
+                style={{
+                  position: 'absolute',
+                  top: coords.top,
+                  left: coords.left,
+                  transform: 'translate(-50%, -50%)',
+                  minWidth: '100px',
+                  minHeight: '60px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: formation[pos]?.length > 0 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.2)',
+                  border: editMode ? '3px solid #3b82f6' : '2px dashed rgba(255,255,255,0.5)',
+                  padding: '0.5rem',
+                  gap: '0.25rem',
+                  cursor: editMode ? 'move' : 'default',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {formation[pos]?.length > 0 ? (
+                  formation[pos].map((player: any, index: number) => (
+                    <div 
+                      key={player.id}
+                      onMouseEnter={(e) => {
+                        setHoveredPlayer(player);
+                        setMousePosition({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseMove={(e) => {
+                        setMousePosition({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseLeave={() => setHoveredPlayer(null)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        position: 'relative',
+                        marginBottom: index < formation[pos].length - 1 ? '0.75rem' : 0,
+                      }}
+                    >
+                      {playerImageSmall(player)}
+                      <div style={{
+                        fontSize: '0.625rem',
+                        fontWeight: 'bold',
+                        color: '#1f2937',
+                        textAlign: 'center',
+                        lineHeight: 1,
+                        marginTop: '0.25rem'
+                      }}>
+                        {getPlayerShortName(player)}
+                      </div>
+                      <div style={{
+                        fontSize: '0.5rem',
+                        color: '#6b7280',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        {getPlayerAge(player)}
+                        {getPlayerNationality(player) && (
+                          <img 
+                            src={`https://flagcdn.com/16x12/${getCountryCode(getPlayerNationality(player)!)}.png`}
+                            alt={getPlayerNationality(player)}
+                            style={{ width: '16px', height: '12px' }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeFromFormation(pos, player.id)}
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-8px',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          fontSize: '0.625rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{
+                    fontSize: '0.875rem',
+                    color: 'rgba(255,255,255,0.8)',
+                    fontWeight: '600'
+                  }}>
+                    {pos}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Leyenda de formación */}
+          <div style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            background: 'white',
+            borderRadius: '8px',
+            border: '2px solid #e5e7eb'
+          }}>
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>
+              Formación {selectedFormation === 'custom' ? 'Personalizada' : selectedFormation}
+            </h4>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+              {editMode 
+                ? 'Arrastra las cajas vacías para reorganizar las posiciones.'
+                : 'Arrastra jugadores desde el panel izquierdo a las posiciones en la cancha.'}
+              Máximo 3 jugadores por posición (1 para portero).
+            </p>
+          </div>
         </div>
       </div>
 
-      <div 
-        ref={pitchRef}
-        className="relative bg-gradient-to-b from-green-400 to-green-500 rounded-lg overflow-hidden" 
-        style={{ aspectRatio: '1', minHeight: '500px' }}
-      >
-        {/* Líneas del campo */}
-        <div className="absolute inset-0">
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-                          w-20 h-20 border-2 border-white opacity-50 rounded-full"></div>
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 
-                          w-44 h-16 border-2 border-b-0 border-white opacity-50"></div>
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 
-                          w-44 h-16 border-2 border-t-0 border-white opacity-50"></div>
+      {/* Popup de información del jugador */}
+      {hoveredPlayer && (
+        <div style={{
+          position: 'fixed',
+          left: mousePosition.x + 10,
+          top: mousePosition.y - 100,
+          background: 'white',
+          borderRadius: '12px',
+          padding: '1rem',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+          zIndex: 2000,
+          minWidth: '250px',
+          border: '2px solid #e5e7eb'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {getPlayerImage(hoveredPlayer) && (
+              <img 
+                src={getPlayerImage(hoveredPlayer)}
+                alt={hoveredPlayer.player_name}
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+              />
+            )}
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 'bold' }}>
+                {hoveredPlayer.player_name}
+              </h4>
+              <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                {hoveredPlayer.position} • {getPlayerAge(hoveredPlayer)} años
+              </p>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>
+                {hoveredPlayer.current_team}
+              </p>
+              {hoveredPlayer.estimated_price && (
+                <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', fontWeight: 'bold', color: '#10b981' }}>
+                  €{hoveredPlayer.estimated_price.toLocaleString()}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* Renderizar posiciones */}
-        {positions.map(position => renderPosition(position))}
-      </div>
-
-      <div className="mt-4 text-xs text-gray-600">
-        <p>• Arrastra las cajas blancas para posicionarlas donde quieras</p>
-        <p>• Luego arrastra jugadores desde la lista a las cajas</p>
-        <p>• Los jugadores permanecerán en su posición hasta que los muevas</p>
-        <p>• Botón × para eliminar cajas o jugadores</p>
-      </div>
+      )}
     </div>
   );
 };
