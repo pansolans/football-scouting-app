@@ -24,47 +24,47 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   // Diferentes formaciones tácticas
-  const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
-    '4-3-3': {
-      GK: { top: '85%', left: '50%' },
-      LB: { top: '70%', left: '15%' },
-      CB1: { top: '70%', left: '35%' },
-      CB2: { top: '70%', left: '65%' },
-      RB: { top: '70%', left: '85%' },
-      CDM1: { top: '50%', left: '50%' },
-      CM: { top: '40%', left: '35%' },
-      RM: { top: '40%', left: '65%' },
-      LW: { top: '20%', left: '15%' },
-      ST: { top: '15%', left: '50%' },
-      RW: { top: '20%', left: '85%' }
-    },
-    '4-4-2': {
-      GK: { top: '85%', left: '50%' },
-      LB: { top: '70%', left: '15%' },
-      CB1: { top: '70%', left: '35%' },
-      CB2: { top: '70%', left: '65%' },
-      RB: { top: '70%', left: '85%' },
-      LM: { top: '45%', left: '15%' },
-      CDM1: { top: '50%', left: '35%' },
-      CDM2: { top: '50%', left: '65%' },
-      RM: { top: '45%', left: '85%' },
-      ST: { top: '20%', left: '35%' },
-      RW: { top: '20%', left: '65%' }
-    },
-    '3-5-2': {
-      GK: { top: '85%', left: '50%' },
-      CB1: { top: '70%', left: '25%' },
-      CB2: { top: '70%', left: '50%' },
-      RB: { top: '70%', left: '75%' },
-      LM: { top: '45%', left: '10%' },
-      CDM1: { top: '50%', left: '35%' },
-      CM: { top: '45%', left: '50%' },
-      CDM2: { top: '50%', left: '65%' },
-      RM: { top: '45%', left: '90%' },
-      ST: { top: '20%', left: '35%' },
-      RW: { top: '20%', left: '65%' }
-    }
-  };
+const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
+  '4-3-3': {
+    GK: { top: '90%', left: '50%' },
+    LB: { top: '75%', left: '15%' },
+    CB1: { top: '75%', left: '35%' },
+    CB2: { top: '75%', left: '65%' },
+    RB: { top: '75%', left: '85%' },
+    CDM1: { top: '55%', left: '50%' },
+    CM: { top: '40%', left: '30%' },
+    RM: { top: '40%', left: '70%' },
+    LW: { top: '20%', left: '15%' },
+    ST: { top: '10%', left: '50%' },
+    RW: { top: '20%', left: '85%' }
+  },
+  '4-4-2': {
+    GK: { top: '90%', left: '50%' },
+    LB: { top: '75%', left: '15%' },
+    CB1: { top: '75%', left: '35%' },
+    CB2: { top: '75%', left: '65%' },
+    RB: { top: '75%', left: '85%' },
+    LM: { top: '50%', left: '15%' },
+    CDM1: { top: '55%', left: '35%' },
+    CDM2: { top: '55%', left: '65%' },
+    RM: { top: '50%', left: '85%' },
+    ST: { top: '15%', left: '35%' },
+    RW: { top: '15%', left: '65%' }
+  },
+  '3-5-2': {
+    GK: { top: '90%', left: '50%' },
+    CB1: { top: '75%', left: '25%' },
+    CB2: { top: '75%', left: '50%' },
+    RB: { top: '75%', left: '75%' },
+    LM: { top: '50%', left: '10%' },
+    CDM1: { top: '55%', left: '35%' },
+    CM: { top: '45%', left: '50%' },
+    CDM2: { top: '55%', left: '65%' },
+    RM: { top: '50%', left: '90%' },
+    ST: { top: '15%', left: '35%' },
+    RW: { top: '15%', left: '65%' }
+  }
+};
 
   // Función para obtener detalles de Wyscout
   const fetchPlayerDetails = async (playerId: string) => {
@@ -400,7 +400,7 @@ const playerImageSmall = (player: any) => {
             width: '100%',
             maxWidth: '1100px',
             margin: '0 auto',
-            aspectRatio: '1.5',
+            aspectRatio: '1.3',
             background: 'linear-gradient(to bottom, #10b981 0%, #059669 50%, #10b981 100%)',
             borderRadius: '12px',
             border: '3px solid white',
@@ -461,8 +461,8 @@ const playerImageSmall = (player: any) => {
                   top: coords.top,
                   left: coords.left,
                   transform: 'translate(-50%, -50%)',
-                  minWidth: '150px',
-                  minHeight: '180px',
+                  minWidth: '140px',
+                  minHeight: '220px',
                   borderRadius: '8px',
                   display: 'flex',
                   flexDirection: 'column',
