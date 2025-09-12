@@ -400,7 +400,7 @@ const playerImageSmall = (player: any) => {
             width: '100%',
             maxWidth: '1100px',
             margin: '0 auto',
-            aspectRatio: '1',
+            aspectRatio: '1.2',
             background: 'linear-gradient(to bottom, #10b981 0%, #059669 50%, #10b981 100%)',
             borderRadius: '12px',
             border: '3px solid white',
