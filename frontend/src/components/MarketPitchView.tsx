@@ -6,36 +6,59 @@ interface MarketPitchViewProps {
 }
 
 const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpdateFormation }) => {
-  const [formation, setFormation] = useState<{[key: string]: any}>({
-    GK: null,
-    LB: null,
-    CB1: null,
-    CB2: null,
-    RB: null,
-    CDM: null,
-    CM1: null,
-    CM2: null,
-    LW: null,
-    ST: null,
-    RW: null
+  const [formation, setFormation] = useState<{[key: string]: any[]}>({
+    GK: [],
+    LB: [], CB1: [], CB2: [], RB: [],
+    CDM1: [], CDM2: [],
+    CM: [], LM: [], RM: [],
+    LW: [], ST: [], RW: []
   });
 
   const [draggedPlayer, setDraggedPlayer] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pitch'>('list');
+  const [selectedFormation, setSelectedFormation] = useState('4-3-3');
 
-  // Posiciones en el campo (porcentajes relativos)
-  const positions = {
-    GK: { top: '85%', left: '50%' },
-    LB: { top: '70%', left: '15%' },
-    CB1: { top: '70%', left: '35%' },
-    CB2: { top: '70%', left: '65%' },
-    RB: { top: '70%', left: '85%' },
-    CDM: { top: '55%', left: '50%' },
-    CM1: { top: '40%', left: '30%' },
-    CM2: { top: '40%', left: '70%' },
-    LW: { top: '20%', left: '15%' },
-    ST: { top: '15%', left: '50%' },
-    RW: { top: '20%', left: '85%' }
+  // Diferentes formaciones tácticas
+  const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
+    '4-3-3': {
+      GK: { top: '85%', left: '50%' },
+      LB: { top: '70%', left: '15%' },
+      CB1: { top: '70%', left: '35%' },
+      CB2: { top: '70%', left: '65%' },
+      RB: { top: '70%', left: '85%' },
+      CDM1: { top: '50%', left: '50%' },
+      CM: { top: '40%', left: '35%' },
+      RM: { top: '40%', left: '65%' },
+      LW: { top: '20%', left: '15%' },
+      ST: { top: '15%', left: '50%' },
+      RW: { top: '20%', left: '85%' }
+    },
+    '4-4-2': {
+      GK: { top: '85%', left: '50%' },
+      LB: { top: '70%', left: '15%' },
+      CB1: { top: '70%', left: '35%' },
+      CB2: { top: '70%', left: '65%' },
+      RB: { top: '70%', left: '85%' },
+      LM: { top: '45%', left: '15%' },
+      CDM1: { top: '50%', left: '35%' },
+      CDM2: { top: '50%', left: '65%' },
+      RM: { top: '45%', left: '85%' },
+      ST: { top: '20%', left: '35%' },
+      RW: { top: '20%', left: '65%' }
+    },
+    '3-5-2': {
+      GK: { top: '85%', left: '50%' },
+      CB1: { top: '70%', left: '25%' },
+      CB2: { top: '70%', left: '50%' },
+      RB: { top: '70%', left: '75%' },
+      LM: { top: '45%', left: '10%' },
+      CDM1: { top: '50%', left: '35%' },
+      CM: { top: '45%', left: '50%' },
+      CDM2: { top: '50%', left: '65%' },
+      RM: { top: '45%', left: '90%' },
+      ST: { top: '20%', left: '35%' },
+      RW: { top: '20%', left: '65%' }
+    }
   };
 
   const handleDragStart = (player: any) => {
@@ -44,7 +67,23 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
 
   const handleDrop = (position: string) => {
     if (draggedPlayer) {
-      setFormation({ ...formation, [position]: draggedPlayer });
+      const currentPositionPlayers = formation[position] || [];
+      // Permitir hasta 2 jugadores por posición (excepto portero)
+      const maxPlayers = position === 'GK' ? 1 : 2;
+      
+      if (currentPositionPlayers.length < maxPlayers) {
+        // Remover jugador de su posición anterior si existe
+        const newFormation = { ...formation };
+        Object.keys(newFormation).forEach(pos => {
+          newFormation[pos] = newFormation[pos].filter((p: any) => p.id !== draggedPlayer.id);
+        });
+        
+        // Agregar a la nueva posición
+        newFormation[position] = [...(newFormation[position] || []), draggedPlayer];
+        setFormation(newFormation);
+      } else {
+        alert(`Máximo ${maxPlayers} jugador(es) en esta posición`);
+      }
       setDraggedPlayer(null);
     }
   };
@@ -53,8 +92,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     e.preventDefault();
   };
 
-  const removeFromFormation = (position: string) => {
-    setFormation({ ...formation, [position]: null });
+  const removeFromFormation = (position: string, playerId: string) => {
+    const newFormation = { ...formation };
+    newFormation[position] = newFormation[position].filter((p: any) => p.id !== playerId);
+    setFormation(newFormation);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -64,6 +105,21 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
       case 'baja': return '#10b981';
       default: return '#6b7280';
     }
+  };
+
+  // Función para obtener la imagen del jugador de Wyscout
+  const getPlayerImage = (player: any): string | undefined => {
+    if (player.player_type === 'wyscout' && player.player_id) {
+      return `https://img.wyscout.com/players/${player.player_id}/small`;
+    }
+    return undefined;
+  };
+
+  // Función para obtener la bandera del país (necesitarás un mapping o API)
+  const getFlagUrl = (nationality: string) => {
+    // Usar una API de banderas como flagcdn.com
+    const countryCode = nationality?.toLowerCase().substring(0, 2);
+    return `https://flagcdn.com/24x18/${countryCode}.png`;
   };
 
   if (viewMode === 'list') {
@@ -85,7 +141,6 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
           ⚽ Ver en Cancha
         </button>
         
-        {/* Lista normal de jugadores */}
         <div style={{ display: 'grid', gap: '1rem' }}>
           {marketPlayers.map(player => (
             <div key={player.id} style={{
@@ -121,36 +176,97 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     );
   }
 
+  const playerImage = (player: any) => {
+    const imgSrc = getPlayerImage(player);
+    if (!imgSrc) return null;
+    
+    return (
+      <img 
+        src={imgSrc}
+        alt={player.player_name}
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          objectFit: 'cover'
+        }}
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    );
+  };
+
+  const playerImageSmall = (player: any) => {
+    const imgSrc = getPlayerImage(player);
+    if (!imgSrc) return null;
+    
+    return (
+      <img 
+        src={imgSrc}
+        alt={player.player_name}
+        style={{
+          width: '35px',
+          height: '35px',
+          borderRadius: '50%',
+          objectFit: 'cover',
+          border: '2px solid white',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    );
+  };
+
   return (
     <div>
-      <button
-        onClick={() => setViewMode('list')}
-        style={{
-          padding: '0.75rem 1.5rem',
-          background: '#6b7280',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          marginBottom: '1rem'
-        }}
-      >
-        ← Ver Lista
-      </button>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        <button
+          onClick={() => setViewMode('list')}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: '#6b7280',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+        >
+          ← Ver Lista
+        </button>
+        
+        <select
+          value={selectedFormation}
+          onChange={(e) => setSelectedFormation(e.target.value)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600'
+          }}
+        >
+          <option value="4-3-3">4-3-3</option>
+          <option value="4-4-2">4-4-2</option>
+          <option value="3-5-2">3-5-2</option>
+        </select>
+      </div>
 
       <div style={{ display: 'flex', gap: '2rem' }}>
         {/* Panel izquierdo - Jugadores disponibles */}
-        <div style={{ width: '300px' }}>
+        <div style={{ width: '350px' }}>
           <h3 style={{ marginBottom: '1rem' }}>Jugadores Disponibles</h3>
           <div style={{
             background: '#f9fafb',
             borderRadius: '8px',
             padding: '1rem',
-            maxHeight: '600px',
+            maxHeight: '700px',
             overflow: 'auto'
           }}>
             {marketPlayers
-              .filter(p => !Object.values(formation).some(f => f?.id === p.id))
+              .filter(p => !Object.values(formation).flat().some((f: any) => f?.id === p.id))
               .map(player => (
                 <div
                   key={player.id}
@@ -162,27 +278,33 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                     padding: '0.75rem',
                     marginBottom: '0.5rem',
                     cursor: 'grab',
-                    border: '2px solid #e5e7eb'
+                    border: '2px solid #e5e7eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
                   }}
                 >
-                  <div style={{ fontWeight: '600', fontSize: '0.875rem' }}>
-                    {player.player_name}
+                  {playerImage(player)}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', fontSize: '0.875rem' }}>
+                      {player.player_name}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      {player.position} • {player.age} años
+                    </div>
+                    <span style={{
+                      display: 'inline-block',
+                      marginTop: '0.25rem',
+                      padding: '0.125rem 0.5rem',
+                      background: `${getPriorityColor(player.priority)}20`,
+                      color: getPriorityColor(player.priority),
+                      borderRadius: '8px',
+                      fontSize: '0.625rem',
+                      fontWeight: '600'
+                    }}>
+                      {player.priority}
+                    </span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                    {player.position} • {player.age} años
-                  </div>
-                  <span style={{
-                    display: 'inline-block',
-                    marginTop: '0.25rem',
-                    padding: '0.125rem 0.5rem',
-                    background: `${getPriorityColor(player.priority)}20`,
-                    color: getPriorityColor(player.priority),
-                    borderRadius: '8px',
-                    fontSize: '0.625rem',
-                    fontWeight: '600'
-                  }}>
-                    {player.priority}
-                  </span>
                 </div>
               ))}
           </div>
@@ -193,7 +315,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
           <div style={{
             position: 'relative',
             width: '100%',
-            maxWidth: '700px',
+            maxWidth: '900px',
             margin: '0 auto',
             aspectRatio: '1.5',
             background: 'linear-gradient(to bottom, #10b981 0%, #059669 50%, #10b981 100%)',
@@ -217,8 +339,8 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '80px',
-              height: '80px',
+              width: '100px',
+              height: '100px',
               border: '2px solid rgba(255,255,255,0.5)',
               borderRadius: '50%'
             }} />
@@ -246,7 +368,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
             }} />
 
             {/* Posiciones de jugadores */}
-            {Object.entries(positions).map(([pos, coords]) => (
+            {Object.entries(formations[selectedFormation]).map(([pos, coords]) => (
               <div
                 key={pos}
                 onDrop={() => handleDrop(pos)}
@@ -256,60 +378,74 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                   top: coords.top,
                   left: coords.left,
                   transform: 'translate(-50%, -50%)',
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '50%',
+                  minWidth: '80px',
+                  minHeight: '100px',
+                  borderRadius: '8px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: formation[pos] ? 'white' : 'rgba(255,255,255,0.2)',
+                  background: formation[pos]?.length > 0 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.2)',
                   border: '2px dashed rgba(255,255,255,0.5)',
-                  cursor: 'pointer'
+                  padding: '0.5rem',
+                  gap: '0.25rem'
                 }}
               >
-                {formation[pos] ? (
-                  <>
-                    <div style={{
-                      fontSize: '0.625rem',
-                      fontWeight: 'bold',
-                      color: '#1f2937',
-                      textAlign: 'center',
-                      lineHeight: 1
+                {formation[pos]?.length > 0 ? (
+                  formation[pos].map((player: any, index: number) => (
+                    <div key={player.id} style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      position: 'relative',
+                      marginBottom: index < formation[pos].length - 1 ? '0.5rem' : 0
                     }}>
-                      {formation[pos].player_name.split(' ').pop()}
-                    </div>
-                    <div style={{
-                      fontSize: '0.5rem',
-                      color: '#6b7280'
-                    }}>
-                      {pos}
-                    </div>
-                    <button
-                      onClick={() => removeFromFormation(pos)}
-                      style={{
-                        position: 'absolute',
-                        top: '-5px',
-                        right: '-5px',
-                        width: '16px',
-                        height: '16px',
-                        borderRadius: '50%',
-                        background: '#ef4444',
-                        color: 'white',
-                        border: 'none',
+                      {playerImageSmall(player)}
+                      <div style={{
+                        fontSize: '0.625rem',
+                        fontWeight: 'bold',
+                        color: '#1f2937',
+                        textAlign: 'center',
+                        lineHeight: 1,
+                        marginTop: '0.25rem'
+                      }}>
+                        {player.player_name.split(' ').pop()}
+                      </div>
+                      <div style={{
                         fontSize: '0.5rem',
-                        cursor: 'pointer',
+                        color: '#6b7280',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </>
+                        gap: '0.25rem'
+                      }}>
+                        {player.age} años
+                      </div>
+                      <button
+                        onClick={() => removeFromFormation(pos, player.id)}
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-8px',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          fontSize: '0.625rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
                 ) : (
                   <div style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.875rem',
                     color: 'rgba(255,255,255,0.8)',
                     fontWeight: '600'
                   }}>
@@ -328,9 +464,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
             borderRadius: '8px',
             border: '2px solid #e5e7eb'
           }}>
-            <h4 style={{ margin: '0 0 0.5rem 0' }}>Formación 4-3-3</h4>
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>Formación {selectedFormation}</h4>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-              Arrastra jugadores desde el panel izquierdo a las posiciones en la cancha
+              Arrastra jugadores desde el panel izquierdo a las posiciones en la cancha.
+              Máximo 2 jugadores por posición (1 para portero).
             </p>
           </div>
         </div>
