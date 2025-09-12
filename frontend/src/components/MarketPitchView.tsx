@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
+
 interface MarketPitchViewProps {
   marketPlayers: any[];
   onUpdateFormation: (formation: any) => void;
@@ -17,6 +19,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
   const [draggedPlayer, setDraggedPlayer] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pitch'>('list');
   const [selectedFormation, setSelectedFormation] = useState('4-3-3');
+  const [playerDetails, setPlayerDetails] = useState<{[key: string]: any}>({});
 
   // Diferentes formaciones tácticas
   const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
@@ -60,6 +63,35 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
       RW: { top: '20%', left: '65%' }
     }
   };
+
+  // Función para obtener detalles de Wyscout
+  const fetchPlayerDetails = async (playerId: string) => {
+    if (playerDetails[playerId]) return; // Ya lo tenemos
+    
+    try {
+      const response = await fetch(`${API_URL}/api/wyscout/player/${playerId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const details = await response.json();
+        setPlayerDetails(prev => ({...prev, [playerId]: details}));
+      }
+    } catch (error) {
+      console.error('Error fetching player details:', error);
+    }
+  };
+
+  // UseEffect para cargar detalles cuando cambien los jugadores
+  useEffect(() => {
+    marketPlayers.forEach(player => {
+      if (player.player_type === 'wyscout' && player.player_id) {
+        fetchPlayerDetails(player.player_id);
+      }
+    });
+  }, [marketPlayers]);
 
   const handleDragStart = (player: any) => {
     setDraggedPlayer(player);
@@ -109,22 +141,21 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
 
   // Función para obtener la imagen del jugador
   const getPlayerImage = (player: any): string | undefined => {
-    // Primero intentar con la URL guardada de Wyscout
-    if (player.image_url) {
-      return player.image_url;
-    }
-    // Si no hay URL guardada, intentar construirla
-    if (player.player_type === 'wyscout' && player.player_id) {
-      return `https://cdn5.wyscout.com/photos/players/public/g${player.player_id}_100x130.png`;
-    }
-    return undefined;
+    const details = playerDetails[player.player_id];
+    return details?.imageDataURL;
+  };
+
+  // Función para obtener el nombre corto
+  const getPlayerShortName = (player: any): string => {
+    const details = playerDetails[player.player_id];
+    return details?.shortName || player.player_name;
   };
 
   // Función para calcular edad desde fecha de nacimiento
   const getPlayerAge = (player: any): number | string => {
-    if (player.age) return player.age;
-    if (player.birth_date) {
-      const birthDate = new Date(player.birth_date);
+    const details = playerDetails[player.player_id];
+    if (details?.birthDate) {
+      const birthDate = new Date(details.birthDate);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -133,12 +164,17 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
       }
       return age;
     }
-    return '?';
+    return player.age || '?';
+  };
+
+  // Función para obtener la nacionalidad
+  const getPlayerNationality = (player: any): string | undefined => {
+    const details = playerDetails[player.player_id];
+    return details?.passportArea?.name;
   };
 
   // Función para obtener código de país de 2 letras
   const getCountryCode = (nationality: string): string => {
-    // Mapeo básico de países comunes
     const countryMap: {[key: string]: string} = {
       'Argentina': 'ar',
       'Brazil': 'br',
@@ -327,7 +363,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                   {playerImage(player)}
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: '600', fontSize: '0.875rem' }}>
-                      {player.short_name || player.player_name}
+                      {getPlayerShortName(player)}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                       {player.position} • {getPlayerAge(player)} años
@@ -449,7 +485,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                         lineHeight: 1,
                         marginTop: '0.25rem'
                       }}>
-                        {player.short_name || player.player_name.split(' ').pop()}
+                        {getPlayerShortName(player)}
                       </div>
                       <div style={{
                         fontSize: '0.5rem',
@@ -459,10 +495,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                         gap: '0.25rem'
                       }}>
                         {getPlayerAge(player)}
-                        {player.nationality && (
+                        {getPlayerNationality(player) && (
                           <img 
-                            src={`https://flagcdn.com/16x12/${getCountryCode(player.nationality)}.png`}
-                            alt={player.nationality}
+                            src={`https://flagcdn.com/16x12/${getCountryCode(getPlayerNationality(player)!)}.png`}
+                            alt={getPlayerNationality(player)}
                             style={{ width: '16px', height: '12px' }}
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
