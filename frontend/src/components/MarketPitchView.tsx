@@ -20,6 +20,8 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
   const [viewMode, setViewMode] = useState<'list' | 'pitch'>('list');
   const [selectedFormation, setSelectedFormation] = useState('4-3-3');
   const [playerDetails, setPlayerDetails] = useState<{[key: string]: any}>({});
+  const [hoveredPlayer, setHoveredPlayer] = useState<any>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   // Diferentes formaciones tácticas
   const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
@@ -64,25 +66,26 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     }
   };
 
-const fetchPlayerDetails = async (playerId: string) => {
-  if (playerDetails[playerId] || !playerId) return;
-  
-  try {
-    const response = await fetch(`${API_URL}/api/player/${playerId}/profile`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
+  // Función para obtener detalles de Wyscout
+  const fetchPlayerDetails = async (playerId: string) => {
+    if (playerDetails[playerId] || !playerId) return;
     
-    if (response.ok) {
-      const details = await response.json();
-      console.log('Details for player', playerId, ':', details);
-      setPlayerDetails(prev => ({...prev, [playerId]: details}));
+    try {
+      const response = await fetch(`${API_URL}/api/player/${playerId}/profile`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const details = await response.json();
+        console.log('Details for player', playerId, ':', details);
+        setPlayerDetails(prev => ({...prev, [playerId]: details}));
+      }
+    } catch (error) {
+      console.error('Error fetching player details:', error);
     }
-  } catch (error) {
-    console.error('Error fetching player details:', error);
-  }
-};
+  };
 
   // UseEffect para cargar detalles cuando cambien los jugadores
   useEffect(() => {
@@ -139,39 +142,39 @@ const fetchPlayerDetails = async (playerId: string) => {
     }
   };
 
-// Función para obtener la imagen del jugador
-const getPlayerImage = (player: any): string | undefined => {
-  const details = playerDetails[player.player_id];
-  return details?.basic_info?.imageDataURL || details?.imageDataURL;
-};
+  // Función para obtener la imagen del jugador
+  const getPlayerImage = (player: any): string | undefined => {
+    const details = playerDetails[player.player_id];
+    return details?.basic_info?.imageDataURL || details?.imageDataURL;
+  };
 
-// Función para obtener el nombre corto
-const getPlayerShortName = (player: any): string => {
-  const details = playerDetails[player.player_id];
-  return details?.basic_info?.shortName || player.player_name;
-};
+  // Función para obtener el nombre corto
+  const getPlayerShortName = (player: any): string => {
+    const details = playerDetails[player.player_id];
+    return details?.basic_info?.shortName || player.player_name;
+  };
 
-// Función para calcular edad desde fecha de nacimiento
-const getPlayerAge = (player: any): number | string => {
-  const details = playerDetails[player.player_id];
-  if (details?.basic_info?.birthDate) {
-    const birthDate = new Date(details.basic_info.birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+  // Función para calcular edad desde fecha de nacimiento
+  const getPlayerAge = (player: any): number | string => {
+    const details = playerDetails[player.player_id];
+    if (details?.basic_info?.birthDate) {
+      const birthDate = new Date(details.basic_info.birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
     }
-    return age;
-  }
-  return player.age || '?';
-};
+    return player.age || '?';
+  };
 
-// Función para obtener la nacionalidad
-const getPlayerNationality = (player: any): string | undefined => {
-  const details = playerDetails[player.player_id];
-  return details?.basic_info?.passportArea?.name || details?.basic_info?.birthArea?.name;
-};
+  // Función para obtener la nacionalidad
+  const getPlayerNationality = (player: any): string | undefined => {
+    const details = playerDetails[player.player_id];
+    return details?.basic_info?.passportArea?.name || details?.basic_info?.birthArea?.name;
+  };
 
   // Función para obtener código de país de 2 letras
   const getCountryCode = (nationality: string): string => {
@@ -391,7 +394,7 @@ const getPlayerNationality = (player: any): string | undefined => {
           <div style={{
             position: 'relative',
             width: '100%',
-            maxWidth: '900px',
+            maxWidth: '1100px',
             margin: '0 auto',
             aspectRatio: '1.5',
             background: 'linear-gradient(to bottom, #10b981 0%, #059669 50%, #10b981 100%)',
@@ -454,8 +457,8 @@ const getPlayerNationality = (player: any): string | undefined => {
                   top: coords.top,
                   left: coords.left,
                   transform: 'translate(-50%, -50%)',
-                  minWidth: '90px',
-                  minHeight: '110px',
+                  minWidth: '120px',
+                  minHeight: '140px',
                   borderRadius: '8px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -469,13 +472,24 @@ const getPlayerNationality = (player: any): string | undefined => {
               >
                 {formation[pos]?.length > 0 ? (
                   formation[pos].map((player: any, index: number) => (
-                    <div key={player.id} style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      position: 'relative',
-                      marginBottom: index < formation[pos].length - 1 ? '0.5rem' : 0
-                    }}>
+                    <div 
+                      key={player.id}
+                      onMouseEnter={(e) => {
+                        setHoveredPlayer(player);
+                        setMousePosition({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseMove={(e) => {
+                        setMousePosition({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseLeave={() => setHoveredPlayer(null)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        position: 'relative',
+                        marginBottom: index < formation[pos].length - 1 ? '0.5rem' : 0
+                      }}
+                    >
                       {playerImageSmall(player)}
                       <div style={{
                         fontSize: '0.625rem',
@@ -558,6 +572,53 @@ const getPlayerNationality = (player: any): string | undefined => {
           </div>
         </div>
       </div>
+
+      {/* Popup de información del jugador */}
+      {hoveredPlayer && (
+        <div style={{
+          position: 'fixed',
+          left: mousePosition.x + 10,
+          top: mousePosition.y - 100,
+          background: 'white',
+          borderRadius: '12px',
+          padding: '1rem',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+          zIndex: 2000,
+          minWidth: '250px',
+          border: '2px solid #e5e7eb'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {getPlayerImage(hoveredPlayer) && (
+              <img 
+                src={getPlayerImage(hoveredPlayer)}
+                alt={hoveredPlayer.player_name}
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+              />
+            )}
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 'bold' }}>
+                {hoveredPlayer.player_name}
+              </h4>
+              <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                {hoveredPlayer.position} • {getPlayerAge(hoveredPlayer)} años
+              </p>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>
+                {hoveredPlayer.current_team}
+              </p>
+              {hoveredPlayer.estimated_price && (
+                <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', fontWeight: 'bold', color: '#10b981' }}>
+                  €{hoveredPlayer.estimated_price.toLocaleString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
