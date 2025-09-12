@@ -1402,77 +1402,27 @@ async def get_manual_players(current_user: dict = Depends(get_current_user)):
         logger.error(f"Error getting manual players: {e}")
         return []
 
-# ========== ENDPOINT PARA BUSCAR EN WYSCOUT ==========
-@app.get("/api/wyscout/search")
-async def search_wyscout_players(query: str, current_user: dict = Depends(get_current_user)):
-    """Buscar jugadores en Wyscout"""
+@app.get("/api/wyscout/player/{player_id}")
+async def get_wyscout_player_details(player_id: str, current_user: dict = Depends(get_current_user)):
+    """Obtener detalles de un jugador específico de Wyscout"""
     try:
-        if not query or len(query) < 2:
-            return {"players": []}
-        
         wyscout_headers = {
             'Authorization': 'Basic ' + base64.b64encode(f'{WYSCOUT_USERNAME}:{WYSCOUT_PASSWORD}'.encode()).decode()
         }
         
         response = requests.get(
-            f'https://apirest.wyscout.com/v3/search/players?name={query}',
+            f'https://apirest.wyscout.com/v3/players/{player_id}',
             headers=wyscout_headers
         )
         
         if response.status_code == 200:
-            data = response.json()
-            players = []
-            
-            # Procesar cada jugador para incluir todos los campos necesarios
-            for player in data.get('players', []):
-                # Obtener detalles completos del jugador si es necesario
-                player_details_response = requests.get(
-                    f'https://apirest.wyscout.com/v3/players/{player["wyId"]}',
-                    headers=wyscout_headers
-                )
-                
-                if player_details_response.status_code == 200:
-                    player_details = player_details_response.json()
-                    players.append({
-                        'wyId': player_details.get('wyId'),
-                        'name': f"{player_details.get('firstName', '')} {player_details.get('lastName', '')}".strip(),
-                        'shortName': player_details.get('shortName'),
-                        'firstName': player_details.get('firstName'),
-                        'lastName': player_details.get('lastName'),
-                        'birthDate': player_details.get('birthDate'),
-                        'age': calculate_age(player_details.get('birthDate')) if player_details.get('birthDate') else None,
-                        'imageDataURL': player_details.get('imageDataURL'),
-                        'role': player_details.get('role'),
-                        'currentTeam': player_details.get('currentTeam'),
-                        'passportArea': player_details.get('passportArea'),
-                        'height': player_details.get('height'),
-                        'weight': player_details.get('weight'),
-                        'foot': player_details.get('foot')
-                    })
-                else:
-                    # Si no podemos obtener detalles, usar datos básicos
-                    players.append(player)
-            
-            return {"players": players}
+            return response.json()
         else:
-            return {"players": []}
+            return {}
             
     except Exception as e:
-        logger.error(f"Error searching Wyscout: {e}")
-        return {"players": []}
-
-def calculate_age(birth_date_str):
-    """Calcular edad desde fecha de nacimiento"""
-    if not birth_date_str:
-        return None
-    try:
-        birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d')
-        today = datetime.today()
-        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-        return age
-    except:
-        return None
-
+        logger.error(f"Error getting player details: {e}")
+        return {}
 
 if __name__ == "__main__":
    import uvicorn
