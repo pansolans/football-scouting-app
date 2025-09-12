@@ -1410,12 +1410,10 @@ async def search_wyscout_players(query: str, current_user: dict = Depends(get_cu
         if not query or len(query) < 2:
             return {"players": []}
         
-        # Usar el endpoint existente de Wyscout
         wyscout_headers = {
             'Authorization': 'Basic ' + base64.b64encode(f'{WYSCOUT_USERNAME}:{WYSCOUT_PASSWORD}'.encode()).decode()
         }
         
-        # Buscar jugadores por nombre
         response = requests.get(
             f'https://apirest.wyscout.com/v3/search/players?name={query}',
             headers=wyscout_headers
@@ -1423,13 +1421,57 @@ async def search_wyscout_players(query: str, current_user: dict = Depends(get_cu
         
         if response.status_code == 200:
             data = response.json()
-            return {"players": data.get('players', [])}
+            players = []
+            
+            # Procesar cada jugador para incluir todos los campos necesarios
+            for player in data.get('players', []):
+                # Obtener detalles completos del jugador si es necesario
+                player_details_response = requests.get(
+                    f'https://apirest.wyscout.com/v3/players/{player["wyId"]}',
+                    headers=wyscout_headers
+                )
+                
+                if player_details_response.status_code == 200:
+                    player_details = player_details_response.json()
+                    players.append({
+                        'wyId': player_details.get('wyId'),
+                        'name': f"{player_details.get('firstName', '')} {player_details.get('lastName', '')}".strip(),
+                        'shortName': player_details.get('shortName'),
+                        'firstName': player_details.get('firstName'),
+                        'lastName': player_details.get('lastName'),
+                        'birthDate': player_details.get('birthDate'),
+                        'age': calculate_age(player_details.get('birthDate')) if player_details.get('birthDate') else None,
+                        'imageDataURL': player_details.get('imageDataURL'),
+                        'role': player_details.get('role'),
+                        'currentTeam': player_details.get('currentTeam'),
+                        'passportArea': player_details.get('passportArea'),
+                        'height': player_details.get('height'),
+                        'weight': player_details.get('weight'),
+                        'foot': player_details.get('foot')
+                    })
+                else:
+                    # Si no podemos obtener detalles, usar datos básicos
+                    players.append(player)
+            
+            return {"players": players}
         else:
             return {"players": []}
             
     except Exception as e:
         logger.error(f"Error searching Wyscout: {e}")
         return {"players": []}
+
+def calculate_age(birth_date_str):
+    """Calcular edad desde fecha de nacimiento"""
+    if not birth_date_str:
+        return None
+    try:
+        birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d')
+        today = datetime.today()
+        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        return age
+    except:
+        return None
 
 
 if __name__ == "__main__":
