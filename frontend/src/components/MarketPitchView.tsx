@@ -64,25 +64,25 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     }
   };
 
-  // Función para obtener detalles de Wyscout
-  const fetchPlayerDetails = async (playerId: string) => {
-    if (playerDetails[playerId]) return; // Ya lo tenemos
-    
-    try {
-      const response = await fetch(`${API_URL}/api/wyscout/player/${playerId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const details = await response.json();
-        setPlayerDetails(prev => ({...prev, [playerId]: details}));
+const fetchPlayerDetails = async (playerId: string) => {
+  if (playerDetails[playerId] || !playerId) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/api/wyscout/player/${playerId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
-    } catch (error) {
-      console.error('Error fetching player details:', error);
+    });
+    
+    if (response.ok) {
+      const details = await response.json();
+      console.log('Details for player', playerId, ':', details); // Para ver qué llega
+      setPlayerDetails(prev => ({...prev, [playerId]: details}));
     }
-  };
+  } catch (error) {
+    console.error('Error fetching player details:', error);
+  }
+};
 
   // UseEffect para cargar detalles cuando cambien los jugadores
   useEffect(() => {
