@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
 
@@ -18,12 +18,42 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
 
   const [draggedPlayer, setDraggedPlayer] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pitch'>('list');
-  const [selectedFormation, setSelectedFormation] = useState('4-3-3');
+  const [selectedFormation, setSelectedFormation] = useState('custom');
   const [playerDetails, setPlayerDetails] = useState<{[key: string]: any}>({});
   const [hoveredPlayer, setHoveredPlayer] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [editMode, setEditMode] = useState(false);
+  const [draggingPosition, setDraggingPosition] = useState<string | null>(null);
+  const pitchRef = useRef<HTMLDivElement>(null);
 
-  // Diferentes formaciones tácticas - AJUSTADAS PARA NO SALIRSE
+  // Posiciones personalizables - se cargan de localStorage o usan valores por defecto
+  const [customPositions, setCustomPositions] = useState<{[key: string]: {top: string, left: string}}>(() => {
+    const saved = localStorage.getItem('customPositions');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error loading custom positions:', e);
+      }
+    }
+    return {
+      GK: { top: '90%', left: '50%' },
+      LB: { top: '75%', left: '15%' },
+      CB1: { top: '75%', left: '35%' },
+      CB2: { top: '75%', left: '65%' },
+      RB: { top: '75%', left: '85%' },
+      CDM1: { top: '55%', left: '35%' },
+      CDM2: { top: '55%', left: '65%' },
+      CM: { top: '45%', left: '50%' },
+      LM: { top: '45%', left: '15%' },
+      RM: { top: '45%', left: '85%' },
+      LW: { top: '20%', left: '20%' },
+      ST: { top: '15%', left: '50%' },
+      RW: { top: '20%', left: '80%' }
+    };
+  });
+
+  // Formaciones predefinidas
   const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
     '4-3-3': {
       GK: { top: '90%', left: '50%' },
@@ -66,13 +96,19 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     }
   };
 
+  // Guardar posiciones personalizadas cuando cambien
+  useEffect(() => {
+    if (selectedFormation === 'custom') {
+      localStorage.setItem('customPositions', JSON.stringify(customPositions));
+    }
+  }, [customPositions, selectedFormation]);
+
   // Cargar formación guardada de localStorage al montar
   useEffect(() => {
     const savedFormation = localStorage.getItem('marketFormation');
     if (savedFormation) {
       try {
         const parsed = JSON.parse(savedFormation);
-        // Verificar que los jugadores siguen existiendo
         const validFormation: {[key: string]: any[]} = {};
         Object.keys(parsed).forEach(pos => {
           validFormation[pos] = parsed[pos].filter((savedPlayer: any) => 
@@ -124,6 +160,57 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     });
   }, [marketPlayers]);
 
+  // Manejar el arrastre de posiciones vacías
+  const handlePositionMouseDown = (pos: string, e: React.MouseEvent) => {
+    if (!editMode || !pitchRef.current) return;
+    
+    e.preventDefault();
+    setDraggingPosition(pos);
+    
+    const pitch = pitchRef.current.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const positions = selectedFormation === 'custom' ? customPositions : formations[selectedFormation];
+    const startTop = parseFloat(positions[pos].top);
+    const startLeft = parseFloat(positions[pos].left);
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      
+      const newLeft = Math.max(5, Math.min(95, startLeft + (deltaX / pitch.width) * 100));
+      const newTop = Math.max(5, Math.min(95, startTop + (deltaY / pitch.height) * 100));
+      
+      setCustomPositions(prev => ({
+        ...prev,
+        [pos]: { top: `${newTop}%`, left: `${newLeft}%` }
+      }));
+      
+      // Cambiar automáticamente a formación personalizada cuando se mueva una posición
+      if (selectedFormation !== 'custom') {
+        setSelectedFormation('custom');
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setDraggingPosition(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Cambiar formación
+  const changeFormation = (formationName: string) => {
+    setSelectedFormation(formationName);
+    if (formationName !== 'custom' && formations[formationName]) {
+      // Copiar la formación predefinida a las posiciones personalizadas
+      setCustomPositions(formations[formationName]);
+    }
+  };
+
   const handleDragStart = (player: any) => {
     setDraggedPlayer(player);
   };
@@ -131,17 +218,14 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
   const handleDrop = (position: string) => {
     if (draggedPlayer) {
       const currentPositionPlayers = formation[position] || [];
-      // Permitir hasta 3 jugadores por posición (excepto portero)
       const maxPlayers = position === 'GK' ? 1 : 3;
       
       if (currentPositionPlayers.length < maxPlayers) {
-        // Remover jugador de su posición anterior si existe
         const newFormation = { ...formation };
         Object.keys(newFormation).forEach(pos => {
           newFormation[pos] = newFormation[pos].filter((p: any) => p.id !== draggedPlayer.id);
         });
         
-        // Agregar a la nueva posición
         newFormation[position] = [...(newFormation[position] || []), draggedPlayer];
         setFormation(newFormation);
       } else {
@@ -170,19 +254,16 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     }
   };
 
-  // Función para obtener la imagen del jugador
   const getPlayerImage = (player: any): string | undefined => {
     const details = playerDetails[player.player_id];
     return details?.basic_info?.imageDataURL || details?.imageDataURL;
   };
 
-  // Función para obtener el nombre corto
   const getPlayerShortName = (player: any): string => {
     const details = playerDetails[player.player_id];
     return details?.basic_info?.shortName || player.player_name;
   };
 
-  // Función para calcular edad desde fecha de nacimiento
   const getPlayerAge = (player: any): number | string => {
     const details = playerDetails[player.player_id];
     if (details?.basic_info?.birthDate) {
@@ -198,13 +279,11 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     return player.age || '?';
   };
 
-  // Función para obtener la nacionalidad
   const getPlayerNationality = (player: any): string | undefined => {
     const details = playerDetails[player.player_id];
     return details?.basic_info?.passportArea?.name || details?.basic_info?.birthArea?.name;
   };
 
-  // Función para obtener código de país de 2 letras
   const getCountryCode = (nationality: string): string => {
     const countryMap: {[key: string]: string} = {
       'Argentina': 'ar',
@@ -331,9 +410,14 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     );
   };
 
+  // Obtener las posiciones actuales según la formación seleccionada
+  const getCurrentPositions = () => {
+    return selectedFormation === 'custom' ? customPositions : formations[selectedFormation];
+  };
+
   return (
     <div>
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
         <button
           onClick={() => setViewMode('list')}
           style={{
@@ -350,7 +434,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
         
         <select
           value={selectedFormation}
-          onChange={(e) => setSelectedFormation(e.target.value)}
+          onChange={(e) => changeFormation(e.target.value)}
           style={{
             padding: '0.75rem 1.5rem',
             border: '2px solid #e5e7eb',
@@ -359,10 +443,32 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
             fontWeight: '600'
           }}
         >
+          <option value="custom">Personalizada</option>
           <option value="4-3-3">4-3-3</option>
           <option value="4-4-2">4-4-2</option>
           <option value="3-5-2">3-5-2</option>
         </select>
+        
+        <button
+          onClick={() => setEditMode(!editMode)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: editMode ? '#ef4444' : '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600'
+          }}
+        >
+          {editMode ? '✓ Guardar Posiciones' : '✏️ Editar Posiciones'}
+        </button>
+        
+        {editMode && (
+          <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+            Arrastra las cajas vacías para reorganizar
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '2rem' }}>
@@ -381,14 +487,15 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
               .map(player => (
                 <div
                   key={player.id}
-                  draggable
+                  draggable={!editMode}
                   onDragStart={() => handleDragStart(player)}
                   style={{
                     background: 'white',
                     borderRadius: '8px',
                     padding: '0.75rem',
                     marginBottom: '0.5rem',
-                    cursor: 'grab',
+                    cursor: editMode ? 'not-allowed' : 'grab',
+                    opacity: editMode ? 0.5 : 1,
                     border: '2px solid #e5e7eb',
                     display: 'flex',
                     alignItems: 'center',
@@ -423,17 +530,20 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
 
         {/* Cancha */}
         <div style={{ flex: 1 }}>
-          <div style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '1100px',
-            margin: '0 auto',
-            aspectRatio: '1.2',
-            background: 'linear-gradient(to bottom, #10b981 0%, #059669 50%, #10b981 100%)',
-            borderRadius: '12px',
-            border: '3px solid white',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
-          }}>
+          <div 
+            ref={pitchRef}
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '1100px',
+              margin: '0 auto',
+              aspectRatio: '1.2',
+              background: 'linear-gradient(to bottom, #10b981 0%, #059669 50%, #10b981 100%)',
+              borderRadius: '12px',
+              border: '3px solid white',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+            }}
+          >
             {/* Líneas del campo */}
             <div style={{
               position: 'absolute',
@@ -479,11 +589,12 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
             }} />
 
             {/* Posiciones de jugadores */}
-            {Object.entries(formations[selectedFormation]).map(([pos, coords]) => (
+            {Object.entries(getCurrentPositions()).map(([pos, coords]) => (
               <div
                 key={pos}
-                onDrop={() => handleDrop(pos)}
+                onDrop={() => !editMode && handleDrop(pos)}
                 onDragOver={handleDragOver}
+                onMouseDown={(e) => handlePositionMouseDown(pos, e)}
                 style={{
                   position: 'absolute',
                   top: coords.top,
@@ -497,9 +608,13 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: formation[pos]?.length > 0 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.2)',
-                  border: '2px dashed rgba(255,255,255,0.5)',
+                  border: editMode 
+                    ? (draggingPosition === pos ? '3px solid #ef4444' : '3px solid #3b82f6')
+                    : '2px dashed rgba(255,255,255,0.5)',
                   padding: '0.5rem',
-                  gap: '0.25rem'
+                  gap: '0.25rem',
+                  cursor: editMode ? 'move' : 'default',
+                  transition: 'border 0.2s'
                 }}
               >
                 {formation[pos]?.length > 0 ? (
@@ -552,27 +667,29 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                           />
                         )}
                       </div>
-                      <button
-                        onClick={() => removeFromFormation(pos, player.id)}
-                        style={{
-                          position: 'absolute',
-                          top: '-8px',
-                          right: '-8px',
-                          width: '18px',
-                          height: '18px',
-                          borderRadius: '50%',
-                          background: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          fontSize: '0.625rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        ×
-                      </button>
+                      {!editMode && (
+                        <button
+                          onClick={() => removeFromFormation(pos, player.id)}
+                          style={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-8px',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            fontSize: '0.625rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -596,10 +713,13 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
             borderRadius: '8px',
             border: '2px solid #e5e7eb'
           }}>
-            <h4 style={{ margin: '0 0 0.5rem 0' }}>Formación {selectedFormation}</h4>
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>
+              Formación {selectedFormation === 'custom' ? 'Personalizada' : selectedFormation}
+            </h4>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-              Arrastra jugadores desde el panel izquierdo a las posiciones en la cancha.
-              Máximo 3 jugadores por posición (1 para portero).
+              {editMode 
+                ? 'Modo edición: Arrastra las cajas para reorganizar las posiciones. Click en "Guardar Posiciones" cuando termines.'
+                : 'Arrastra jugadores desde el panel izquierdo a las posiciones en la cancha. Máximo 3 jugadores por posición (1 para portero).'}
             </p>
           </div>
         </div>
