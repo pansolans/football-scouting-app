@@ -276,28 +276,32 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     );
   };
 
-  const playerImageSmall = (player: any) => {
-    const imgSrc = getPlayerImage(player);
-    if (!imgSrc) return null;
-    
-    return (
-      <img 
-        src={imgSrc}
-        alt={player.player_name}
-        style={{
-          width: '35px',
-          height: '35px',
-          borderRadius: '50%',
-          objectFit: 'cover',
-          border: '2px solid white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = 'none';
-        }}
-      />
-    );
-  };
+const playerImageSmall = (player: any) => {
+  const imgSrc = getPlayerImage(player);
+  if (!imgSrc) return null;
+  
+  const playersInPosition = Object.values(formation).flat().filter((p: any) => 
+    Object.values(formation).some(pos => pos.includes(player) && pos.length > 2)
+  ).length > 0;
+  
+  return (
+    <img 
+      src={imgSrc}
+      alt={player.player_name}
+      style={{
+        width: playersInPosition ? '30px' : '35px',
+        height: playersInPosition ? '30px' : '35px',
+        borderRadius: '50%',
+        objectFit: 'cover',
+        border: '2px solid white',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+      }}
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+};
 
   return (
     <div>
@@ -457,8 +461,8 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                   top: coords.top,
                   left: coords.left,
                   transform: 'translate(-50%, -50%)',
-                  minWidth: '120px',
-                  minHeight: '140px',
+                  minWidth: '150px',
+                  minHeight: '180px',
                   borderRadius: '8px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -487,7 +491,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                         flexDirection: 'column',
                         alignItems: 'center',
                         position: 'relative',
-                        marginBottom: index < formation[pos].length - 1 ? '0.5rem' : 0
+                        marginBottom: index < formation[pos].length - 1 ? '0.75rem' : 0,
                       }}
                     >
                       {playerImageSmall(player)}
