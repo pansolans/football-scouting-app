@@ -139,39 +139,39 @@ const fetchPlayerDetails = async (playerId: string) => {
     }
   };
 
-  // Función para obtener la imagen del jugador
-  const getPlayerImage = (player: any): string | undefined => {
-    const details = playerDetails[player.player_id];
-    return details?.imageDataURL;
-  };
+// Función para obtener la imagen del jugador
+const getPlayerImage = (player: any): string | undefined => {
+  const details = playerDetails[player.player_id];
+  return details?.basic_info?.imageDataURL || details?.imageDataURL;
+};
 
-  // Función para obtener el nombre corto
-  const getPlayerShortName = (player: any): string => {
-    const details = playerDetails[player.player_id];
-    return details?.shortName || player.player_name;
-  };
+// Función para obtener el nombre corto
+const getPlayerShortName = (player: any): string => {
+  const details = playerDetails[player.player_id];
+  return details?.basic_info?.shortName || player.player_name;
+};
 
-  // Función para calcular edad desde fecha de nacimiento
-  const getPlayerAge = (player: any): number | string => {
-    const details = playerDetails[player.player_id];
-    if (details?.birthDate) {
-      const birthDate = new Date(details.birthDate);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age;
+// Función para calcular edad desde fecha de nacimiento
+const getPlayerAge = (player: any): number | string => {
+  const details = playerDetails[player.player_id];
+  if (details?.basic_info?.birthDate) {
+    const birthDate = new Date(details.basic_info.birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
     }
-    return player.age || '?';
-  };
+    return age;
+  }
+  return player.age || '?';
+};
 
-  // Función para obtener la nacionalidad
-  const getPlayerNationality = (player: any): string | undefined => {
-    const details = playerDetails[player.player_id];
-    return details?.passportArea?.name;
-  };
+// Función para obtener la nacionalidad
+const getPlayerNationality = (player: any): string | undefined => {
+  const details = playerDetails[player.player_id];
+  return details?.basic_info?.passportArea?.name || details?.basic_info?.birthArea?.name;
+};
 
   // Función para obtener código de país de 2 letras
   const getCountryCode = (nationality: string): string => {
