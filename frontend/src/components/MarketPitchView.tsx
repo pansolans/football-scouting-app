@@ -68,7 +68,7 @@ const fetchPlayerDetails = async (playerId: string) => {
   if (playerDetails[playerId] || !playerId) return;
   
   try {
-    const response = await fetch(`${API_URL}/api/wyscout/player/${playerId}`, {
+    const response = await fetch(`${API_URL}/api/player/${playerId}/profile`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -76,7 +76,7 @@ const fetchPlayerDetails = async (playerId: string) => {
     
     if (response.ok) {
       const details = await response.json();
-      console.log('Details for player', playerId, ':', details); // Para ver qué llega
+      console.log('Details for player', playerId, ':', details);
       setPlayerDetails(prev => ({...prev, [playerId]: details}));
     }
   } catch (error) {
