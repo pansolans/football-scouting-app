@@ -68,8 +68,8 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
   const handleDrop = (position: string) => {
     if (draggedPlayer) {
       const currentPositionPlayers = formation[position] || [];
-      // Permitir hasta 2 jugadores por posición (excepto portero)
-      const maxPlayers = position === 'GK' ? 1 : 2;
+      // Permitir hasta 3 jugadores por posición (excepto portero)
+      const maxPlayers = position === 'GK' ? 1 : 3;
       
       if (currentPositionPlayers.length < maxPlayers) {
         // Remover jugador de su posición anterior si existe
@@ -107,19 +107,59 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
     }
   };
 
-  // Función para obtener la imagen del jugador de Wyscout
+  // Función para obtener la imagen del jugador
   const getPlayerImage = (player: any): string | undefined => {
+    // Primero intentar con la URL guardada de Wyscout
+    if (player.image_url) {
+      return player.image_url;
+    }
+    // Si no hay URL guardada, intentar construirla
     if (player.player_type === 'wyscout' && player.player_id) {
-      return `https://img.wyscout.com/players/${player.player_id}/small`;
+      return `https://cdn5.wyscout.com/photos/players/public/g${player.player_id}_100x130.png`;
     }
     return undefined;
   };
 
-  // Función para obtener la bandera del país (necesitarás un mapping o API)
-  const getFlagUrl = (nationality: string) => {
-    // Usar una API de banderas como flagcdn.com
-    const countryCode = nationality?.toLowerCase().substring(0, 2);
-    return `https://flagcdn.com/24x18/${countryCode}.png`;
+  // Función para calcular edad desde fecha de nacimiento
+  const getPlayerAge = (player: any): number | string => {
+    if (player.age) return player.age;
+    if (player.birth_date) {
+      const birthDate = new Date(player.birth_date);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    }
+    return '?';
+  };
+
+  // Función para obtener código de país de 2 letras
+  const getCountryCode = (nationality: string): string => {
+    // Mapeo básico de países comunes
+    const countryMap: {[key: string]: string} = {
+      'Argentina': 'ar',
+      'Brazil': 'br',
+      'Spain': 'es',
+      'France': 'fr',
+      'Germany': 'de',
+      'Italy': 'it',
+      'England': 'gb',
+      'United Kingdom': 'gb',
+      'Portugal': 'pt',
+      'Netherlands': 'nl',
+      'Belgium': 'be',
+      'Uruguay': 'uy',
+      'Colombia': 'co',
+      'Mexico': 'mx',
+      'Poland': 'pl',
+      'Croatia': 'hr',
+      'Serbia': 'rs'
+    };
+    
+    return countryMap[nationality] || nationality?.toLowerCase().substring(0, 2) || '';
   };
 
   if (viewMode === 'list') {
@@ -155,7 +195,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                     {player.player_name}
                   </h3>
                   <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {player.position} • {player.age} años • {player.current_team}
+                    {player.position} • {getPlayerAge(player)} años • {player.current_team}
                   </p>
                 </div>
                 <span style={{
@@ -287,10 +327,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                   {playerImage(player)}
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: '600', fontSize: '0.875rem' }}>
-                      {player.player_name}
+                      {player.short_name || player.player_name}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      {player.position} • {player.age} años
+                      {player.position} • {getPlayerAge(player)} años
                     </div>
                     <span style={{
                       display: 'inline-block',
@@ -378,8 +418,8 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                   top: coords.top,
                   left: coords.left,
                   transform: 'translate(-50%, -50%)',
-                  minWidth: '80px',
-                  minHeight: '100px',
+                  minWidth: '90px',
+                  minHeight: '110px',
                   borderRadius: '8px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -409,7 +449,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                         lineHeight: 1,
                         marginTop: '0.25rem'
                       }}>
-                        {player.player_name.split(' ').pop()}
+                        {player.short_name || player.player_name.split(' ').pop()}
                       </div>
                       <div style={{
                         fontSize: '0.5rem',
@@ -418,7 +458,17 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
                         alignItems: 'center',
                         gap: '0.25rem'
                       }}>
-                        {player.age} años
+                        {getPlayerAge(player)}
+                        {player.nationality && (
+                          <img 
+                            src={`https://flagcdn.com/16x12/${getCountryCode(player.nationality)}.png`}
+                            alt={player.nationality}
+                            style={{ width: '16px', height: '12px' }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        )}
                       </div>
                       <button
                         onClick={() => removeFromFormation(pos, player.id)}
@@ -467,7 +517,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
             <h4 style={{ margin: '0 0 0.5rem 0' }}>Formación {selectedFormation}</h4>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
               Arrastra jugadores desde el panel izquierdo a las posiciones en la cancha.
-              Máximo 2 jugadores por posición (1 para portero).
+              Máximo 3 jugadores por posición (1 para portero).
             </p>
           </div>
         </div>
