@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import { useSupabase } from '../hooks/useSupabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Configuración de Supabase
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || '';
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface Player {
   id: string;
@@ -36,7 +41,6 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({
   const [playerPositions, setPlayerPositions] = useState<Record<string, { top: number; left: number }>>({});
   const [isDragging, setIsDragging] = useState<string | null>(null);
   const pitchRef = useRef<HTMLDivElement>(null);
-  const supabase = useSupabase();
 
   // Posiciones iniciales (11 cajas vacías)
   const initialPositions = [
