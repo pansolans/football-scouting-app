@@ -112,6 +112,13 @@ const MainApp: React.FC = () => {
     notes: ''
   });
 
+  // Agregar estos estados con los otros estados existentes
+const [selectedNationalities, setSelectedNationalities] = useState<string[]>([]);
+const [ageFilter, setAgeFilter] = useState({ min: '', max: '' });
+const [showNationalityFilter, setShowNationalityFilter] = useState(false);
+const [availableNationalities, setAvailableNationalities] = useState<string[]>([]);
+const [isLoadingFiltered, setIsLoadingFiltered] = useState(false);
+
   const [reportForm, setReportForm] = useState<ScoutReportCreate>({
     player_id: '',
     player_name: '',
@@ -614,6 +621,8 @@ const openMarketModal = async (player: any) => {
     }
   };
 
+
+
   // Cargar partidos cuando se abre el formulario
 
 
@@ -630,6 +639,67 @@ const openMarketModal = async (player: any) => {
     }
   };
 
+// Reemplazar las funciones con estas versiones corregidas
+const searchPlayersWithFilters = async () => {
+  if (!selectedCompetition) return;
+  
+  setIsLoadingFiltered(true);
+  try {
+    const params = new URLSearchParams();
+    
+    if (selectedNationalities.length > 0) {
+      params.append('nationalities', selectedNationalities.join(','));
+    }
+    
+    if (ageFilter.min) {
+      params.append('min_age', ageFilter.min);
+    }
+    
+    if (ageFilter.max) {
+      params.append('max_age', ageFilter.max);
+    }
+    
+    const url = `${API_URL}/api/wyscout/competition/${selectedCompetition}/players-filtered${params.toString() ? '?' + params.toString() : ''}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setTeamPlayers(data.players || []);
+      
+      // Actualizar nacionalidades disponibles - CORREGIDO
+      const nationalities = Array.from(new Set(
+        data.players.map((player: any) => player.nationality).filter(Boolean)
+      )).sort();
+      setAvailableNationalities(nationalities as any);
+      
+    } else {
+      setTeamPlayers([]);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    setTeamPlayers([]);
+  } finally {
+    setIsLoadingFiltered(false);
+  }
+};
+
+const clearAllFilters = () => {
+  setSelectedNationalities([] as any);
+  setAgeFilter({ min: '', max: '' });
+  setShowNationalityFilter(false);
+  
+  // Volver a cargar sin filtros
+  if (selectedCompetition) {
+    setTeamPlayers([]);
+  }
+};
+  
   // Cargar jugadores manuales
   const loadManualPlayers = async () => {
     setLoadingManualPlayers(true);
