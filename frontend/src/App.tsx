@@ -1728,6 +1728,163 @@ const clearAllFilters = () => {
                 </div>
               </div>
 
+{/* Filtros avanzados - AGREGAR SOLO ESTO */}
+{selectedCompetition && (
+  <div style={{
+    borderTop: '1px solid #e5e7eb',
+    paddingTop: '1.5rem',
+    marginTop: '1.5rem'
+  }}>
+    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem', color: '#1f2937' }}>
+      Filtros Avanzados
+    </h3>
+
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+      {/* Filtro de Nacionalidad */}
+      <div>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+          Nacionalidades
+        </label>
+        <div style={{ position: 'relative' }}>
+          <div
+            onClick={() => setShowNationalityFilter(!showNationalityFilter)}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              background: 'white',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <span>
+              {selectedNationalities.length === 0 
+                ? 'Todas las nacionalidades' 
+                : `${selectedNationalities.length} seleccionadas`
+              }
+            </span>
+            <span>▼</span>
+          </div>
+          
+          {showNationalityFilter && availableNationalities.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              background: 'white',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              maxHeight: '200px',
+              overflowY: 'auto',
+              zIndex: 10,
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}>
+              {availableNationalities.map(nationality => (
+                <label key={nationality} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0.5rem 0.75rem',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedNationalities.includes(nationality)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedNationalities([...selectedNationalities, nationality]);
+                      } else {
+                        setSelectedNationalities(selectedNationalities.filter(n => n !== nationality));
+                      }
+                    }}
+                    style={{ marginRight: '0.5rem' }}
+                  />
+                  {nationality}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Filtro de Edad */}
+      <div>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+          Rango de Edad
+        </label>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <input
+            type="number"
+            placeholder="Mín"
+            value={ageFilter.min}
+            onChange={(e) => setAgeFilter({...ageFilter, min: e.target.value})}
+            style={{
+              flex: 1,
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
+          <span style={{ color: '#6b7280' }}>-</span>
+          <input
+            type="number"
+            placeholder="Máx"
+            value={ageFilter.max}
+            onChange={(e) => setAgeFilter({...ageFilter, max: e.target.value})}
+            style={{
+              flex: 1,
+              padding: '0.75rem',
+              border: '2px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '0.875rem'
+            }}
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Botones de acción */}
+    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+      <button
+        onClick={searchPlayersWithFilters}
+        disabled={!selectedCompetition || isLoadingFiltered}
+        style={{
+          padding: '0.75rem 2rem',
+          background: selectedCompetition ? currentClub.primaryColor : '#9ca3af',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '0.875rem',
+          fontWeight: '600',
+          cursor: selectedCompetition ? 'pointer' : 'not-allowed'
+        }}
+      >
+        {isLoadingFiltered ? 'Buscando...' : 'Buscar Jugadores'}
+      </button>
+
+      <button
+        onClick={clearAllFilters}
+        style={{
+          padding: '0.75rem 1.5rem',
+          background: 'white',
+          color: '#6b7280',
+          border: '2px solid #e5e7eb',
+          borderRadius: '8px',
+          fontSize: '0.875rem',
+          fontWeight: '600',
+          cursor: 'pointer'
+        }}
+      >
+        Limpiar Filtros
+      </button>
+    </div>
+  </div>
+)}
               {/* Players List */}
               {teamPlayers.length > 0 && (
                 <div style={{
