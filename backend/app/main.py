@@ -1522,15 +1522,16 @@ async def get_competition_players_filtered(
             
             for player in players:
                 # Obtener team_id y mapear al nombre real
-                team_id = player.get('currentTeam', {}).get('wyId')
+                team_id = player.get('currentTeamId')
                 team_name = team_names.get(team_id, 'Unknown') if team_id else 'Unknown'
                 
                 # Calcular edad
                 age = calculate_age(player.get('birthDate'))
                 
                 # Obtener nacionalidad
-                nationality = (player.get('passportArea', {}).get('name') or 
-                             player.get('birthArea', {}).get('name') or 'Unknown')
+                passport_area = player.get('passportArea') or {}
+                birth_area = player.get('birthArea') or {}
+                nationality = passport_area.get('name') or birth_area.get('name') or 'Unknown'
                 
                 # Agregar a nacionalidades disponibles
                 if nationality != 'Unknown':
