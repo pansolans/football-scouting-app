@@ -1424,70 +1424,11 @@ async def get_wyscout_player_details(player_id: str, current_user: dict = Depend
         logger.error(f"Error getting player details: {e}")
         return {}
     
-@app.get("/api/wyscout/competition/{competition_id}/players-filtered")
-async def get_competition_players_filtered(
-    competition_id: int,
-    nationalities: str = Query(None),
-    min_age: int = Query(None),
-    max_age: int = Query(None),
-    current_user: dict = Depends(get_current_user)
-):
-    """Obtener jugadores de competición con filtros"""
-    try:
-        async with WyscoutClient(settings.WYSCOUT_USERNAME, settings.WYSCOUT_PASSWORD) as wyscout:
-            # Usar tu endpoint existente para obtener todos los jugadores
-            response = await wyscout.client.get(
-                f"https://apirest.wyscout.com/v3/competitions/{competition_id}/players",
-                headers=wyscout.headers
-            )
-            
-            if response.status_code != 200:
-                return {'players': [], 'total': 0}
-            
-            data = response.json()
-            players = data.get('players', [])
-            
-            # Filtrar en el servidor
-            filtered_players = []
-            for player in players:
-                # Filtro nacionalidad
-                if nationalities:
-                    nat_list = [n.strip() for n in nationalities.split(',')]
-                    player_nat = player.get('passportArea', {}).get('name') or player.get('birthArea', {}).get('name')
-                    if player_nat not in nat_list:
-                        continue
-                
-                # Filtro edad
-                if min_age or max_age:
-                    age = calculate_age(player.get('birthDate'))
-                    if age is None:
-                        continue
-                    if min_age and age < min_age:
-                        continue
-                    if max_age and age > max_age:
-                        continue
-                
-                # Agregar player con datos extra
-                filtered_players.append({
-                    **player,
-                    'age': calculate_age(player.get('birthDate')),
-                    'nationality': player.get('passportArea', {}).get('name') or player.get('birthArea', {}).get('name'),
-                    'current_team_name': player.get('currentTeam', {}).get('name', 'Unknown'),
-                    'name': player.get('shortName') or f"{player.get('firstName', '')} {player.get('lastName', '')}".strip()
-                })
-            
-            return {
-                'players': filtered_players,
-                'total': len(filtered_players)
-            }
-            
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        return {'players': [], 'total': 0}
     
 @app.get("/api/wyscout/competition/{competition_id}/players-filtered")
 async def get_competition_players_filtered(
     competition_id: int,
+    teams: str = Query(None),
     nationalities: str = Query(None),
     min_age: int = Query(None),
     max_age: int = Query(None),
@@ -1548,15 +1489,21 @@ async def get_competition_players_filtered(
                 
                 processed_players.append(processed_player)
             
-            # 4. Aplicar filtros
+                # 4. Aplicar filtros
             filtered_players = []
             for player in processed_players:
+                # Filtro por equipos
+                if teams:
+                    team_list = [int(t.strip()) for t in teams.split(',')]
+                    player_team_id = player.get('currentTeamId')
+                    if player_team_id not in team_list:
+                        continue
+                
                 # Filtro nacionalidad
                 if nationalities:
                     nat_list = [n.strip() for n in nationalities.split(',')]
                     if player['nationality'] not in nat_list:
                         continue
-                
                 # Filtro edad
                 if min_age or max_age:
                     age = player['age']
