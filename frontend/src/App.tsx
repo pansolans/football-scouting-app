@@ -436,6 +436,7 @@ const openMarketModal = async (player: any) => {
           setSelectedTeam(null);
           setSelectedTeams([]);
           setTeamPlayers([]);
+          searchPlayersWithFilters();
         } catch (error) {
           console.error('Failed to load teams:', error);
         } finally {
@@ -701,10 +702,12 @@ const searchPlayersWithFilters = async () => {
       
     } else {
       setTeamPlayers([]);
+      setAvailableNationalities([]);
     }
   } catch (error) {
     console.error('Error:', error);
     setTeamPlayers([]);
+    setAvailableNationalities([]);
   } finally {
     setIsLoadingFiltered(false);
   }
