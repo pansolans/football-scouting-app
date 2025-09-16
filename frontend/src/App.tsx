@@ -413,6 +413,7 @@ const openMarketModal = async (player: any) => {
           setSelectedCompetition(null);
           setCompetitionTeams([]);
           setSelectedTeam(null);
+          setSelectedTeams([]);
           setTeamPlayers([]);
         } catch (error) {
           console.error('Failed to load competitions:', error);
@@ -433,6 +434,7 @@ const openMarketModal = async (player: any) => {
           const teams = await playerService.getCompetitionTeams(selectedCompetition);
           setCompetitionTeams(Array.isArray(teams) ? teams : []);
           setSelectedTeam(null);
+          setSelectedTeams([]);
           setTeamPlayers([]);
         } catch (error) {
           console.error('Failed to load teams:', error);
@@ -444,23 +446,41 @@ const openMarketModal = async (player: any) => {
     loadTeams();
   }, [selectedCompetition]);
 
-  // Load players when team is selected
+  // Load players when teams are selected
   useEffect(() => {
     const loadTeamPlayers = async () => {
-      if (selectedTeam) {
+      if (selectedTeams.length > 0) {
         setLoading(true);
         try {
-          const players = await playerService.getTeamPlayers(selectedTeam);
-          setTeamPlayers(Array.isArray(players) ? players : []);
+          const allPlayers = [];
+          for (const teamId of selectedTeams) {
+            const players = await playerService.getTeamPlayers(teamId);
+            if (Array.isArray(players)) {
+              allPlayers.push(...players);
+            }
+          }
+          setTeamPlayers(allPlayers);
+          
+          // Extraer nacionalidades de todos los jugadores
+          const nationalities = Array.from(new Set(
+            allPlayers.map((player: any) => 
+              player.passportArea?.name || player.birthArea?.name
+            ).filter(Boolean)
+          )).sort();
+          setAvailableNationalities(nationalities as any);
+          
         } catch (error) {
           console.error('Failed to load players:', error);
         } finally {
           setLoading(false);
         }
+      } else {
+        setTeamPlayers([]);
+        setAvailableNationalities([]);
       }
     };
     loadTeamPlayers();
-  }, [selectedTeam]);
+  }, [selectedTeams]);
 
   // View player profile
   const viewPlayerProfile = async (playerId: number) => {
