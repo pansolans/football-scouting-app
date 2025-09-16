@@ -669,6 +669,10 @@ const searchPlayersWithFilters = async () => {
   try {
     const params = new URLSearchParams();
     
+    if (selectedTeams.length > 0) {
+      params.append('teams', selectedTeams.join(','));
+    }
+    
     if (selectedNationalities.length > 0) {
       params.append('nationalities', selectedNationalities.join(','));
     }
