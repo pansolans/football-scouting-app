@@ -1817,7 +1817,7 @@ const clearAllFilters = () => {
             <span>▼</span>
           </div>
           
-          {showNationalityFilter && availableNationalities.length > 0 && (
+          {showNationalityFilter && (
             <div style={{
               position: 'absolute',
               top: '100%',
