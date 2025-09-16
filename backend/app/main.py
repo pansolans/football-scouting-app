@@ -1484,6 +1484,101 @@ async def get_competition_players_filtered(
     except Exception as e:
         logger.error(f"Error: {e}")
         return {'players': [], 'total': 0}
+    
+@app.get("/api/wyscout/competition/{competition_id}/players-filtered")
+async def get_competition_players_filtered(
+    competition_id: int,
+    nationalities: str = Query(None),
+    min_age: int = Query(None),
+    max_age: int = Query(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Obtener jugadores de competición con filtros avanzados"""
+    try:
+        async with WyscoutClient(settings.WYSCOUT_USERNAME, settings.WYSCOUT_PASSWORD) as wyscout:
+            # 1. PRIMERO obtener los equipos de la competición para tener los nombres
+            teams_data = await wyscout.get_competition_teams(competition_id)
+            team_names = {}
+            for team in teams_data.get('teams', []):
+                team_names[team.get('wyId')] = team.get('name', 'Unknown')
+            
+            logger.info(f"Team names loaded: {len(team_names)} teams")
+            
+            # 2. DESPUÉS obtener los jugadores
+            response = await wyscout.client.get(
+                f"https://apirest.wyscout.com/v3/competitions/{competition_id}/players",
+                headers=wyscout.headers
+            )
+            
+            if response.status_code != 200:
+                return {'players': [], 'total': 0, 'nationalities': []}
+            
+            data = response.json()
+            players = data.get('players', [])
+            
+            # 3. Procesar jugadores y mapear nombres de equipos
+            processed_players = []
+            available_nationalities = set()
+            
+            for player in players:
+                # Obtener team_id y mapear al nombre real
+                team_id = player.get('currentTeam', {}).get('wyId')
+                team_name = team_names.get(team_id, 'Unknown') if team_id else 'Unknown'
+                
+                # Calcular edad
+                age = calculate_age(player.get('birthDate'))
+                
+                # Obtener nacionalidad
+                nationality = (player.get('passportArea', {}).get('name') or 
+                             player.get('birthArea', {}).get('name') or 'Unknown')
+                
+                # Agregar a nacionalidades disponibles
+                if nationality != 'Unknown':
+                    available_nationalities.add(nationality)
+                
+                # Crear jugador procesado
+                processed_player = {
+                    **player,
+                    'age': age,
+                    'nationality': nationality,
+                    'current_team_name': team_name,  # ← NOMBRE REAL DEL EQUIPO
+                    'name': player.get('shortName') or f"{player.get('firstName', '')} {player.get('lastName', '')}".strip()
+                }
+                
+                processed_players.append(processed_player)
+            
+            # 4. Aplicar filtros
+            filtered_players = []
+            for player in processed_players:
+                # Filtro nacionalidad
+                if nationalities:
+                    nat_list = [n.strip() for n in nationalities.split(',')]
+                    if player['nationality'] not in nat_list:
+                        continue
+                
+                # Filtro edad
+                if min_age or max_age:
+                    age = player['age']
+                    if age is None:
+                        continue
+                    if min_age and age < min_age:
+                        continue
+                    if max_age and age > max_age:
+                        continue
+                
+                filtered_players.append(player)
+            
+            logger.info(f"Returning {len(filtered_players)} players with real team names")
+            
+            return {
+                'players': filtered_players,
+                'total': len(filtered_players),
+                'nationalities': sorted(list(available_nationalities))  # Para el dropdown
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in players-filtered endpoint: {e}")
+        return {'players': [], 'total': 0, 'nationalities': []}    
 
 if __name__ == "__main__":
    import uvicorn
