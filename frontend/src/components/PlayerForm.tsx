@@ -69,7 +69,6 @@ const PlayerForm: React.FC = () => {
           <div style={{
             padding: '1rem',
             position: 'relative',  
-            zIndex: 1,  
             borderRadius: '8px',
             background: message.includes('✅') ? '#10b98120' : '#ef444420',
             color: message.includes('✅') ? '#059669' : '#dc2626',

@@ -118,6 +118,7 @@ const [ageFilter, setAgeFilter] = useState({ min: '', max: '' });
 const [showNationalityFilter, setShowNationalityFilter] = useState(false);
 const [availableNationalities, setAvailableNationalities] = useState<string[]>([]);
 const [isLoadingFiltered, setIsLoadingFiltered] = useState(false);
+const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
 
   const [reportForm, setReportForm] = useState<ScoutReportCreate>({
     player_id: '',
@@ -1702,28 +1703,51 @@ const clearAllFilters = () => {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-                      🏟️ Team
+                      🏟️ Teams
                     </label>
-                    <select
-                      value={selectedTeam || ''}
-                      onChange={(e) => setSelectedTeam(e.target.value ? parseInt(e.target.value) : null)}
-                      disabled={!selectedCompetition}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem',
-                        cursor: selectedCompetition ? 'pointer' : 'not-allowed',
-                        opacity: selectedCompetition ? 1 : 0.5,
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="">Select a team...</option>
+                    <div style={{ 
+                      border: '2px solid #e5e7eb', 
+                      borderRadius: '8px', 
+                      padding: '0.5rem',
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      opacity: selectedCompetition ? 1 : 0.5
+                    }}>
+                      <label style={{ display: 'flex', alignItems: 'center', padding: '0.25rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTeams.length === competitionTeams.length && competitionTeams.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTeams(competitionTeams.map(team => team.id));
+                            } else {
+                              setSelectedTeams([]);
+                            }
+                          }}
+                          disabled={!selectedCompetition}
+                          style={{ marginRight: '0.5rem' }}
+                        />
+                        <strong>Todos los equipos</strong>
+                      </label>
                       {competitionTeams.map(team => (
-                        <option key={team.id} value={team.id}>{team.name}</option>
+                        <label key={team.id} style={{ display: 'flex', alignItems: 'center', padding: '0.25rem', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedTeams.includes(team.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTeams([...selectedTeams, team.id]);
+                              } else {
+                                setSelectedTeams(selectedTeams.filter(id => id !== team.id));
+                              }
+                            }}
+                            disabled={!selectedCompetition}
+                            style={{ marginRight: '0.5rem' }}
+                          />
+                          {team.name}
+                        </label>
                       ))}
-                    </select>
+                    </div>
                   </div>
                 </div>
               </div>

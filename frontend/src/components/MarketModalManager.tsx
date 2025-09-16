@@ -55,16 +55,20 @@ const MarketModalManager: React.FC<MarketModalManagerProps> = ({ show, player, o
           'Content-Type': 'application/json'
         },
 body: JSON.stringify({
-          player_id: player.wyscout_id || player.manual_id || `temp_${Date.now()}`,
-          player_name: player.name,
-          player_type: player.wyscout_id ? 'wyscout' : 'manual',
+          player_id: player.wyId || player.wyscout_id || player.manual_id || `temp_${Date.now()}`,
+          player_name: player.name || player.player_name,
+          short_name: player.shortName || player.player_name,
+          player_type: player.wyId || player.wyscout_id ? 'wyscout' : 'manual',
+          position: player.role?.name || player.position || '',
+          age: player.age || null,
+          birth_date: player.birthDate || null,
+          current_team: player.currentTeam?.name || player.team || '',
+          image_url: player.imageDataURL || null,
+          nationality: player.passportArea?.name || null,
           status: 'seguimiento',
           priority: marketForm.priority,
           estimated_price: marketForm.estimated_price ? parseFloat(marketForm.estimated_price) : null,
           max_price: null,
-          position: player.position || '',
-          age: player.age || null,
-          current_team: player.team || '',
           notes: marketForm.notes || ''
         })
       });
