@@ -1471,7 +1471,9 @@ async def get_competition_players_filtered(
                 filtered_players.append({
                     **player,
                     'age': calculate_age(player.get('birthDate')),
-                    'nationality': player.get('passportArea', {}).get('name') or player.get('birthArea', {}).get('name')
+                    'nationality': player.get('passportArea', {}).get('name') or player.get('birthArea', {}).get('name'),
+                    'current_team_name': player.get('currentTeam', {}).get('name', 'Unknown'),
+                    'name': player.get('shortName') or f"{player.get('firstName', '')} {player.get('lastName', '')}".strip()
                 })
             
             return {
