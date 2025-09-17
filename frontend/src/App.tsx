@@ -447,41 +447,64 @@ const openMarketModal = async (player: any) => {
     loadTeams();
   }, [selectedCompetition]);
 
-  // Load players when teams are selected
-  useEffect(() => {
-    const loadTeamPlayers = async () => {
-      if (selectedTeams.length > 0) {
-        setLoading(true);
-        try {
-          const allPlayers = [];
-          for (const teamId of selectedTeams) {
-            const players = await playerService.getTeamPlayers(teamId);
-            if (Array.isArray(players)) {
-              allPlayers.push(...players);
-            }
+// Load players when teams are selected WITH FILTERING
+useEffect(() => {
+  const loadTeamPlayers = async () => {
+    if (selectedTeams.length > 0) {
+      setLoading(true);
+      try {
+        const allPlayers = [];
+        for (const teamId of selectedTeams) {
+          const players = await playerService.getTeamPlayers(teamId);
+          if (Array.isArray(players)) {
+            allPlayers.push(...players);
           }
-          setTeamPlayers(allPlayers);
-          
-          // Extraer nacionalidades de todos los jugadores
-          const nationalities = Array.from(new Set(
-            allPlayers.map((player: any) => 
-              player.passportArea?.name || player.birthArea?.name
-            ).filter(Boolean)
-          )).sort();
-          setAvailableNationalities(nationalities as any);
-          
-        } catch (error) {
-          console.error('Failed to load players:', error);
-        } finally {
-          setLoading(false);
         }
-      } else {
-        setTeamPlayers([]);
-        setAvailableNationalities([]);
+        
+        // Aplicar filtros en tiempo real
+        let filteredPlayers = [...allPlayers];
+        
+        // Filtro por nacionalidad
+        if (selectedNationalities.length > 0) {
+          filteredPlayers = filteredPlayers.filter(player => {
+            const nationality = player.passportArea?.name || player.birthArea?.name;
+            return selectedNationalities.includes(nationality);
+          });
+        }
+        
+        // Filtro por edad
+        if (ageFilter.min || ageFilter.max) {
+          filteredPlayers = filteredPlayers.filter(player => {
+            if (!player.birthDate) return false;
+            const age = new Date().getFullYear() - new Date(player.birthDate).getFullYear();
+            const meetsMin = !ageFilter.min || age >= parseInt(ageFilter.min);
+            const meetsMax = !ageFilter.max || age <= parseInt(ageFilter.max);
+            return meetsMin && meetsMax;
+          });
+        }
+        
+        setTeamPlayers(filteredPlayers);
+        
+        // Extraer nacionalidades de TODOS los jugadores (no filtrados)
+        const nationalities = Array.from(new Set(
+          allPlayers.map((player: any) => 
+            player.passportArea?.name || player.birthArea?.name
+          ).filter(Boolean)
+        )).sort();
+        setAvailableNationalities(nationalities);
+        
+      } catch (error) {
+        console.error('Failed to load players:', error);
+      } finally {
+        setLoading(false);
       }
-    };
-    loadTeamPlayers();
-  }, [selectedTeams]);
+    } else {
+      setTeamPlayers([]);
+      setAvailableNationalities([]);
+    }
+  };
+  loadTeamPlayers();
+}, [selectedTeams, selectedNationalities, ageFilter.min, ageFilter.max]);
 
   // View player profile
   const viewPlayerProfile = async (playerId: number) => {
@@ -662,58 +685,14 @@ const openMarketModal = async (player: any) => {
   };
 
 // Reemplazar las funciones con estas versiones corregidas
-const searchPlayersWithFilters = async () => {
-  if (!selectedCompetition) return;
-  
-  setIsLoadingFiltered(true);
-  try {
-    const params = new URLSearchParams();
-    
-    if (selectedTeams.length > 0) {
-      params.append('teams', selectedTeams.join(','));
-    }
-    
-    if (selectedNationalities.length > 0) {
-      params.append('nationalities', selectedNationalities.join(','));
-    }
-    
-    if (ageFilter.min) {
-      params.append('min_age', ageFilter.min);
-    }
-    
-    if (ageFilter.max) {
-      params.append('max_age', ageFilter.max);
-    }
-    
-    const url = `${API_URL}/api/wyscout/competition/${selectedCompetition}/players-filtered${params.toString() ? '?' + params.toString() : ''}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      setTeamPlayers(data.players || []);
-      
-      // Actualizar nacionalidades disponibles - CORREGIDO
-      const nationalities = Array.from(new Set(
-        data.players.map((player: any) => player.nationality).filter(Boolean)
-      )).sort();
-      setAvailableNationalities(nationalities as any);
-      
-    } else {
-      setTeamPlayers([]);
-      setAvailableNationalities([]);
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    setTeamPlayers([]);
-    setAvailableNationalities([]);
-  } finally {
-    setIsLoadingFiltered(false);
+const searchPlayersWithFilters = () => {
+  if (teamPlayers.length > 0) {
+    const nationalities = Array.from(new Set(
+      teamPlayers.map((player: any) => 
+        player.passportArea?.name || player.birthArea?.name || player.nationality
+      ).filter(Boolean)
+    )).sort();
+    setAvailableNationalities(nationalities);
   }
 };
 
@@ -1898,44 +1877,9 @@ const clearAllFilters = () => {
         </div>
       </div>
     </div>
+  </div>    
+)}           
 
-    {/* Botones de acción */}
-    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-      <button
-        onClick={searchPlayersWithFilters}
-        disabled={!selectedCompetition || isLoadingFiltered}
-        style={{
-          padding: '0.75rem 2rem',
-          background: selectedCompetition ? currentClub.primaryColor : '#9ca3af',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '0.875rem',
-          fontWeight: '600',
-          cursor: selectedCompetition ? 'pointer' : 'not-allowed'
-        }}
-      >
-        {isLoadingFiltered ? 'Buscando...' : 'Buscar Jugadores'}
-      </button>
-
-      <button
-        onClick={clearAllFilters}
-        style={{
-          padding: '0.75rem 1.5rem',
-          background: 'white',
-          color: '#6b7280',
-          border: '2px solid #e5e7eb',
-          borderRadius: '8px',
-          fontSize: '0.875rem',
-          fontWeight: '600',
-          cursor: 'pointer'
-        }}
-      >
-        Limpiar Filtros
-      </button>
-    </div>
-  </div>
-)}
               {/* Players List */}
               {teamPlayers.length > 0 && (
                 <div style={{
