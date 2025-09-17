@@ -6,6 +6,7 @@ import Login from './components/Login';
 import PlayerForm from './components/PlayerForm';
 import MarketSystem from './components/MarketSystem';
 import MarketModalManager from './components/MarketModalManager';
+import PlayerProfile from './components/PlayerProfile';
 const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
 
 
@@ -52,7 +53,7 @@ const MainApp: React.FC = () => {
   };
 
   const currentClub = clubConfig[userClub as keyof typeof clubConfig] || clubConfig['Club Atlético Banfield'];
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations' | 'add-player' | 'manual-players' | 'markets'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'quick-search' | 'browse' | 'reports' | 'player-profile' | 'recommendations' | 'add-player' | 'manual-players' | 'markets' | 'player-profiles'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -1202,7 +1203,8 @@ const clearAllFilters = () => {
               { id: 'recommendations', label: '🎯 Recomendaciones', icon: '🎯' },
               { id: 'add-player', label: '➕ Agregar Jugador', icon: '➕' },
               { id: 'manual-players', label: '👥 Jugadores Creados', icon: '👥' },
-              { id: 'markets', label: '💰 Mercados', icon: '💰' }
+              { id: 'markets', label: '💰 Mercados', icon: '💰' },
+              { id: 'player-profiles', label: '📋 Perfiles', icon: '📋' }
 
             ].map(tab => (
               <button
@@ -4096,6 +4098,11 @@ const clearAllFilters = () => {
       {/* Markets Tab - NUEVO */}
       {activeTab === 'markets' && (
         <MarketSystem />
+      )}
+
+      {/* Player Profiles Tab - NUEVO */}
+      {activeTab === 'player-profiles' && (
+        <PlayerProfile />
       )}
 
       <MarketModalManager 
