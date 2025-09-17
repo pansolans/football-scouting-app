@@ -467,7 +467,7 @@ useEffect(() => {
         // Filtro por nacionalidad
         if (selectedNationalities.length > 0) {
           filteredPlayers = filteredPlayers.filter(player => {
-            const nationality = player.passportArea?.name || player.birthArea?.name;
+            const nationality = player.nationality;
             return selectedNationalities.includes(nationality);
           });
         }
@@ -488,7 +488,7 @@ useEffect(() => {
         // Extraer nacionalidades de TODOS los jugadores (no filtrados)
         const nationalities = Array.from(new Set(
           allPlayers.map((player: any) => 
-            player.passportArea?.name || player.birthArea?.name
+            player.nationality
           ).filter(Boolean)
         )).sort();
         setAvailableNationalities(nationalities);
@@ -689,7 +689,7 @@ const searchPlayersWithFilters = () => {
   if (teamPlayers.length > 0) {
     const nationalities = Array.from(new Set(
       teamPlayers.map((player: any) => 
-        player.passportArea?.name || player.birthArea?.name || player.nationality
+        player.nationality || player.nationality
       ).filter(Boolean)
     )).sort();
     setAvailableNationalities(nationalities);
