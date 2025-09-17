@@ -36,9 +36,11 @@ weaknesses: string;
 
 interface PlayerProfileProps {
   onClose?: () => void;
+  preselectedPlayer?: any;
+  onClearPreselected?: () => void;
 }
 
-const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose }) => {
+const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlayer, onClearPreselected }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
@@ -181,6 +183,16 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose }) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+
+  // Manejar jugador preseleccionado
+useEffect(() => {
+  if (preselectedPlayer) {
+    selectPlayer(preselectedPlayer);
+    if (onClearPreselected) {
+      onClearPreselected();
+    }
+  }
+}, [preselectedPlayer]);
   // Vista de lista de perfiles
   if (viewMode === 'list') {
     return (

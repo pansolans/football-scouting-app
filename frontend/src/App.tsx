@@ -74,6 +74,7 @@ const MainApp: React.FC = () => {
   const [filterPlayerName, setFilterPlayerName] = useState('');
   const [filterTeam, setFilterTeam] = useState('');
   const [allPlayersData, setAllPlayersData] = useState<any[]>([]);
+  const [preselectedPlayer, setPreselectedPlayer] = useState<any>(null);
 
 
   // Browse filters
@@ -1662,9 +1663,10 @@ const clearAllFilters = () => {
                                 💰 A Mercado
                               </button>
                               <button
-                                onClick={() => {
-                                  setActiveTab('player-profiles');
-                                }}
+  onClick={() => {
+    setPreselectedPlayer(result);
+    setActiveTab('player-profiles');
+  }}
                                 style={{
                                   padding: '0.5rem 1rem',
                                   background: 'linear-gradient(135deg, #667eea, #764ba2)',
@@ -2069,7 +2071,10 @@ const clearAllFilters = () => {
                             💰 Mercado
                           </button>
                           <button
-                            onClick={() => setActiveTab('player-profiles')}
+                            onClick={() => {
+                             setPreselectedPlayer(player);
+                             setActiveTab('player-profiles');
+                            }}  
                             style={{
                               padding: '0.5rem 0.75rem',
                               background: 'linear-gradient(135deg, #667eea, #764ba2)',
@@ -2091,7 +2096,7 @@ const clearAllFilters = () => {
               )}
             </div>
           )}
-          
+
           {/* My Reports Tab */}
           {activeTab === 'reports' && (
             <div style={{
@@ -4136,9 +4141,12 @@ const clearAllFilters = () => {
       )}
 
       {/* Player Profiles Tab - NUEVO */}
-      {activeTab === 'player-profiles' && (
-        <PlayerProfile />
-      )}
+{activeTab === 'player-profiles' && (
+  <PlayerProfile 
+    preselectedPlayer={preselectedPlayer}
+    onClearPreselected={() => setPreselectedPlayer(null)}
+  />
+)}
 
       <MarketModalManager 
         show={showMarketModal} 
