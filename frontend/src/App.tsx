@@ -2068,6 +2068,21 @@ const clearAllFilters = () => {
                           >
                             💰 Mercado
                           </button>
+                          <button
+                            onClick={() => setActiveTab('player-profiles')}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            📋 Perfil
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -2076,7 +2091,7 @@ const clearAllFilters = () => {
               )}
             </div>
           )}
-
+          
           {/* My Reports Tab */}
           {activeTab === 'reports' && (
             <div style={{
