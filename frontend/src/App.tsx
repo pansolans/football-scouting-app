@@ -1661,6 +1661,26 @@ const clearAllFilters = () => {
                               >
                                 💰 A Mercado
                               </button>
+                              <button
+                                onClick={() => {
+                                  setActiveTab('player-profiles');
+                                }}
+                                style={{
+                                  padding: '0.5rem 1rem',
+                                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  transition: 'transform 0.1s'
+                                }}
+                                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                📋 Perfil Scouting
+                              </button>
                             </>
                           )}
                         </div>

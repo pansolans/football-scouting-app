@@ -16,10 +16,11 @@ interface PlayerProfileData {
   foot?: string;
   imageUrl?: string;
   
-  // Análisis personalizado
-  position_analysis: string;
-  strengths: string;
-  weaknesses: string;
+// Análisis personalizado
+position_analysis: string;
+general_info: string;
+strengths: string;
+weaknesses: string;
   
   // Información comercial
   agent_name: string;
@@ -46,6 +47,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose }) => {
   const [profileData, setProfileData] = useState<PlayerProfileData>({
     name: '',
     position_analysis: '',
+    general_info: '',
     strengths: '',
     weaknesses: '',
     agent_name: '',
@@ -160,6 +162,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose }) => {
     setProfileData({
       name: '',
       position_analysis: '',
+      general_info: '',
       strengths: '',
       weaknesses: '',
       agent_name: '',
@@ -463,6 +466,23 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose }) => {
               {viewingProfile.position_analysis}
             </p>
           </div>
+
+          {/* Información General */}
+{viewingProfile.general_info && (
+  <div style={{
+    padding: '1.5rem',
+    background: 'linear-gradient(135deg, #3b82f615, #3b82f625)',
+    borderRadius: '12px',
+    border: '2px solid #3b82f630'
+  }}>
+    <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#1d4ed8' }}>
+      📝 Información General
+    </h3>
+    <p style={{ fontSize: '1rem', lineHeight: '1.6', color: '#374151', margin: 0 }}>
+      {viewingProfile.general_info}
+    </p>
+  </div>
+)}
 
           {/* Fortalezas y Debilidades */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -810,49 +830,70 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose }) => {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#059669' }}>
-                  ✅ Fortalezas Principales
-                </label>
-                <textarea
-                  placeholder="Principales virtudes técnicas, físicas y mentales del jugador..."
-                  value={profileData.strengths}
-                  onChange={(e) => setProfileData({ ...profileData, strengths: e.target.value })}
-                  rows={4}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #10b98130',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem',
-                    backgroundColor: '#10b98108',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+  <div>
+    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#3b82f6' }}>
+      📝 Información General
+    </label>
+    <textarea
+      placeholder="Información adicional, observaciones generales, contexto del jugador..."
+      value={profileData.general_info || ''}
+      onChange={(e) => setProfileData({ ...profileData, general_info: e.target.value })}
+      rows={4}
+      style={{
+        width: '100%',
+        padding: '0.75rem',
+        border: '2px solid #3b82f630',
+        borderRadius: '8px',
+        fontSize: '0.875rem',
+        backgroundColor: '#3b82f608',
+        resize: 'vertical'
+      }}
+    />
+  </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#dc2626' }}>
-                  ⚠️ Debilidades a Mejorar
-                </label>
-                <textarea
-                  placeholder="Aspectos que debe trabajar, limitaciones técnicas o físicas..."
-                  value={profileData.weaknesses}
-                  onChange={(e) => setProfileData({ ...profileData, weaknesses: e.target.value })}
-                  rows={4}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid #ef444430',
-                    borderRadius: '8px',
-                    fontSize: '0.875rem',
-                    backgroundColor: '#ef444408',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-            </div>
+  <div>
+    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#059669' }}>
+      ✅ Fortalezas Principales
+    </label>
+    <textarea
+      placeholder="Principales virtudes técnicas, físicas y mentales del jugador..."
+      value={profileData.strengths}
+      onChange={(e) => setProfileData({ ...profileData, strengths: e.target.value })}
+      rows={4}
+      style={{
+        width: '100%',
+        padding: '0.75rem',
+        border: '2px solid #10b98130',
+        borderRadius: '8px',
+        fontSize: '0.875rem',
+        backgroundColor: '#10b98108',
+        resize: 'vertical'
+      }}
+    />
+  </div>
+
+  <div>
+    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#dc2626' }}>
+      ⚠️ Debilidades a Mejorar
+    </label>
+    <textarea
+      placeholder="Aspectos que debe trabajar, limitaciones técnicas o físicas..."
+      value={profileData.weaknesses}
+      onChange={(e) => setProfileData({ ...profileData, weaknesses: e.target.value })}
+      rows={4}
+      style={{
+        width: '100%',
+        padding: '0.75rem',
+        border: '2px solid #ef444430',
+        borderRadius: '8px',
+        fontSize: '0.875rem',
+        backgroundColor: '#ef444408',
+        resize: 'vertical'
+      }}
+    />
+  </div>
+</div>
           </div>
 
           {/* Información Comercial */}
