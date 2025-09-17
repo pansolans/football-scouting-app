@@ -72,6 +72,7 @@ const MainApp: React.FC = () => {
   const [filterPosition, setFilterPosition] = useState('');
   const [filterPlayerName, setFilterPlayerName] = useState('');
   const [filterTeam, setFilterTeam] = useState('');
+  const [allPlayersData, setAllPlayersData] = useState<any[]>([]);
 
 
   // Browse filters
@@ -483,7 +484,8 @@ useEffect(() => {
           });
         }
         
-        setTeamPlayers(filteredPlayers);
+        setAllPlayersData(allPlayers); // Guardar datos originales
+        setTeamPlayers(allPlayers); // Mostrar todos inicialmente
         
         // Extraer nacionalidades de TODOS los jugadores (no filtrados)
         const nationalities = Array.from(new Set(
@@ -504,7 +506,33 @@ useEffect(() => {
     }
   };
   loadTeamPlayers();
-}, [selectedTeams, selectedNationalities, ageFilter.min, ageFilter.max]);
+}, [selectedTeams]); // Solo equipos
+
+
+// Filtrar jugadores sin recargar datos
+useEffect(() => {
+  if (allPlayersData.length === 0) return;
+  
+  let filtered = [...allPlayersData];
+  
+  if (selectedNationalities.length > 0) {
+    filtered = filtered.filter(player => 
+      selectedNationalities.includes(player.nationality)
+    );
+  }
+  
+  if (ageFilter.min || ageFilter.max) {
+    filtered = filtered.filter(player => {
+      if (!player.birthDate) return false;
+      const age = new Date().getFullYear() - new Date(player.birthDate).getFullYear();
+      const meetsMin = !ageFilter.min || age >= parseInt(ageFilter.min);
+      const meetsMax = !ageFilter.max || age <= parseInt(ageFilter.max);
+      return meetsMin && meetsMax;
+    });
+  }
+  
+  setTeamPlayers(filtered);
+}, [selectedNationalities, ageFilter.min, ageFilter.max, allPlayersData]);
 
   // View player profile
   const viewPlayerProfile = async (playerId: number) => {
