@@ -131,26 +131,45 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
     try {
       // Aquí harías la llamada al backend para guardar
       // Por ahora simularemos guardado local
-      const newProfile = {
-        ...profileData,
-        id: profileData.id || Date.now().toString(),
-        created_at: new Date().toISOString(),
-        created_by: 'Current User' // Reemplazar con usuario actual
-      };
+// Verificar si es edición (si ya existe el perfil en savedProfiles)
+const existingIndex = savedProfiles.findIndex(p => p.id === profileData.id);
 
-      setSavedProfiles([...savedProfiles, newProfile]);
-      alert('Perfil guardado exitosamente');
-      setViewMode('list');
-      resetForm();
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      alert('Error al guardar el perfil');
-    } finally {
-      setSaving(false);
-    }
+if (existingIndex !== -1) {
+  // Actualizar perfil existente
+  const updatedProfile = {
+    ...profileData,
+    updated_at: new Date().toISOString()
+  };
+  
+  const updatedProfiles = [...savedProfiles];
+  updatedProfiles[existingIndex] = updatedProfile;
+  setSavedProfiles(updatedProfiles);
+  
+  alert('Perfil actualizado exitosamente');
+} else {
+  // Crear nuevo perfil
+  const newProfile = {
+    ...profileData,
+    id: profileData.id || Date.now().toString(),
+    created_at: new Date().toISOString(),
+    created_by: 'Current User'
   };
 
-  // Exportar a PDF (simulado)
+  setSavedProfiles([...savedProfiles, newProfile]);
+  alert('Perfil creado exitosamente');
+}
+
+setViewMode('list');
+resetForm();
+} catch (error) {
+  console.error('Error saving profile:', error);
+  alert('Error al guardar el perfil');
+} finally {
+  setSaving(false);
+}
+};
+
+// Exportar a PDF (simulado)
   const exportToPDF = () => {
     // Aquí integrarías una librería como jsPDF o html2pdf
     alert('Funcionalidad de exportar PDF en desarrollo');
@@ -292,41 +311,65 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    onClick={() => {
-                      setViewingProfile(profile);
-                      setViewMode('view');
-                    }}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    👁️ Ver
-                  </button>
-                  <button
-                    onClick={exportToPDF}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    📄 PDF
-                  </button>
-                </div>
+<div style={{ display: 'flex', gap: '0.5rem' }}>
+  <button
+    onClick={() => {
+      setViewingProfile(profile);
+      setViewMode('view');
+    }}
+    style={{
+      padding: '0.5rem 1rem',
+      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '0.875rem',
+      fontWeight: '600',
+      cursor: 'pointer'
+    }}
+  >
+    👁️ Ver
+  </button>
+  <button
+    onClick={() => {
+      setProfileData(profile);
+      setSelectedPlayer({ 
+        id: profile.wyscout_id || profile.id, 
+        name: profile.name,
+        position: profile.position,
+        team: profile.currentTeam
+      });
+      setViewMode('create');
+    }}
+    style={{
+      padding: '0.5rem 1rem',
+      background: 'linear-gradient(135deg, #10b981, #059669)',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '0.875rem',
+      fontWeight: '600',
+      cursor: 'pointer'
+    }}
+  >
+    ✏️ Editar
+  </button>
+  <button
+    onClick={exportToPDF}
+    style={{
+      padding: '0.5rem 1rem',
+      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '0.875rem',
+      fontWeight: '600',
+      cursor: 'pointer'
+    }}
+  >
+    📄 PDF
+  </button>
+</div>
               </div>
             ))}
           </div>
