@@ -1424,7 +1424,141 @@ async def get_wyscout_player_details(player_id: str, current_user: dict = Depend
         logger.error(f"Error getting player details: {e}")
         return {}
     
-  
+
+
+# Endpoints para Player Profiles
+@app.get("/api/player-profiles")
+async def get_player_profiles(current_user: dict = Depends(get_current_user)):
+    try:
+        response = supabase.table("player_profiles").select(
+            """
+            *,
+            created_by_user:scouts!created_by(name, role),
+            updated_by_user:scouts!updated_by(name, role),
+            player_data:players(name, position, current_team_name, age, passport_area, image_url)
+            """
+        ).eq("club_id", current_user["club_id"]).order("created_at", desc=True).execute()
+        
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading player profiles: {str(e)}")
+
+@app.post("/api/player-profiles")
+async def create_player_profile(profile_data: dict, current_user: dict = Depends(get_current_user)):
+    try:
+        # Si es un jugador manual, crear primero en la tabla players si no existe
+        player_id = None
+        if not profile_data.get("wyscout_id"):
+            # Es jugador manual, buscar o crear en tabla players
+            player_check = supabase.table("players").select("id").eq("name", profile_data["player_name"]).execute()
+            
+            if player_check.data:
+                player_id = player_check.data[0]["id"]
+            else:
+                # Crear jugador manual
+                new_player = {
+                    "name": profile_data["player_name"],
+                    "position": profile_data.get("position"),
+                    "age": profile_data.get("age"),
+                    "current_team_name": profile_data.get("current_team"),
+                    "passport_area": profile_data.get("nationality"),
+                    "height": profile_data.get("height"),
+                    "weight": profile_data.get("weight"),
+                    "foot": profile_data.get("foot"),
+                    "image_url": profile_data.get("image_url"),
+                    "source": "manual",
+                    "manually_created": True,
+                    "organization_id": current_user["club_id"]
+                }
+                
+                player_response = supabase.table("players").insert(new_player).execute()
+                if player_response.data:
+                    player_id = player_response.data[0]["id"]
+        
+        # Preparar datos para el perfil de scouting
+        insert_data = {
+            "wyscout_id": profile_data.get("wyscout_id"),
+            "player_id": player_id,
+            "player_name": profile_data["player_name"],
+            "position": profile_data.get("position"),
+            "current_team": profile_data.get("current_team") or profile_data.get("currentTeam"),
+            "age": profile_data.get("age"),
+            "nationality": profile_data.get("nationality"),
+            "height": profile_data.get("height"),
+            "weight": profile_data.get("weight"),
+            "foot": profile_data.get("foot"),
+            "image_url": profile_data.get("image_url") or profile_data.get("imageUrl"),
+            "position_analysis": profile_data["position_analysis"],
+            "general_info": profile_data.get("general_info"),
+            "strengths": profile_data.get("strengths"),
+            "weaknesses": profile_data.get("weaknesses"),
+            "agent_name": profile_data.get("agent_name"),
+            "agent_contact": profile_data.get("agent_contact"),
+            "video_link": profile_data.get("video_link"),
+            "transfermarkt_link": profile_data.get("transfermarkt_link"),
+            "club_id": current_user["club_id"],
+            "created_by": current_user["id"],
+            "updated_by": current_user["id"]
+        }
+        
+        response = supabase.table("player_profiles").insert(insert_data).execute()
+        
+        if response.data:
+            return response.data[0]
+        else:
+            raise HTTPException(status_code=400, detail="Failed to create player profile")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating player profile: {str(e)}")
+
+@app.put("/api/player-profiles/{profile_id}")
+async def update_player_profile(profile_id: str, profile_data: dict, current_user: dict = Depends(get_current_user)):
+    try:
+        # Preparar datos para actualización
+        update_data = {
+            "player_name": profile_data["player_name"],
+            "position": profile_data.get("position"),
+            "current_team": profile_data.get("current_team") or profile_data.get("currentTeam"),
+            "age": profile_data.get("age"),
+            "nationality": profile_data.get("nationality"),
+            "height": profile_data.get("height"),
+            "weight": profile_data.get("weight"),
+            "foot": profile_data.get("foot"),
+            "image_url": profile_data.get("image_url") or profile_data.get("imageUrl"),
+            "position_analysis": profile_data["position_analysis"],
+            "general_info": profile_data.get("general_info"),
+            "strengths": profile_data.get("strengths"),
+            "weaknesses": profile_data.get("weaknesses"),
+            "agent_name": profile_data.get("agent_name"),
+            "agent_contact": profile_data.get("agent_contact"),
+            "video_link": profile_data.get("video_link"),
+            "transfermarkt_link": profile_data.get("transfermarkt_link"),
+            "updated_by": current_user["id"],
+            "updated_at": "NOW()"
+        }
+        
+        response = supabase.table("player_profiles").update(update_data).eq("id", profile_id).eq("club_id", current_user["club_id"]).execute()
+        
+        if response.data:
+            return response.data[0]
+        else:
+            raise HTTPException(status_code=404, detail="Player profile not found")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating player profile: {str(e)}")
+
+@app.delete("/api/player-profiles/{profile_id}")
+async def delete_player_profile(profile_id: str, current_user: dict = Depends(get_current_user)):
+    try:
+        response = supabase.table("player_profiles").delete().eq("id", profile_id).eq("club_id", current_user["club_id"]).execute()
+        
+        if response.data:
+            return {"message": "Player profile deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Player profile not found")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting player profile: {str(e)}")
 
 if __name__ == "__main__":
    import uvicorn
