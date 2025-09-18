@@ -25,12 +25,14 @@ role = roles.get(role_option, "viewer")
 print("\nClub del usuario:")
 print("1. Club Atlético Banfield")
 print("2. Boca Juniors")
-print("3. Santa Fe Fútbol Club")  # AGREGAR ESTA LÍNEA
-club_option = input("\nElige club (1-3): ")  # CAMBIAR A 1-3
+print("3. Santa Fe Fútbol Club")  
+print("4. Scouting FC")  
+club_option = input("\nElige club (1-4): ")  # CAMBIAR A 1-3
 clubs = {
     "1": "Club Atlético Banfield",
     "2": "Boca Juniors",
-    "3": "Santa Fe Fútbol Club"  # AGREGAR ESTA LÍNEA
+    "3": "Santa Fe Fútbol Club", 
+    "4": "Scouting FC"  
 }
 club = clubs.get(club_option, "Club Atlético Banfield")
 

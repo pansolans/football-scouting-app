@@ -49,6 +49,12 @@ const MainApp: React.FC = () => {
       secondaryColor: '#ffd700',
       logo: 'https://santafefc.do/wp-content/uploads/2021/08/logo_sf_footer_300x300-16.png',
       name: 'Santa Fe FC'
+    },
+    'Scouting FC': {
+      primaryColor: '#00668c',
+      secondaryColor: '#b6ccd8',
+      logo: 'https://image.jimcdn.com/app/cms/image/transf/none/path/sbdcfbaae4f22b55a/image/id41c93cbdf9f68a5/version/1621237465/image.png',
+      name: 'Scouting'
     }
   };
 
