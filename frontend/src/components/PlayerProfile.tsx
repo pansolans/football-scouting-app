@@ -70,6 +70,37 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
   const [savedProfiles, setSavedProfiles] = useState<PlayerProfileData[]>([]);
   const [viewMode, setViewMode] = useState<'create' | 'view' | 'list'>('list');
   const [viewingProfile, setViewingProfile] = useState<PlayerProfileData | null>(null);
+  
+  // Estados para filtros de búsqueda
+  const [profileFilters, setProfileFilters] = useState({
+    name: '',
+    team: '',
+    position: '',
+    created_by: '',
+    nationality: ''
+  });
+
+  // Función para filtrar perfiles
+  const getFilteredProfiles = () => {
+    return savedProfiles.filter(profile => {
+      const matchesName = !profileFilters.name || 
+        (profile.name || profile.player_name || '').toLowerCase().includes(profileFilters.name.toLowerCase());
+      
+      const matchesTeam = !profileFilters.team || 
+        (profile.currentTeam || profile.current_team || '').toLowerCase().includes(profileFilters.team.toLowerCase());
+      
+      const matchesPosition = !profileFilters.position || 
+        (profile.position || '').toLowerCase().includes(profileFilters.position.toLowerCase());
+      
+      const matchesCreatedBy = !profileFilters.created_by || 
+        (profile.created_by_user?.name || '').toLowerCase().includes(profileFilters.created_by.toLowerCase());
+      
+      const matchesNationality = !profileFilters.nationality || 
+        (profile.nationality || '').toLowerCase().includes(profileFilters.nationality.toLowerCase());
+      
+      return matchesName && matchesTeam && matchesPosition && matchesCreatedBy && matchesNationality;
+    });
+  };
 
   // Funciones para comunicarse con el backend
   const loadProfilesFromBackend = async () => {
@@ -185,10 +216,11 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
     setViewMode('create');
   };
 
-  // Guardar perfil
+  // Guardar perfil - SIN VALIDACIONES OBLIGATORIAS
   const saveProfile = async () => {
-    if (!profileData.name || !profileData.position_analysis) {
-      alert('Por favor completa al menos el nombre y análisis posicional');
+    // Solo verificar que al menos tenga un nombre
+    if (!profileData.name && !profileData.player_name) {
+      alert('Por favor completa al menos el nombre del jugador');
       return;
     }
 
@@ -304,6 +336,108 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
           </button>
         </div>
 
+        {/* Filtros de búsqueda */}
+        <div style={{
+          padding: '1.5rem',
+          background: '#f9fafb',
+          borderRadius: '12px',
+          border: '2px solid #e5e7eb',
+          marginBottom: '1.5rem'
+        }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem', color: '#1f2937' }}>
+            🔍 Filtros de Búsqueda
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <input
+              type="text"
+              placeholder="Buscar por nombre..."
+              value={profileFilters.name}
+              onChange={(e) => setProfileFilters({...profileFilters, name: e.target.value})}
+              style={{
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '0.875rem'
+              }}
+            />
+            
+            <input
+              type="text"
+              placeholder="Buscar por equipo..."
+              value={profileFilters.team}
+              onChange={(e) => setProfileFilters({...profileFilters, team: e.target.value})}
+              style={{
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '0.875rem'
+              }}
+            />
+            
+            <input
+              type="text"
+              placeholder="Buscar por posición..."
+              value={profileFilters.position}
+              onChange={(e) => setProfileFilters({...profileFilters, position: e.target.value})}
+              style={{
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '0.875rem'
+              }}
+            />
+            
+            <input
+              type="text"
+              placeholder="Creado por..."
+              value={profileFilters.created_by}
+              onChange={(e) => setProfileFilters({...profileFilters, created_by: e.target.value})}
+              style={{
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '0.875rem'
+              }}
+            />
+            
+            <input
+              type="text"
+              placeholder="Nacionalidad..."
+              value={profileFilters.nationality}
+              onChange={(e) => setProfileFilters({...profileFilters, nationality: e.target.value})}
+              style={{
+                padding: '0.75rem',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '0.875rem'
+              }}
+            />
+            
+            <button
+              onClick={() => setProfileFilters({
+                name: '', team: '', position: '', created_by: '', nationality: ''
+              })}
+              style={{
+                padding: '0.75rem 1rem',
+                background: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Limpiar Filtros
+            </button>
+          </div>
+          
+          <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+            Mostrando {getFilteredProfiles().length} de {savedProfiles.length} perfiles
+          </div>
+        </div>
+
         {savedProfiles.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
@@ -312,7 +446,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '1rem' }}>
-            {savedProfiles.map((profile) => (
+            {getFilteredProfiles().map((profile) => (
               <div key={profile.id} style={{
                 background: '#f9fafb',
                 border: '2px solid #e5e7eb',
@@ -1143,7 +1277,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
             border: '2px solid #e5e7eb'
           }}>
             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              Complete al menos el análisis posicional para guardar el perfil
+              Puedes editar cualquier campo que necesites modificar
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
@@ -1168,21 +1302,20 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
               
               <button
                 onClick={saveProfile}
-                disabled={saving || !profileData.position_analysis}
+                disabled={saving}
                 style={{
                   padding: '0.75rem 2rem',
-                  background: (!profileData.position_analysis) ? 
-                    '#9ca3af' : 'linear-gradient(135deg, #10b981, #059669)',
+                  background: saving ? '#9ca3af' : 'linear-gradient(135deg, #10b981, #059669)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '0.875rem',
                   fontWeight: '600',
-                  cursor: (!profileData.position_analysis) ? 'not-allowed' : 'pointer',
+                  cursor: saving ? 'not-allowed' : 'pointer',
                   opacity: saving ? 0.7 : 1
                 }}
               >
-                {saving ? '💾 Guardando.. .' : '💾 Guardar Perfil'}
+                {saving ? '💾 Guardando...' : '💾 Guardar Perfil'}
               </button>
             </div>
           </div>
