@@ -1182,7 +1182,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
                   opacity: saving ? 0.7 : 1
                 }}
               >
-                {saving ? '💾 Guardando...' : '💾 Guardar Perfil'}
+                {saving ? '💾 Guardando.. .' : '💾 Guardar Perfil'}
               </button>
             </div>
           </div>
