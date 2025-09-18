@@ -867,66 +867,81 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
                 />
               </div>
 
-              {selectedPlayer?.id !== 'manual' && (
-                <>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-                      Posición
-                    </label>
-                    <input
-                      type="text"
-                      value={profileData.position || ''}
-                      readOnly
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem',
-                        backgroundColor: '#f3f4f6'
-                      }}
-                    />
-                  </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  Posición
+                </label>
+                <input
+                  type="text"
+                  value={profileData.position || ''}
+                  onChange={(e) => setProfileData({ ...profileData, position: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-                      Equipo Actual
-                    </label>
-                    <input
-                      type="text"
-                      value={profileData.currentTeam || profileData.current_team || ''}
-                      readOnly
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem',
-                        backgroundColor: '#f3f4f6'
-                      }}
-                    />
-                  </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  Equipo Actual
+                </label>
+                <input
+                  type="text"
+                  value={profileData.currentTeam || profileData.current_team || ''}
+                  onChange={(e) => setProfileData({ 
+                    ...profileData, 
+                    currentTeam: e.target.value,
+                    current_team: e.target.value
+                  })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
-                      Edad
-                    </label>
-                    <input
-                      type="text"
-                      value={profileData.age ? `${profileData.age} años` : ''}
-                      readOnly
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem',
-                        backgroundColor: '#f3f4f6'
-                      }}
-                    />
-                  </div>
-                </>
-              )}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  Edad
+                </label>
+                <input
+                  type="number"
+                  value={profileData.age || ''}
+                  onChange={(e) => setProfileData({ ...profileData, age: parseInt(e.target.value) || undefined })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#374151' }}>
+                  Nacionalidad
+                </label>
+                <input
+                  type="text"
+                  value={profileData.nationality || ''}
+                  onChange={(e) => setProfileData({ ...profileData, nationality: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -1153,17 +1168,17 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
               
               <button
                 onClick={saveProfile}
-                disabled={saving || !profileData.name || !profileData.position_analysis}
+                disabled={saving || !profileData.position_analysis}
                 style={{
                   padding: '0.75rem 2rem',
-                  background: (!profileData.name || !profileData.position_analysis) ? 
+                  background: (!profileData.position_analysis) ? 
                     '#9ca3af' : 'linear-gradient(135deg, #10b981, #059669)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '0.875rem',
                   fontWeight: '600',
-                  cursor: (!profileData.name || !profileData.position_analysis) ? 'not-allowed' : 'pointer',
+                  cursor: (!profileData.position_analysis) ? 'not-allowed' : 'pointer',
                   opacity: saving ? 0.7 : 1
                 }}
               >
