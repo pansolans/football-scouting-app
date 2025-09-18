@@ -1,26 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { playerService } from '../services/api';
 
+const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
+
 interface PlayerProfileData {
   // Datos básicos (automáticos de Wyscout)
   id?: string;
   wyscout_id?: number;
+  player_id?: string;
   name: string;
+  player_name?: string;
   shortName?: string;
   age?: number;
   position?: string;
   currentTeam?: string;
+  current_team?: string;
   nationality?: string;
   height?: number;
   weight?: number;
   foot?: string;
   imageUrl?: string;
+  image_url?: string;
   
-// Análisis personalizado
-position_analysis: string;
-general_info: string;
-strengths: string;
-weaknesses: string;
+  // Análisis personalizado
+  position_analysis: string;
+  general_info: string;
+  strengths: string;
+  weaknesses: string;
   
   // Información comercial
   agent_name: string;
@@ -30,8 +36,11 @@ weaknesses: string;
   
   // Metadatos
   created_by?: string;
+  updated_by?: string;
   created_at?: string;
   updated_at?: string;
+  created_by_user?: { name: string; role: string };
+  updated_by_user?: { name: string; role: string };
 }
 
 interface PlayerProfileProps {
@@ -62,6 +71,59 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
   const [viewMode, setViewMode] = useState<'create' | 'view' | 'list'>('list');
   const [viewingProfile, setViewingProfile] = useState<PlayerProfileData | null>(null);
 
+  // Funciones para comunicarse con el backend
+  const loadProfilesFromBackend = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/player-profiles`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const profiles = await response.json();
+        setSavedProfiles(profiles);
+      }
+    } catch (error) {
+      console.error('Error loading profiles from backend:', error);
+    }
+  };
+
+  const saveProfileToBackend = async (profileData: PlayerProfileData) => {
+    const response = await fetch(`${API_URL}/api/player-profiles`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(profileData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error saving profile: ${response.status}`);
+    }
+
+    return response.json();
+  };
+
+  const updateProfileInBackend = async (profileId: string, profileData: PlayerProfileData) => {
+    const response = await fetch(`${API_URL}/api/player-profiles/${profileId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(profileData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error updating profile: ${response.status}`);
+    }
+
+    return response.json();
+  };
+
   // Buscar jugador en Wyscout
   const handlePlayerSearch = async () => {
     if (searchQuery.length < 2) return;
@@ -88,31 +150,34 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
       
       setProfileData({
         ...profileData,
-        id: String(player.id),
         wyscout_id: player.wyscout_id || player.id,
         name: profile.basic_info?.shortName || player.name,
+        player_name: profile.basic_info?.shortName || player.name,
         shortName: profile.basic_info?.shortName,
         age: profile.basic_info?.birthDate ? 
           new Date().getFullYear() - new Date(profile.basic_info.birthDate).getFullYear() : 
           player.age,
         position: profile.basic_info?.role?.name || player.position,
         currentTeam: profile.basic_info?.currentTeam?.name || player.team,
+        current_team: profile.basic_info?.currentTeam?.name || player.team,
         nationality: profile.basic_info?.passportArea?.name || player.nationality,
         height: profile.basic_info?.height,
         weight: profile.basic_info?.weight,
         foot: profile.basic_info?.foot,
-        imageUrl: profile.basic_info?.imageDataURL
+        imageUrl: profile.basic_info?.imageDataURL,
+        image_url: profile.basic_info?.imageDataURL
       });
     } catch (error) {
       // Si no se puede cargar el perfil completo, usar datos básicos
       setProfileData({
         ...profileData,
-        id: String(player.id),
         wyscout_id: player.wyscout_id || player.id,
         name: player.name,
+        player_name: player.name,
         age: player.age,
         position: player.position,
         currentTeam: player.team,
+        current_team: player.team,
         nationality: player.nationality
       });
     }
@@ -129,47 +194,39 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
 
     setSaving(true);
     try {
-      // Aquí harías la llamada al backend para guardar
-      // Por ahora simularemos guardado local
-// Verificar si es edición (si ya existe el perfil en savedProfiles)
-const existingIndex = savedProfiles.findIndex(p => p.id === profileData.id);
+      // Verificar si es edición (si ya existe el perfil)
+      const existingIndex = savedProfiles.findIndex(p => p.id === profileData.id);
 
-if (existingIndex !== -1) {
-  // Actualizar perfil existente
-  const updatedProfile = {
-    ...profileData,
-    updated_at: new Date().toISOString()
+      if (existingIndex !== -1) {
+        // Actualizar perfil existente en el backend
+        const updatedProfile = await updateProfileInBackend(profileData.id!, profileData);
+        
+        // Actualizar en el estado local
+        const updatedProfiles = [...savedProfiles];
+        updatedProfiles[existingIndex] = updatedProfile;
+        setSavedProfiles(updatedProfiles);
+        
+        alert('Perfil actualizado exitosamente');
+      } else {
+        // Crear nuevo perfil en el backend
+        const newProfile = await saveProfileToBackend(profileData);
+        
+        // Agregar al estado local
+        setSavedProfiles([...savedProfiles, newProfile]);
+        alert('Perfil creado exitosamente');
+      }
+      
+      setViewMode('list');
+      resetForm();
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Error al guardar el perfil');
+    } finally {
+      setSaving(false);
+    }
   };
-  
-  const updatedProfiles = [...savedProfiles];
-  updatedProfiles[existingIndex] = updatedProfile;
-  setSavedProfiles(updatedProfiles);
-  
-  alert('Perfil actualizado exitosamente');
-} else {
-  // Crear nuevo perfil
-  const newProfile = {
-    ...profileData,
-    id: profileData.id || Date.now().toString(),
-    created_at: new Date().toISOString(),
-    created_by: 'Current User'
-  };
 
-  setSavedProfiles([...savedProfiles, newProfile]);
-  alert('Perfil creado exitosamente');
-}
-
-setViewMode('list');
-resetForm();
-} catch (error) {
-  console.error('Error saving profile:', error);
-  alert('Error al guardar el perfil');
-} finally {
-  setSaving(false);
-}
-};
-
-// Exportar a PDF (simulado)
+  // Exportar a PDF (simulado)
   const exportToPDF = () => {
     // Aquí integrarías una librería como jsPDF o html2pdf
     alert('Funcionalidad de exportar PDF en desarrollo');
@@ -202,16 +259,21 @@ resetForm();
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Cargar perfiles del backend al iniciar
+  useEffect(() => {
+    loadProfilesFromBackend();
+  }, []);
 
   // Manejar jugador preseleccionado
-useEffect(() => {
-  if (preselectedPlayer) {
-    selectPlayer(preselectedPlayer);
-    if (onClearPreselected) {
-      onClearPreselected();
+  useEffect(() => {
+    if (preselectedPlayer) {
+      selectPlayer(preselectedPlayer);
+      if (onClearPreselected) {
+        onClearPreselected();
+      }
     }
-  }
-}, [preselectedPlayer]);
+  }, [preselectedPlayer]);
+
   // Vista de lista de perfiles
   if (viewMode === 'list') {
     return (
@@ -261,10 +323,10 @@ useEffect(() => {
                 alignItems: 'center'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  {profile.imageUrl ? (
+                  {(profile.imageUrl || profile.image_url) ? (
                     <img
-                      src={profile.imageUrl}
-                      alt={profile.name}
+                      src={profile.imageUrl || profile.image_url}
+                      alt={profile.name || profile.player_name}
                       style={{
                         width: '60px',
                         height: '60px',
@@ -285,13 +347,13 @@ useEffect(() => {
                       fontWeight: 'bold',
                       fontSize: '1.25rem'
                     }}>
-                      {profile.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                      {(profile.name || profile.player_name || '').split(' ').map(n => n[0]).join('').substring(0, 2)}
                     </div>
                   )}
                   
                   <div>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-                      {profile.name}
+                      {profile.name || profile.player_name}
                     </h3>
                     <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
                       <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
@@ -302,74 +364,82 @@ useEffect(() => {
                           📅 {profile.age} años
                         </span>
                       )}
-                      {profile.currentTeam && (
+                      {(profile.currentTeam || profile.current_team) && (
                         <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                          🏟️ {profile.currentTeam}
+                          🏟️ {profile.currentTeam || profile.current_team}
                         </span>
                       )}
                     </div>
+                    {profile.created_by_user && (
+                      <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>
+                        Creado por: {profile.created_by_user.name} 
+                        {profile.updated_by_user && profile.updated_by_user.name !== profile.created_by_user.name && (
+                          <span> • Editado por: {profile.updated_by_user.name}</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-<div style={{ display: 'flex', gap: '0.5rem' }}>
-  <button
-    onClick={() => {
-      setViewingProfile(profile);
-      setViewMode('view');
-    }}
-    style={{
-      padding: '0.5rem 1rem',
-      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '0.875rem',
-      fontWeight: '600',
-      cursor: 'pointer'
-    }}
-  >
-    👁️ Ver
-  </button>
-  <button
-    onClick={() => {
-      setProfileData(profile);
-      setSelectedPlayer({ 
-        id: profile.wyscout_id || profile.id, 
-        name: profile.name,
-        position: profile.position,
-        team: profile.currentTeam
-      });
-      setViewMode('create');
-    }}
-    style={{
-      padding: '0.5rem 1rem',
-      background: 'linear-gradient(135deg, #10b981, #059669)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '0.875rem',
-      fontWeight: '600',
-      cursor: 'pointer'
-    }}
-  >
-    ✏️ Editar
-  </button>
-  <button
-    onClick={exportToPDF}
-    style={{
-      padding: '0.5rem 1rem',
-      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '0.875rem',
-      fontWeight: '600',
-      cursor: 'pointer'
-    }}
-  >
-    📄 PDF
-  </button>
-</div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => {
+                      setViewingProfile(profile);
+                      setViewMode('view');
+                    }}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    👁️ Ver
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProfileData(profile);
+                      setSelectedPlayer({ 
+                        id: profile.wyscout_id || profile.id, 
+                        name: profile.name || profile.player_name,
+                        position: profile.position,
+                        team: profile.currentTeam || profile.current_team
+                      });
+                      setViewMode('create');
+                    }}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️ Editar
+                  </button>
+                  <button
+                    onClick={exportToPDF}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📄 PDF
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -431,10 +501,10 @@ useEffect(() => {
           borderRadius: '12px',
           border: '2px solid #667eea30'
         }}>
-          {viewingProfile.imageUrl ? (
+          {(viewingProfile.imageUrl || viewingProfile.image_url) ? (
             <img
-              src={viewingProfile.imageUrl}
-              alt={viewingProfile.name}
+              src={viewingProfile.imageUrl || viewingProfile.image_url}
+              alt={viewingProfile.name || viewingProfile.player_name}
               style={{
                 width: '120px',
                 height: '120px',
@@ -457,13 +527,13 @@ useEffect(() => {
               fontSize: '2.5rem',
               border: '4px solid white'
             }}>
-              {viewingProfile.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+              {(viewingProfile.name || viewingProfile.player_name || '').split(' ').map(n => n[0]).join('').substring(0, 2)}
             </div>
           )}
 
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', margin: '0 0 1rem 0', color: '#1f2937' }}>
-              {viewingProfile.name}
+              {viewingProfile.name || viewingProfile.player_name}
             </h1>
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
@@ -484,9 +554,9 @@ useEffect(() => {
                 </span>
               )}
               
-              {viewingProfile.currentTeam && (
+              {(viewingProfile.currentTeam || viewingProfile.current_team) && (
                 <span style={{ fontSize: '0.875rem', color: '#4b5563', display: 'flex', alignItems: 'center' }}>
-                  🏟️ {viewingProfile.currentTeam}
+                  🏟️ {viewingProfile.currentTeam || viewingProfile.current_team}
                 </span>
               )}
               
@@ -523,21 +593,21 @@ useEffect(() => {
           </div>
 
           {/* Información General */}
-{viewingProfile.general_info && (
-  <div style={{
-    padding: '1.5rem',
-    background: 'linear-gradient(135deg, #3b82f615, #3b82f625)',
-    borderRadius: '12px',
-    border: '2px solid #3b82f630'
-  }}>
-    <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#1d4ed8' }}>
-      📝 Información General
-    </h3>
-    <p style={{ fontSize: '1rem', lineHeight: '1.6', color: '#374151', margin: 0 }}>
-      {viewingProfile.general_info}
-    </p>
-  </div>
-)}
+          {viewingProfile.general_info && (
+            <div style={{
+              padding: '1.5rem',
+              background: 'linear-gradient(135deg, #3b82f615, #3b82f625)',
+              borderRadius: '12px',
+              border: '2px solid #3b82f630'
+            }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#1d4ed8' }}>
+                📝 Información General
+              </h3>
+              <p style={{ fontSize: '1rem', lineHeight: '1.6', color: '#374151', margin: 0 }}>
+                {viewingProfile.general_info}
+              </p>
+            </div>
+          )}
 
           {/* Fortalezas y Debilidades */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -637,7 +707,9 @@ useEffect(() => {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-          📋 Crear Perfil de Scouting
+          {savedProfiles.some(p => p.id === profileData.id) 
+            ? '✏️ Editar Perfil de Scouting' 
+            : '📋 Crear Perfil de Scouting'}
         </h2>
         <button
           onClick={() => setViewMode('list')}
@@ -779,8 +851,12 @@ useEffect(() => {
                 </label>
                 <input
                   type="text"
-                  value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                  value={profileData.name || profileData.player_name || ''}
+                  onChange={(e) => setProfileData({ 
+                    ...profileData, 
+                    name: e.target.value,
+                    player_name: e.target.value
+                  })}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -818,7 +894,7 @@ useEffect(() => {
                     </label>
                     <input
                       type="text"
-                      value={profileData.currentTeam || ''}
+                      value={profileData.currentTeam || profileData.current_team || ''}
                       readOnly
                       style={{
                         width: '100%',
@@ -885,70 +961,70 @@ useEffect(() => {
               />
             </div>
 
-<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-  <div>
-    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#3b82f6' }}>
-      📝 Información General
-    </label>
-    <textarea
-      placeholder="Información adicional, observaciones generales, contexto del jugador..."
-      value={profileData.general_info || ''}
-      onChange={(e) => setProfileData({ ...profileData, general_info: e.target.value })}
-      rows={4}
-      style={{
-        width: '100%',
-        padding: '0.75rem',
-        border: '2px solid #3b82f630',
-        borderRadius: '8px',
-        fontSize: '0.875rem',
-        backgroundColor: '#3b82f608',
-        resize: 'vertical'
-      }}
-    />
-  </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#3b82f6' }}>
+                  📝 Información General
+                </label>
+                <textarea
+                  placeholder="Información adicional, observaciones generales, contexto del jugador..."
+                  value={profileData.general_info || ''}
+                  onChange={(e) => setProfileData({ ...profileData, general_info: e.target.value })}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #3b82f630',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    backgroundColor: '#3b82f608',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
 
-  <div>
-    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#059669' }}>
-      ✅ Fortalezas Principales
-    </label>
-    <textarea
-      placeholder="Principales virtudes técnicas, físicas y mentales del jugador..."
-      value={profileData.strengths}
-      onChange={(e) => setProfileData({ ...profileData, strengths: e.target.value })}
-      rows={4}
-      style={{
-        width: '100%',
-        padding: '0.75rem',
-        border: '2px solid #10b98130',
-        borderRadius: '8px',
-        fontSize: '0.875rem',
-        backgroundColor: '#10b98108',
-        resize: 'vertical'
-      }}
-    />
-  </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#059669' }}>
+                  ✅ Fortalezas Principales
+                </label>
+                <textarea
+                  placeholder="Principales virtudes técnicas, físicas y mentales del jugador..."
+                  value={profileData.strengths}
+                  onChange={(e) => setProfileData({ ...profileData, strengths: e.target.value })}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #10b98130',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    backgroundColor: '#10b98108',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
 
-  <div>
-    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#dc2626' }}>
-      ⚠️ Debilidades a Mejorar
-    </label>
-    <textarea
-      placeholder="Aspectos que debe trabajar, limitaciones técnicas o físicas..."
-      value={profileData.weaknesses}
-      onChange={(e) => setProfileData({ ...profileData, weaknesses: e.target.value })}
-      rows={4}
-      style={{
-        width: '100%',
-        padding: '0.75rem',
-        border: '2px solid #ef444430',
-        borderRadius: '8px',
-        fontSize: '0.875rem',
-        backgroundColor: '#ef444408',
-        resize: 'vertical'
-      }}
-    />
-  </div>
-</div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#dc2626' }}>
+                  ⚠️ Debilidades a Mejorar
+                </label>
+                <textarea
+                  placeholder="Aspectos que debe trabajar, limitaciones técnicas o físicas..."
+                  value={profileData.weaknesses}
+                  onChange={(e) => setProfileData({ ...profileData, weaknesses: e.target.value })}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid #ef444430',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    backgroundColor: '#ef444408',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Información Comercial */}
