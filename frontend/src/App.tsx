@@ -54,7 +54,7 @@ const MainApp: React.FC = () => {
       primaryColor: '#00668c',
       secondaryColor: '#b6ccd8',
       logo: 'https://image.jimcdn.com/app/cms/image/transf/none/path/sbdcfbaae4f22b55a/image/id41c93cbdf9f68a5/version/1621237465/image.png',
-      name: 'Scouting'
+      name: 'FC'
     }
   };
 
