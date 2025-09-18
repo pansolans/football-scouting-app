@@ -1427,15 +1427,15 @@ async def get_wyscout_player_details(player_id: str, current_user: dict = Depend
 
 
 # Endpoints para Player Profiles
+# Endpoints para Player Profiles
 @app.get("/api/player-profiles")
 async def get_player_profiles(current_user: dict = Depends(get_current_user)):
     try:
         response = supabase.table("player_profiles").select(
             """
             *,
-            created_by_user:scouts!created_by(name, role),
-            updated_by_user:scouts!updated_by(name, role),
-            player_data:players(name, position, current_team_name, age, passport_area, image_url)
+            created_by_user:scouts!player_profiles_created_by_fkey(name, role),
+            updated_by_user:scouts!player_profiles_updated_by_fkey(name, role)
             """
         ).eq("club_id", current_user["club_id"]).order("created_at", desc=True).execute()
         
