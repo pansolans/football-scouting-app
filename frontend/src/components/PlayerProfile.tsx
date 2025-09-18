@@ -485,34 +485,39 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
                     </div>
                   )}
                   
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-                      {profile.name || profile.player_name}
-                    </h3>
-                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                        ⚽ {profile.position}
-                      </span>
-                      {profile.age && (
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                          📅 {profile.age} años
-                        </span>
-                      )}
-                      {(profile.currentTeam || profile.current_team) && (
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                          🏟️ {profile.currentTeam || profile.current_team}
-                        </span>
-                      )}
-                    </div>
-                    {profile.created_by_user && (
-                      <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>
-                        Creado por: {profile.created_by_user.name} 
-                        {profile.updated_by_user && profile.updated_by_user.name !== profile.created_by_user.name && (
-                          <span> • Editado por: {profile.updated_by_user.name}</span>
-                        )}
-                      </p>
-                    )}
-                  </div>
+<div>
+  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+    {profile.name || profile.player_name}
+  </h3>
+  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+      ⚽ {profile.position}
+    </span>
+    {profile.age && (
+      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+        📅 {profile.age} años
+      </span>
+    )}
+    {(profile.currentTeam || profile.current_team) && (
+      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+        🏟️ {profile.currentTeam || profile.current_team}
+      </span>
+    )}
+    {profile.nationality && (
+      <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+        🌍 {profile.nationality}
+      </span>
+    )}
+  </div>
+  {profile.created_by_user && (
+    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#3b82f6', fontWeight: '500' }}>
+      👤 Scout: {profile.created_by_user.name} 
+      {profile.updated_by_user && profile.updated_by_user.name !== profile.created_by_user.name && (
+        <span> • Editado por: {profile.updated_by_user.name}</span>
+      )}
+    </p>
+  )}
+</div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
