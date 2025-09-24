@@ -1435,8 +1435,8 @@ async def get_player_profiles(current_user: dict = Depends(get_current_user)):
         response = supabase.table("player_profiles")\
             .select("""
                 *,
-                created_by_scout:scouts!created_by(name, role),
-                updated_by_scout:scouts!updated_by(name, role)
+                created_by_user:scouts!created_by(name, role),
+                updated_by_user:scouts!updated_by(name, role)
             """)\
             .eq("club_id", current_user["club_id"])\
             .execute()
