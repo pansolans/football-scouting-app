@@ -1324,10 +1324,15 @@ async def get_manual_players_filters(current_user: dict = Depends(get_current_us
 
 @app.get("/api/markets")
 async def get_markets(current_user: dict = Depends(get_current_user)):
-    """Obtener todos los mercados del club"""
+    """Obtener mercados según permisos del usuario"""
     try:
-        club_id = current_user.get('club_id')
-        query = supabase.table('markets').select("*").eq('club_id', club_id).order('created_at', desc=True)
+        if current_user["role"] in ["admin", "head_scout"]:
+            # Admin y Head Scout ven TODOS los mercados del club
+            query = supabase.table('markets').select("*").eq('club_id', current_user['club_id']).order('created_at', desc=True)
+        else:
+            # Scout y Viewer solo ven mercados que ELLOS crearon
+            query = supabase.table('markets').select("*").eq('created_by', current_user['id']).order('created_at', desc=True)
+        
         result = query.execute()
         return result.data or []
     except Exception as e:
@@ -1431,15 +1436,18 @@ async def get_wyscout_player_details(player_id: str, current_user: dict = Depend
 @app.get("/api/player-profiles")
 async def get_player_profiles(current_user: dict = Depends(get_current_user)):
     try:
-        # Query con JOIN directo en Supabase
-        response = supabase.table("player_profiles")\
-            .select("""
-                *,
-                created_by_user:scouts!created_by(name, role),
-                updated_by_user:scouts!updated_by(name, role)
-            """)\
-            .eq("club_id", current_user["club_id"])\
-            .execute()
+        if current_user["role"] in ["admin", "head_scout"]:
+            # Admin y Head Scout ven TODOS los perfiles del club
+            response = supabase.table("player_profiles")\
+                .select("*")\
+                .eq("club_id", current_user["club_id"])\
+                .execute()
+        else:
+            # Scout y Viewer solo ven SUS PROPIOS perfiles
+            response = supabase.table("player_profiles")\
+                .select("*")\
+                .eq("created_by", current_user["id"])\
+                .execute()
         
         return response.data
         
