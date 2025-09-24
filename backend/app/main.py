@@ -1432,14 +1432,23 @@ async def get_wyscout_player_details(player_id: str, current_user: dict = Depend
 async def get_player_profiles(current_user: dict = Depends(get_current_user)):
     try:
         response = supabase.table("player_profiles").select(
-            """
-            *,
-            created_by_user:scouts!player_profiles_created_by_fkey(name, role),
-            updated_by_user:scouts!player_profiles_updated_by_fkey(name, role)
-            """
+            "*"
         ).eq("club_id", current_user["club_id"]).order("created_at", desc=True).execute()
         
-        return response.data
+        # Manually join scout data
+        profiles = response.data
+        for profile in profiles:
+            if profile.get('created_by'):
+                scout_response = supabase.table("scouts").select("name, role").eq("id", profile['created_by']).execute()
+                if scout_response.data:
+                    profile['created_by_user'] = scout_response.data[0]
+            
+            if profile.get('updated_by'):
+                scout_response = supabase.table("scouts").select("name, role").eq("id", profile['updated_by']).execute()
+                if scout_response.data:
+                    profile['updated_by_user'] = scout_response.data[0]
+        
+        return profiles
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading player profiles: {str(e)}")
 
