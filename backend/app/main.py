@@ -1431,26 +1431,20 @@ async def get_wyscout_player_details(player_id: str, current_user: dict = Depend
 @app.get("/api/player-profiles")
 async def get_player_profiles(current_user: dict = Depends(get_current_user)):
     try:
-        response = supabase.table("player_profiles").select(
-            "*"
-        ).eq("club_id", current_user["club_id"]).order("created_at", desc=True).execute()
+        # Query con JOIN directo en Supabase
+        response = supabase.table("player_profiles")\
+            .select("""
+                *,
+                created_by_scout:scouts!created_by(name, role),
+                updated_by_scout:scouts!updated_by(name, role)
+            """)\
+            .eq("club_id", current_user["club_id"])\
+            .execute()
         
-        # Manually join scout data
-        profiles = response.data
-        for profile in profiles:
-            if profile.get('created_by'):
-                scout_response = supabase.table("scouts").select("name, role").eq("id", profile['created_by']).execute()
-                if scout_response.data:
-                    profile['created_by_user'] = scout_response.data[0]
-            
-            if profile.get('updated_by'):
-                scout_response = supabase.table("scouts").select("name, role").eq("id", profile['updated_by']).execute()
-                if scout_response.data:
-                    profile['updated_by_user'] = scout_response.data[0]
+        return response.data
         
-        return profiles
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading player profiles: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @app.post("/api/player-profiles")
 async def create_player_profile(profile_data: dict, current_user: dict = Depends(get_current_user)):
