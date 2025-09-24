@@ -41,6 +41,8 @@ interface PlayerProfileData {
   updated_at?: string;
   created_by_user?: { name: string; role: string };
   updated_by_user?: { name: string; role: string };
+  created_by_name?: string;
+  updated_by_name?: string;
 }
 
 interface PlayerProfileProps {
@@ -93,7 +95,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
         (profile.position || '').toLowerCase().includes(profileFilters.position.toLowerCase());
       
       const matchesCreatedBy = !profileFilters.created_by || 
-        (profile.created_by_user?.name || '').toLowerCase().includes(profileFilters.created_by.toLowerCase());
+        (profile.created_by_name || '').toLowerCase().includes(profileFilters.created_by.toLowerCase());
       
       const matchesNationality = !profileFilters.nationality || 
         (profile.nationality || '').toLowerCase().includes(profileFilters.nationality.toLowerCase());
@@ -509,11 +511,11 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
       </span>
     )}
   </div>
-  {profile.created_by_user && (
+  {profile.created_by_name && (
     <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#3b82f6', fontWeight: '500' }}>
-      👤 Scout: {profile.created_by_user.name} 
-      {profile.updated_by_user && profile.updated_by_user.name !== profile.created_by_user.name && (
-        <span> • Editado por: {profile.updated_by_user.name}</span>
+      👤 Scout: {profile.created_by_name} 
+      {profile.updated_by_name && profile.updated_by_name !== profile.created_by_name && (
+        <span> • Editado por: {profile.updated_by_name}</span>
       )}
     </p>
   )}
@@ -831,6 +833,40 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ onClose, preselectedPlaye
               )}
             </div>
           </div>
+
+          {/* Información del Scout */}
+          {viewingProfile.created_by_name && (
+            <div style={{
+              padding: '1.5rem',
+              background: 'linear-gradient(135deg, #8b5cf615, #8b5cf625)',
+              borderRadius: '12px',
+              border: '2px solid #8b5cf630'
+            }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#7c3aed' }}>
+                👤 Información del Scout
+              </h3>
+              <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+                <div>
+                  <strong>Creado por:</strong> {viewingProfile.created_by_name}
+                  {viewingProfile.created_at && (
+                    <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      📅 {new Date(viewingProfile.created_at).toLocaleDateString('es-ES')}
+                    </div>
+                  )}
+                </div>
+                {viewingProfile.updated_by_name && viewingProfile.updated_by_name !== viewingProfile.created_by_name && (
+                  <div>
+                    <strong>Última edición:</strong> {viewingProfile.updated_by_name}
+                    {viewingProfile.updated_at && (
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        📅 {new Date(viewingProfile.updated_at).toLocaleDateString('es-ES')}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
