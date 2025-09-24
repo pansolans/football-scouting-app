@@ -1500,8 +1500,8 @@ async def create_player_profile(profile_data: dict, current_user: dict = Depends
             "video_link": profile_data.get("video_link"),
             "transfermarkt_link": profile_data.get("transfermarkt_link"),
             "club_id": current_user["club_id"],
-            "created_by": current_user["id"],
-            "updated_by": current_user["id"]
+            "created_by": current_user["name"],
+            "updated_by": current_user["name"]
         }
         
         response = supabase.table("player_profiles").insert(insert_data).execute()
@@ -1536,7 +1536,7 @@ async def update_player_profile(profile_id: str, profile_data: dict, current_use
             "agent_contact": profile_data.get("agent_contact"),
             "video_link": profile_data.get("video_link"),
             "transfermarkt_link": profile_data.get("transfermarkt_link"),
-            "updated_by": current_user["id"],
+            "updated_by": current_user["name"],
             "updated_at": "NOW()"
         }
         
