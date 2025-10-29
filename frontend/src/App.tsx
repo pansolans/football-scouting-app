@@ -55,7 +55,13 @@ const MainApp: React.FC = () => {
       secondaryColor: '#b6ccd8',
       logo: 'https://image.jimcdn.com/app/cms/image/transf/none/path/sbdcfbaae4f22b55a/image/id41c93cbdf9f68a5/version/1621237465/image.png',
       name: 'FC'
-    }
+    },
+    'UAI Urquiza': {
+      primaryColor: '#00668c',
+      secondaryColor: '#780000',
+      logo: 'https://upload.wikimedia.org/wikipedia/en/9/9d/Club_dep_uaiurquiza_crest.png',
+      name: 'UAI'
+    }    
   };
 
   const currentClub = clubConfig[userClub as keyof typeof clubConfig] || clubConfig['Club Atlético Banfield'];

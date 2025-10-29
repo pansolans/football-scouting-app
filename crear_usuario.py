@@ -26,13 +26,15 @@ print("\nClub del usuario:")
 print("1. Club Atlético Banfield")
 print("2. Boca Juniors")
 print("3. Santa Fe Fútbol Club")  
-print("4. Scouting FC")  
-club_option = input("\nElige club (1-4): ")  # CAMBIAR A 1-3
+print("4. Scouting FC")
+print("5. UAI Urquiza")   
+club_option = input("\nElige club (1-5): ")  # CAMBIAR A 1-3
 clubs = {
     "1": "Club Atlético Banfield",
     "2": "Boca Juniors",
     "3": "Santa Fe Fútbol Club", 
-    "4": "Scouting FC"  
+    "4": "Scouting FC",
+    "5": "UAI Urquiza", 
 }
 club = clubs.get(club_option, "Club Atlético Banfield")
 
