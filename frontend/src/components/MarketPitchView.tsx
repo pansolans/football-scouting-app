@@ -280,7 +280,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     const details = playerDetails[player.player_id];
     return details?.basic_info?.passportArea?.name || details?.basic_info?.birthArea?.name;
   };
-
+  const getPlayerCurrentTeam = (player: any): string => {
+    const details = playerDetails[player.player_id];
+    return details?.contract_info?.team || player.current_team || 'Sin equipo';
+  };
   const getCountryCode = (nationality: string): string => {
     const countryMap: {[key: string]: string} = {
       'Argentina': 'ar',
@@ -299,10 +302,40 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
       'Mexico': 'mx',
       'Poland': 'pl',
       'Croatia': 'hr',
-      'Serbia': 'rs'
+      'Serbia': 'rs',
+      'Paraguay': 'py',
+      'Peru': 'pe',
+      'Chile': 'cl',
+      'Ecuador': 'ec',
+      'Bolivia': 'bo',
+      'Venezuela': 've',
+      'United States': 'us',
+      'Canada': 'ca',
+      'Japan': 'jp',
+      'South Korea': 'kr',
+      'Australia': 'au',
+      'Turkey': 'tr',
+      'Russia': 'ru',
+      'Ukraine': 'ua',
+      'Sweden': 'se',
+      'Norway': 'no',
+      'Denmark': 'dk',
+      'Switzerland': 'ch',
+      'Austria': 'at',
+      'Czech Republic': 'cz',
+      'Greece': 'gr',
+      'Morocco': 'ma',
+      'Egypt': 'eg',
+      'Senegal': 'sn',
+      'Nigeria': 'ng',
+      'Ghana': 'gh',
+      'Cameroon': 'cm',
+      'Ivory Coast': 'ci',
+      'Algeria': 'dz',
+      'Tunisia': 'tn'
     };
     
-    return countryMap[nationality] || nationality?.toLowerCase().substring(0, 2) || '';
+    return countryMap[nationality] || '';
   };
 
   if (viewMode === 'list') {
@@ -338,7 +371,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                     {player.player_name}
                   </h3>
                   <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {player.position} • {getPlayerAge(player)} años • {player.current_team}
+                    {player.position} • {getPlayerAge(player)} años • {getPlayerCurrentTeam(player)}
                   </p>
                 </div>
                 <span style={{
@@ -757,7 +790,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                 {hoveredPlayer.position} • {getPlayerAge(hoveredPlayer)} años
               </p>
               <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>
-                {hoveredPlayer.current_team}
+                {getPlayerCurrentTeam(hoveredPlayer)}
               </p>
               {hoveredPlayer.estimated_price && (
                 <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', fontWeight: 'bold', color: '#10b981' }}>
