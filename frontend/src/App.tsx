@@ -333,7 +333,7 @@ const openMarketModal = async (player: any) => {
         overall_rating: Math.round(avgRating * 10) / 10, // Promedio redondeado a 1 decimal
         total_reports: reports.length,
         // Estos campos los necesitaremos agregar desde Wyscout idealmente
-        team: latestReport.rival || 'Sin equipo', // Por ahora usamos rival como referencia
+        team: latestReport.player_current_team || 'Sin equipo',
         age: null // Necesitaríamos obtener esto de Wyscout
       };
     });
@@ -2782,7 +2782,7 @@ const clearAllFilters = () => {
                           id: String(playerProfile.basic_info?.wyId || ''),
                           name: playerProfile.basic_info?.shortName || '',
                           position: playerProfile.basic_info?.role?.name || '',
-                          team: playerProfile.basic_info?.currentTeam?.name || '',
+                          team: playerProfile.contract_info?.team || playerProfile.basic_info?.currentTeam?.name || 'Sin equipo',
                           wyscout_id: playerProfile.basic_info?.wyId
                         })}
                         style={{
