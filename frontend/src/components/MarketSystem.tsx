@@ -376,6 +376,7 @@ const MarketSystem: React.FC = () => {
 
       <MarketPitchView 
         marketPlayers={marketPlayers}
+        marketId={selectedMarket?.id || ''}
         onUpdateFormation={(formation) => {
           console.log('Formación actualizada:', formation);
         }}

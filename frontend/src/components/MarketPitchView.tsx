@@ -4,10 +4,11 @@ const API_URL = 'https://football-scouting-backend-vd0x.onrender.com';
 
 interface MarketPitchViewProps {
   marketPlayers: any[];
+  marketId: string;
   onUpdateFormation: (formation: any) => void;
 }
 
-const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpdateFormation }) => {
+const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, onUpdateFormation }) => {
   const [formation, setFormation] = useState<{[key: string]: any[]}>({
     GK: [],
     LB: [], CB1: [], CB2: [], RB: [],
@@ -28,7 +29,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
 
   // Posiciones personalizables - se cargan de localStorage o usan valores por defecto
   const [customPositions, setCustomPositions] = useState<{[key: string]: {top: string, left: string}}>(() => {
-    const saved = localStorage.getItem('customPositions');
+    const saved = localStorage.getItem(`customPositions_${marketId}`);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -98,37 +99,33 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, onUpda
 
   // Guardar posiciones personalizadas cuando cambien
   useEffect(() => {
-    if (selectedFormation === 'custom') {
-      localStorage.setItem('customPositions', JSON.stringify(customPositions));
+    if (selectedFormation === 'custom' && marketId) {
+      localStorage.setItem(`customPositions_${marketId}`, JSON.stringify(customPositions));
     }
-  }, [customPositions, selectedFormation]);
+  }, [customPositions, selectedFormation, marketId]);
 
   // Cargar formación guardada de localStorage al montar
   useEffect(() => {
-    const savedFormation = localStorage.getItem('marketFormation');
-    if (savedFormation) {
+    if (!marketId) return;
+    
+    const savedFormation = localStorage.getItem(`marketFormation_${marketId}`);
+    if (savedFormation && marketPlayers.length > 0) {
       try {
         const parsed = JSON.parse(savedFormation);
-        const validFormation: {[key: string]: any[]} = {};
-        Object.keys(parsed).forEach(pos => {
-          validFormation[pos] = parsed[pos].filter((savedPlayer: any) => 
-            marketPlayers.some(mp => mp.id === savedPlayer.id)
-          );
-        });
-        setFormation(validFormation);
+        setFormation(parsed);
       } catch (e) {
         console.error('Error loading saved formation:', e);
       }
     }
-  }, [marketPlayers]);
+  }, [marketId, marketPlayers]);
 
   // Guardar formación cuando cambie
   useEffect(() => {
-    if (Object.values(formation).some(pos => pos.length > 0)) {
-      localStorage.setItem('marketFormation', JSON.stringify(formation));
+    if (marketId && Object.values(formation).some(pos => pos.length > 0)) {
+      localStorage.setItem(`marketFormation_${marketId}`, JSON.stringify(formation));
       onUpdateFormation(formation);
     }
-  }, [formation]);
+  }, [formation, marketId]);
 
   // Función para obtener detalles de Wyscout
   const fetchPlayerDetails = async (playerId: string) => {
