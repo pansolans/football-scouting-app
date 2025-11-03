@@ -480,7 +480,7 @@ async def search_players(
                     id=str(player.get("wyId", "")),
                     name=player.get("shortName", "Unknown"),
                     position=player.get("role", {}).get("name", "Unknown"),
-                    team=player.get("currentTeam", {}).get("name", "Unknown") if player.get("currentTeam") else "Unknown",
+                   team=player.get("currentTeam", {}).get("name", "") or "Free Agent",
                     wyscout_id=player.get("wyId"),
                     age=calculate_age(player.get("birthDate")) if player.get("birthDate") else None,
                     nationality=player.get("passportArea", {}).get("name", "Unknown") if player.get("passportArea") else "Unknown"
