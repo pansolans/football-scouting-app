@@ -333,7 +333,7 @@ const openMarketModal = async (player: any) => {
         overall_rating: Math.round(avgRating * 10) / 10, // Promedio redondeado a 1 decimal
         total_reports: reports.length,
         // Estos campos los necesitaremos agregar desde Wyscout idealmente
-        team: latestReport.player_current_team || 'Sin equipo',
+        team: latestReport.player_current_team || latestReport.rival || 'Sin equipo',
         age: null // Necesitaríamos obtener esto de Wyscout
       };
     });
