@@ -100,6 +100,7 @@ class MatchResponse(BaseModel):
 class ScoutReportCreate(BaseModel):
     player_wyscout_id: int
     player_name: str
+    player_current_team: Optional[str] = None
     match_context: Optional[str] = None
     overall_rating: int
     technical_rating: int
