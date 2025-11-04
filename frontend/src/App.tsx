@@ -572,7 +572,8 @@ useEffect(() => {
       const reportData = {
         ...reportForm,
         player_id: String(selectedPlayer.id),
-        player_name: selectedPlayer.name
+        player_name: selectedPlayer.name,
+        player_current_team: selectedPlayer.team || ''
       };
 
       console.log('Sending to backend:', reportData);
