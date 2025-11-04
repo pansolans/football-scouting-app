@@ -469,7 +469,7 @@ async def search_players(
     query: str = Query(..., min_length=2),
     limit: int = Query(10, le=50)
 ):
-    """Legacy player search endpoint"""
+    """Legacy player search endpoint """
     try:
         async with WyscoutClient(settings.WYSCOUT_USERNAME, settings.WYSCOUT_PASSWORD) as wyscout:
             wyscout_results = await wyscout.search_players(query)
