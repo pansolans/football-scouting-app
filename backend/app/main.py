@@ -480,7 +480,7 @@ async def search_players(
                     id=str(player.get("wyId", "")),
                     name=player.get("shortName", "Unknown"),
                     position=player.get("role", {}).get("name", "Unknown"),
-                   team=player.get("currentTeam", {}).get("name", "") or "Free Agent",
+                    team=player.get("currentTeam", {}).get("name", "Unknown") if player.get("currentTeam") else "Unknown",
                     wyscout_id=player.get("wyId"),
                     age=calculate_age(player.get("birthDate")) if player.get("birthDate") else None,
                     nationality=player.get("passportArea", {}).get("name", "Unknown") if player.get("passportArea") else "Unknown"
@@ -490,19 +490,7 @@ async def search_players(
             
     except Exception as e:
         logger.error(f"Error searching players: {e}")
-        # Fallback to mock data
-        return [
-            PlayerSearchResponse(
-                id="1",
-                name=f"Player matching '{query}' #1",
-                position="Forward",
-                team="Demo FC",
-                wyscout_id=1,
-                age=25,
-                nationality="Spain"
-            )
-        ]
-
+        return []
 # ==============================================
 # PLAYER & MATCH DETAILS
 # ==============================================
