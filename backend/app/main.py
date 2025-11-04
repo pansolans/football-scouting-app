@@ -540,6 +540,7 @@ class ScoutReportCreate(BaseModel):
     player_id: str
     player_name: str
     player_wyscout_id: Optional[int] = None
+    player_current_team: Optional[str] = None
     match_context: Optional[str] = ""
     
     # Posición observada
