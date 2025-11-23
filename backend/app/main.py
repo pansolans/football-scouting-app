@@ -1382,7 +1382,18 @@ async def update_market(market_id: str, update_data: dict, current_user: dict = 
     except Exception as e:
         logger.error(f"Error updating market: {e}")
         raise HTTPException(status_code=500, detail=str(e))    
+
+@app.delete("/api/markets/players/{player_id}")
+async def delete_market_player(player_id: str, current_user: dict = Depends(get_current_user)):
+    """Eliminar jugador del mercado"""
+    try:
+        result = supabase.table('market_players').delete().eq('id', player_id).execute()
+        return {"message": "Jugador eliminado del mercado"}
+    except Exception as e:
+        logger.error(f"Error deleting market player: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     
+
 
 # ========== ENDPOINT PARA JUGADORES MANUALES ==========
 @app.get("/api/manual-players")
