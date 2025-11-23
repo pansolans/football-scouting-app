@@ -342,7 +342,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
 
   // Función para eliminar jugador del mercado
   const handleDeletePlayer = async (playerId: string, playerName: string) => {
-    if (!confirm(`¿Eliminar a ${playerName} del mercado?`)) {
+    if (!window.confirm(`¿Eliminar a ${playerName} del mercado?`)) {
       return;
     }
 
