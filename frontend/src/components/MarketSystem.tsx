@@ -380,6 +380,11 @@ const MarketSystem: React.FC = () => {
         onUpdateFormation={(formation) => {
           console.log('Formación actualizada:', formation);
         }}
+        onPlayerDeleted={() => {
+          if (selectedMarket) {
+            loadMarketPlayers(selectedMarket.id);
+          }
+        }}
       />
     </div>
   );

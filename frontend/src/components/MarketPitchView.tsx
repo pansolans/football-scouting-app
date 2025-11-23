@@ -6,9 +6,10 @@ interface MarketPitchViewProps {
   marketPlayers: any[];
   marketId: string;
   onUpdateFormation: (formation: any) => void;
+  onPlayerDeleted?: () => void;
 }
 
-const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, onUpdateFormation }) => {
+const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, onUpdateFormation, onPlayerDeleted }) => {
   const [formation, setFormation] = useState<{[key: string]: any[]}>({
     GK: [],
     LB: [], CB1: [], CB2: [], RB: [],
@@ -338,6 +339,36 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     return countryMap[nationality] || '';
   };
 
+
+  // Función para eliminar jugador del mercado
+  const handleDeletePlayer = async (playerId: string, playerName: string) => {
+    if (!confirm(`¿Eliminar a ${playerName} del mercado?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/markets/players/${playerId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        alert('Jugador eliminado del mercado');
+        if (onPlayerDeleted) {
+          onPlayerDeleted();
+        }
+      } else {
+        alert('Error al eliminar jugador');
+      }
+    } catch (error) {
+      console.error('Error deleting player:', error);
+      alert('Error al eliminar jugador');
+    }
+  };
+
   if (viewMode === 'list') {
     return (
       <div>
@@ -363,17 +394,20 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
               background: 'white',
               borderRadius: '12px',
               padding: '1.5rem',
-              border: '2px solid #e5e7eb'
+              border: '2px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'start'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-                    {player.player_name}
-                  </h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                    {player.position} • {getPlayerAge(player)} años • {getPlayerCurrentTeam(player)}
-                  </p>
-                </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+                  {player.player_name}
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  {player.position} • {getPlayerAge(player)} años • {getPlayerCurrentTeam(player)}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <span style={{
                   padding: '0.25rem 0.75rem',
                   background: `${getPriorityColor(player.priority)}20`,
@@ -384,6 +418,21 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                 }}>
                   Prioridad {player.priority}
                 </span>
+                <button
+                  onClick={() => handleDeletePlayer(player.id, player.player_name)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  🗑️ Eliminar
+                </button>
               </div>
             </div>
           ))}
@@ -391,6 +440,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
       </div>
     );
   }
+
 
   const playerImage = (player: any) => {
     const imgSrc = getPlayerImage(player);
