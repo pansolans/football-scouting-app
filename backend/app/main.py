@@ -1194,7 +1194,7 @@ class ManualPlayerCreate(BaseModel):
     notes: Optional[str] = None
 
 @app.post("/api/players/manual")
-async def create_manual_player(player_data: ManualPlayerCreate):
+async def create_manual_player(player_data: ManualPlayerCreate, current_user: dict = Depends(get_current_user)):
     """Crear un jugador manualmente"""
     try:
         # Generar ID único
@@ -1228,6 +1228,7 @@ async def create_manual_player(player_data: ManualPlayerCreate):
             "notes": player_data.notes,
             "source": "manual",
             "manually_created": True,
+            "organization_id": current_user["club_id"],
             "created_at": datetime.now().isoformat()
         }
         
