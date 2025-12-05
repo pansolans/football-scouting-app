@@ -65,7 +65,7 @@ const MainApp: React.FC = () => {
         'TAGENCY': {
       primaryColor: '#121113',
       secondaryColor: '#f7b538',
-      logo: 'https://instagram.ffdo24-3.fna.fbcdn.net/v/t51.2885-19/583773518_17861293947537595_4620038122785075881_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=instagram.ffdo24-3.fna.fbcdn.net&_nc_cat=107&_nc_oc=Q6cZ2QGj2F6BtxkiqmacQFoW_PR9JzFqNLoRGiswdHsLD5mZLxuokVHAW4bFPWaHu6qSf90&_nc_ohc=d6o9mdCm2w4Q7kNvwHr1N1c&_nc_gid=BlBXoTt_Y8NNRpdm9JKv1Q&edm=AP4sbd4BAAAA&ccb=7-5&oh=00_Afn9EpaU2RakMfu4rxQxc867a5jev9s3j0Yd-3f81lj98Q&oe=6938EB37&_nc_sid=7a9f4b',
+      logo: 'https://i.imgur.com/0qe0Wxg.jpeg',
       name: 'TAGENCY'
     },    
   };
