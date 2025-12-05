@@ -65,7 +65,7 @@ const MainApp: React.FC = () => {
         'TAGENCY': {
       primaryColor: '#121113',
       secondaryColor: '#f7b538',
-      logo: 'https://ibb.co/pvzGTwpF',
+      logo: 'https://drive.google.com/file/d/1udG1DBoF0ad7c1-4FjQzFh_DjSBW2tdO/view?usp=drive_link',
       name: 'TAGENCY'
     },    
   };
