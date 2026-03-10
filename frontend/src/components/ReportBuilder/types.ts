@@ -38,13 +38,15 @@ export interface ReportPage {
 
 export interface CoverData {
   enabled?: boolean;
+  backgroundImage?: string;
+  overlayOpacity?: number;  // 0-100, default 60
+  blocks?: ReportBlock[];   // movable elements on cover page
+  // Legacy fields (kept for backwards compat, ignored if blocks exist)
   clubLogo?: string;
   playerPhoto?: string;
-  backgroundImage?: string;
   title: string;
   subtitle?: string;
   date?: string;
-  overlayOpacity?: number;  // 0-100, default 60
   titleAlign?: 'left' | 'center' | 'right';
 }
 

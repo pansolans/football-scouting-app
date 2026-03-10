@@ -59,7 +59,11 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const pages = report.pages || [{ id: crypto.randomUUID(), blocks: report.blocks }];
-  const currentPage = pages[activePage] || pages[0];
+  const coverBlocks = report.cover_data.blocks || [];
+  const isCoverActive = activePage === -1 && (report.cover_data.enabled ?? false);
+  const currentPage = isCoverActive
+    ? { id: '__cover__', blocks: coverBlocks }
+    : (pages[activePage] || pages[0]);
 
   const setPages = (updater: (prev: ReportPage[]) => ReportPage[]) => {
     setReport(prev => {
@@ -67,6 +71,13 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       const newPages = updater(cur);
       return { ...prev, pages: newPages, blocks: newPages.flatMap(p => p.blocks) };
     });
+  };
+
+  const setCoverBlocks = (updater: (prev: ReportBlock[]) => ReportBlock[]) => {
+    setReport(prev => ({
+      ...prev,
+      cover_data: { ...prev.cover_data, blocks: updater(prev.cover_data.blocks || []) },
+    }));
   };
 
   // ─── Load ───
@@ -111,6 +122,17 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         : { ...o, w: clamp(o.w + dx, 5, 100 - o.x), h: clamp(o.h + dy, 2, 100 - o.y) };
 
       setReport(prev => {
+        // Check if block is in cover
+        const inCover = (prev.cover_data.blocks || []).some(b => b.id === interaction.blockId);
+        if (inCover) {
+          return {
+            ...prev,
+            cover_data: {
+              ...prev.cover_data,
+              blocks: (prev.cover_data.blocks || []).map(b => b.id === interaction.blockId ? { ...b, style: newStyle } : b),
+            },
+          };
+        }
         const newPages = (prev.pages || []).map(p => ({
           ...p,
           blocks: p.blocks.map(b => b.id === interaction.blockId ? { ...b, style: newStyle } : b),
@@ -272,46 +294,69 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     const sz = BLOCK_SIZES[type];
     const block = createBlock(type);
     block.style = { x: (100 - sz.w) / 2, y: nextY, w: sz.w, h: sz.h };
-    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, block] } : p));
+    if (isCoverActive) {
+      setCoverBlocks(prev => [...prev, block]);
+    } else {
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, block] } : p));
+    }
+    setSelectedBlock(block.id);
+  };
+
+  const addCoverBlock = (type: BlockType) => {
+    const sz = BLOCK_SIZES[type];
+    const block = createBlock(type);
+    const cb = report.cover_data.blocks || [];
+    let maxBottom = 0;
+    cb.forEach(b => { const st = b.style || DEFAULT_BLOCK_STYLE; maxBottom = Math.max(maxBottom, st.y + st.h); });
+    const nextY = cb.length === 0 ? 30 : Math.min(maxBottom + 2, 90);
+    block.style = { x: (100 - sz.w) / 2, y: nextY, w: sz.w, h: sz.h };
+    setCoverBlocks(prev => [...prev, block]);
+    setActivePage(-1);
     setSelectedBlock(block.id);
   };
 
   const updateBlock = (blockId: string, content: any) => {
-    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: p.blocks.map(b => b.id === blockId ? { ...b, content } : b) } : p));
+    if (isCoverActive) {
+      setCoverBlocks(prev => prev.map(b => b.id === blockId ? { ...b, content } : b));
+    } else {
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: p.blocks.map(b => b.id === blockId ? { ...b, content } : b) } : p));
+    }
   };
 
   // When an image loads, resize the block to match the image's real aspect ratio
   const fitBlockToImage = (blockId: string, imgW: number, imgH: number) => {
     if (!imgW || !imgH) return;
-    const ratio = imgH / imgW; // e.g. 0.75 for landscape, 1.5 for portrait
-    // A4 page ratio: 297/210 ≈ 1.414. Canvas % are relative to width and height independently.
-    // To make block match image ratio: if block is W% wide, its pixel width = canvasW * W/100
-    // We want pixel height = pixel width * ratio → H% = W% * ratio * (canvasW / canvasH)
-    // canvasW/canvasH = 210/297 ≈ 0.707
+    const ratio = imgH / imgW;
     const pageRatio = 210 / 297;
-    setPages(prev => prev.map((p, i) => {
-      if (i !== activePage) return p;
-      return {
-        ...p,
-        blocks: p.blocks.map(b => {
-          if (b.id !== blockId) return b;
-          const bs = b.style || DEFAULT_BLOCK_STYLE;
-          const newH = clamp(bs.w * ratio * pageRatio, 5, 90);
-          return { ...b, style: { ...bs, h: newH } };
-        }),
-      };
-    }));
+    const resizer = (blocks: ReportBlock[]) => blocks.map(b => {
+      if (b.id !== blockId) return b;
+      const bs = b.style || DEFAULT_BLOCK_STYLE;
+      return { ...b, style: { ...bs, h: clamp(bs.w * ratio * pageRatio, 5, 90) } };
+    });
+    if (isCoverActive) {
+      setCoverBlocks(prev => resizer(prev));
+    } else {
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: resizer(p.blocks) } : p));
+    }
   };
 
   const deleteBlock = (blockId: string) => {
-    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: p.blocks.filter(b => b.id !== blockId) } : p));
+    if (isCoverActive) {
+      setCoverBlocks(prev => prev.filter(b => b.id !== blockId));
+    } else {
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: p.blocks.filter(b => b.id !== blockId) } : p));
+    }
     if (selectedBlock === blockId) setSelectedBlock(null);
   };
 
   const duplicateBlock = (block: ReportBlock) => {
     const bs = block.style || DEFAULT_BLOCK_STYLE;
     const newBlock: ReportBlock = { ...block, id: crypto.randomUUID(), content: { ...block.content }, style: { ...bs, x: bs.x + 2, y: Math.min(bs.y + 3, 90) } };
-    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, newBlock] } : p));
+    if (isCoverActive) {
+      setCoverBlocks(prev => [...prev, newBlock]);
+    } else {
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, newBlock] } : p));
+    }
     setSelectedBlock(newBlock.id);
   };
 
@@ -377,20 +422,44 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   const buildCoverHtml = (): string => {
     const c = report.cover_data;
     const overlay = (c.overlayOpacity ?? 60) / 100;
-    const align = c.titleAlign || 'center';
-    const textAlign = `text-align:${align};`;
-    const flexAlign = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+    const cb = c.blocks || [];
+
+    // Reuse the same blockToHtml from buildPageHtml
+    const blockToHtml = (block: ReportBlock): string => {
+      const bs = block.style || DEFAULT_BLOCK_STYLE;
+      const pos = `position:absolute;left:${bs.x}%;top:${bs.y}%;width:${bs.w}%;height:${bs.h}%;overflow:hidden;box-sizing:border-box;`;
+      const inner = (() => {
+        switch (block.type) {
+          case 'header': {
+            const sizes: Record<string, string> = { '1': '36px', '2': '26px', '3': '20px' };
+            return `<h2 style="font-size:${sizes[String(block.content?.level)] || '26px'};font-weight:bold;color:#fff;margin:0;padding:6px 0;">${block.content?.text || ''}</h2>`;
+          }
+          case 'text':
+            return `<div style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+          case 'image':
+            return block.content?.url ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;display:block;" crossorigin="anonymous"/>` : '';
+          case 'shape': {
+            const sc = block.content || {};
+            const bg = sc.backgroundColor || '#00bf63';
+            const op = (sc.opacity ?? 100) / 100;
+            const br = sc.borderRadius ?? 0;
+            const bw = sc.borderWidth ?? 0;
+            const bc = sc.borderColor || 'transparent';
+            const label = sc.label || '';
+            return `<div style="width:100%;height:100%;background:${bg};opacity:${op};border-radius:${br}px;${bw > 0 ? `border:${bw}px solid ${bc};` : ''}box-sizing:border-box;display:flex;align-items:center;justify-content:center;">${label ? `<span style="color:#fff;font-weight:600;font-size:13px;text-align:center;">${label}</span>` : ''}</div>`;
+          }
+          case 'divider':
+            return '<hr style="border:none;border-top:2px solid rgba(0,191,99,0.25);margin:0;"/>';
+          default: return '';
+        }
+      })();
+      return `<div style="${pos}">${inner}</div>`;
+    };
 
     return `<div style="width:794px;height:1123px;background:#0d0d10;position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
       ${c.backgroundImage ? `<img src="${c.backgroundImage}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" crossorigin="anonymous"/>` : ''}
       <div style="position:absolute;inset:0;background:rgba(0,0,0,${overlay});"></div>
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:${flexAlign};justify-content:center;padding:0 10%;${textAlign}">
-        ${c.clubLogo ? `<img src="${c.clubLogo}" style="height:80px;object-fit:contain;margin-bottom:24px;" crossorigin="anonymous"/>` : ''}
-        ${c.playerPhoto ? `<img src="${c.playerPhoto}" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:3px solid rgba(255,255,255,0.2);margin-bottom:24px;" crossorigin="anonymous"/>` : ''}
-        <h1 style="font-size:36px;font-weight:bold;color:#fff;margin:0 0 12px;line-height:1.2;">${c.title || ''}</h1>
-        ${c.subtitle ? `<p style="font-size:18px;color:rgba(255,255,255,0.7);margin:0 0 12px;">${c.subtitle}</p>` : ''}
-        ${c.date ? `<p style="font-size:14px;color:rgba(255,255,255,0.4);margin:0;">${c.date}</p>` : ''}
-      </div>
+      ${cb.map(blockToHtml).join('')}
     </div>`;
   };
 
@@ -612,7 +681,26 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           )}
 
           {/* Cover config */}
-          <CoverEditor cover={report.cover_data} onChange={cover_data => setReport(prev => ({ ...prev, cover_data }))} playerPhoto={playerPhoto} />
+          <CoverEditor
+            cover={report.cover_data}
+            onChange={cover_data => {
+              // Auto-generate initial blocks when cover is first enabled
+              if (cover_data.enabled && !report.cover_data.enabled && (!cover_data.blocks || cover_data.blocks.length === 0)) {
+                const id = () => crypto.randomUUID();
+                cover_data = {
+                  ...cover_data,
+                  blocks: [
+                    { id: id(), type: 'header', content: { text: report.cover_data.title || 'Informe', level: 1 }, style: { x: 10, y: 35, w: 80, h: 10 } },
+                    { id: id(), type: 'text', content: { text: report.cover_data.date || new Date().toISOString().split('T')[0] }, style: { x: 25, y: 50, w: 50, h: 5 } },
+                  ],
+                };
+                setActivePage(-1);
+              }
+              setReport(prev => ({ ...prev, cover_data }));
+            }}
+            onAddCoverBlock={addCoverBlock}
+            playerPhoto={playerPhoto}
+          />
 
           {/* Shape editor (when a shape block is selected) */}
           {(() => {
@@ -696,52 +784,23 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             style={{ aspectRatio: '210/297' }}
             onClick={() => setSelectedBlock(null)}
           >
-            {/* ─── Cover page view ─── */}
-            {activePage === -1 && report.cover_data.enabled && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                {/* Background image */}
+            {/* ─── Cover background (only on cover page) ─── */}
+            {isCoverActive && (
+              <>
                 {report.cover_data.backgroundImage && (
-                  <img
-                    src={report.cover_data.backgroundImage}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                  <img src={report.cover_data.backgroundImage} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
                 )}
-                {/* Overlay */}
-                <div
-                  className="absolute inset-0"
-                  style={{ backgroundColor: `rgba(0,0,0,${(report.cover_data.overlayOpacity ?? 60) / 100})` }}
-                />
-                {/* Content */}
-                <div
-                  className="relative z-10 flex flex-col gap-4 px-[10%] w-full"
-                  style={{ textAlign: report.cover_data.titleAlign || 'center' }}
-                >
-                  {report.cover_data.clubLogo && (
-                    <div className={`flex ${(report.cover_data.titleAlign || 'center') === 'center' ? 'justify-center' : (report.cover_data.titleAlign || 'center') === 'right' ? 'justify-end' : 'justify-start'}`}>
-                      <img src={report.cover_data.clubLogo} alt="" className="h-16 object-contain" />
-                    </div>
-                  )}
-                  {report.cover_data.playerPhoto && (
-                    <div className={`flex ${(report.cover_data.titleAlign || 'center') === 'center' ? 'justify-center' : (report.cover_data.titleAlign || 'center') === 'right' ? 'justify-end' : 'justify-start'}`}>
-                      <img src={report.cover_data.playerPhoto} alt="" className="w-24 h-24 rounded-xl object-cover border-2 border-white/20" />
-                    </div>
-                  )}
-                  <h1 className="text-white font-bold text-2xl leading-tight drop-shadow-lg m-0">
-                    {report.cover_data.title || 'Titulo del Informe'}
-                  </h1>
-                  {report.cover_data.subtitle && (
-                    <p className="text-white/70 text-sm m-0">{report.cover_data.subtitle}</p>
-                  )}
-                  {report.cover_data.date && (
-                    <p className="text-white/40 text-xs m-0">{report.cover_data.date}</p>
-                  )}
-                </div>
-              </div>
+                <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: `rgba(0,0,0,${(report.cover_data.overlayOpacity ?? 60) / 100})` }} />
+                {coverBlocks.length === 0 && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                    <p className="text-white/40 text-sm">Agrega elementos desde el panel izquierdo</p>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* ─── Blocks on canvas (normal pages) ─── */}
-            {activePage >= 0 && currentPage.blocks.map(block => {
+            {/* ─── Blocks on canvas ─── */}
+            {currentPage.blocks.map(block => {
               const bs = block.style || DEFAULT_BLOCK_STYLE;
               const isSel = selectedBlock === block.id;
 
@@ -805,7 +864,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             })}
 
             {/* Empty state */}
-            {activePage >= 0 && currentPage.blocks.length === 0 && (
+            {!isCoverActive && currentPage.blocks.length === 0 && (
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <p className="text-text-muted text-base mb-1">Pagina vacia</p>
                 <p className="text-text-muted text-xs">Agrega objetos desde el panel izquierdo</p>
