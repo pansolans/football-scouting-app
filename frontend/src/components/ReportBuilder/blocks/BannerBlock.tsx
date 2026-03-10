@@ -9,12 +9,13 @@ interface Props {
 
 const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
   const logoRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
 
-  const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, key: 'logoUrl' | 'photoUrl') => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => onChange({ ...content, logoUrl: reader.result as string });
+    reader.onload = () => onChange({ ...content, [key]: reader.result as string });
     reader.readAsDataURL(file);
   };
 
@@ -42,7 +43,7 @@ const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
           Logo
         </button>
       ) : null}
-      <input ref={logoRef} type="file" accept="image/*" onChange={handleLogoFile} className="hidden" />
+      <input ref={logoRef} type="file" accept="image/*" onChange={e => handleFile(e, 'logoUrl')} className="hidden" />
 
       {/* Text fields */}
       <div className="flex-1 min-w-0">
@@ -65,14 +66,15 @@ const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
               type="text"
               value={content.subtitle || ''}
               onChange={e => onChange({ ...content, subtitle: e.target.value })}
-              placeholder="Subtitulo"
+              placeholder="Subtitulo (opcional)"
               className="w-full bg-transparent border-none outline-none text-white/50 text-[9px] placeholder:text-white/20 mt-0.5"
             />
             <input
-              type="date"
+              type="text"
               value={content.date || ''}
               onChange={e => onChange({ ...content, date: e.target.value })}
-              className="bg-transparent border-none outline-none text-white/30 text-[8px] mt-0.5"
+              placeholder="Fecha u otro texto (opcional)"
+              className="w-full bg-transparent border-none outline-none text-white/30 text-[8px] placeholder:text-white/15 mt-0.5"
             />
           </>
         )}
@@ -80,28 +82,39 @@ const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
 
       {/* Player photo */}
       {content.photoUrl ? (
-        <img
-          src={content.photoUrl}
-          alt=""
-          className="h-[70%] max-h-12 aspect-square rounded-lg object-cover shrink-0 cursor-pointer"
-          onClick={() => {
-            if (readOnly) return;
-            const url = prompt('URL de foto (vacio para quitar):', content.photoUrl);
-            if (url === null) return;
-            onChange({ ...content, photoUrl: url || undefined });
-          }}
-        />
+        <div className="relative shrink-0 group/photo">
+          <img
+            src={content.photoUrl}
+            alt=""
+            className="h-[70%] max-h-12 aspect-square rounded-lg object-cover"
+          />
+          {!readOnly && (
+            <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <button onClick={() => photoRef.current?.click()} className="text-[7px] text-white/80 cursor-pointer border-none bg-transparent hover:text-white">Cambiar</button>
+              <button onClick={() => onChange({ ...content, photoUrl: undefined })} className="text-[7px] text-red-400/80 cursor-pointer border-none bg-transparent hover:text-red-400">Quitar</button>
+            </div>
+          )}
+        </div>
       ) : !readOnly ? (
-        <button
-          onClick={() => {
-            const url = prompt('URL de foto del jugador:');
-            if (url) onChange({ ...content, photoUrl: url });
-          }}
-          className="w-10 h-10 rounded-lg bg-white/10 border border-dashed border-white/20 text-[7px] text-white/40 cursor-pointer shrink-0 hover:bg-white/15 transition-colors"
-        >
-          Foto
-        </button>
+        <div className="flex flex-col gap-1 shrink-0">
+          <button
+            onClick={() => photoRef.current?.click()}
+            className="w-10 h-5 rounded bg-white/10 border border-dashed border-white/20 text-[6px] text-white/40 cursor-pointer hover:bg-white/15 transition-colors"
+          >
+            Subir
+          </button>
+          <button
+            onClick={() => {
+              const url = prompt('URL de foto del jugador:');
+              if (url) onChange({ ...content, photoUrl: url });
+            }}
+            className="w-10 h-5 rounded bg-white/10 border border-dashed border-white/20 text-[6px] text-white/40 cursor-pointer hover:bg-white/15 transition-colors"
+          >
+            URL
+          </button>
+        </div>
       ) : null}
+      <input ref={photoRef} type="file" accept="image/*" onChange={e => handleFile(e, 'photoUrl')} className="hidden" />
     </div>
   );
 };

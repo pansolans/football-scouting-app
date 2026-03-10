@@ -507,6 +507,15 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="370" viewBox="0 0 400 370">${rings}${axes}${poly}${dots}${labels}</svg>`;
   };
 
+  const textStyleToCss = (ts: any, defaults: { fontSize: string; color: string; fontWeight?: string }) => {
+    const fs = ts?.fontSize ? `${ts.fontSize}px` : defaults.fontSize;
+    const col = ts?.color || defaults.color;
+    const fw = ts?.bold === false ? 'normal' : ts?.bold ? 'bold' : (defaults.fontWeight || 'normal');
+    const fi = ts?.italic ? 'italic' : 'normal';
+    const ta = ts?.align || 'left';
+    return `font-size:${fs};color:${col};font-weight:${fw};font-style:${fi};text-align:${ta};`;
+  };
+
   const buildCoverHtml = (): string => {
     const c = report.cover_data;
     const overlay = (c.overlayOpacity ?? 60) / 100;
@@ -519,11 +528,14 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       const inner = (() => {
         switch (block.type) {
           case 'header': {
-            const sizes: Record<string, string> = { '1': '36px', '2': '26px', '3': '20px' };
-            return `<h2 style="font-size:${sizes[String(block.content?.level)] || '26px'};font-weight:bold;color:#fff;margin:0;padding:6px 0;">${block.content?.text || ''}</h2>`;
+            const defSizes: Record<string, string> = { '1': '36px', '2': '26px', '3': '20px' };
+            const hCss = textStyleToCss(block.content?.textStyle, { fontSize: defSizes[String(block.content?.level)] || '26px', color: '#fff', fontWeight: 'bold' });
+            return `<h2 style="${hCss}margin:0;padding:6px 0;">${block.content?.text || ''}</h2>`;
           }
-          case 'text':
-            return `<div style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+          case 'text': {
+            const tCss = textStyleToCss(block.content?.textStyle, { fontSize: '14px', color: 'rgba(255,255,255,0.7)' });
+            return `<div style="${tCss}line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+          }
           case 'image':
             return block.content?.url ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;" crossorigin="anonymous"/>` : '';
           case 'shape': {
@@ -571,11 +583,14 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       const inner = (() => {
         switch (block.type) {
           case 'header': {
-            const sizes: Record<string, string> = { '1': '28px', '2': '22px', '3': '17px' };
-            return `<h2 style="font-size:${sizes[String(block.content?.level)] || '22px'};font-weight:bold;color:#fff;margin:0;padding:6px 0;border-bottom:3px solid rgba(0,191,99,0.4);">${block.content?.text || ''}</h2>`;
+            const defSz: Record<string, string> = { '1': '28px', '2': '22px', '3': '17px' };
+            const hStyle = textStyleToCss(block.content?.textStyle, { fontSize: defSz[String(block.content?.level)] || '22px', color: '#fff', fontWeight: 'bold' });
+            return `<h2 style="${hStyle}margin:0;padding:6px 0;border-bottom:3px solid rgba(0,191,99,0.4);">${block.content?.text || ''}</h2>`;
           }
-          case 'text':
-            return `<div style="font-size:12px;color:#d1d5db;line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+          case 'text': {
+            const tStyle = textStyleToCss(block.content?.textStyle, { fontSize: '12px', color: '#d1d5db' });
+            return `<div style="${tStyle}line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+          }
           case 'image':
             return block.content?.url
               ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;" crossorigin="anonymous"/>`

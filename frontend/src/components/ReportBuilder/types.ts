@@ -1,7 +1,14 @@
 export type BlockType = 'header' | 'text' | 'image' | 'video' | 'stats_table' | 'divider' | 'shape' | 'banner';
 
-export interface HeaderContent { text: string; level: 1 | 2 | 3; }
-export interface TextContent { text: string; }
+export interface TextStyle {
+  color?: string;
+  fontSize?: number;     // px
+  align?: 'left' | 'center' | 'right';
+  bold?: boolean;
+  italic?: boolean;
+}
+export interface HeaderContent { text: string; level: 1 | 2 | 3; textStyle?: TextStyle; }
+export interface TextContent { text: string; textStyle?: TextStyle; }
 export interface ImageContent { url: string; caption?: string; width?: number; }
 export interface VideoContent { url: string; caption?: string; }
 export interface StatsTableContent { reportIds: string[]; categories: string[]; }
