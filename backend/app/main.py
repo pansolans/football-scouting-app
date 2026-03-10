@@ -150,7 +150,7 @@ async def root():
 async def health_check():
     try:
         supabase_url = os.getenv("SUPABASE_URL")
-        wyscout_api_key = os.getenv("WYSCOUT_API_KEY")
+        wyscout_api_key = os.getenv("WYSCOUT_API_KEY") or os.getenv("WYSCOUT_USERNAME")
         
         return {
             "status": "healthy",
@@ -220,8 +220,8 @@ async def test_wyscout():
     try:
         import base64
         
-        username = os.getenv("WYSCOUT_API_KEY")
-        password = os.getenv("WYSCOUT_API_SECRET")
+        username = os.getenv("WYSCOUT_API_KEY") or os.getenv("WYSCOUT_USERNAME")
+        password = os.getenv("WYSCOUT_API_SECRET") or os.getenv("WYSCOUT_PASSWORD")
         
         if not username or not password:
             return {"error": "Wyscout credentials not configured"}
@@ -269,7 +269,7 @@ async def test_wyscout():
 async def get_areas():
     """Get all available areas/countries"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             areas_data = await wyscout.get_areas()
             
             areas = []
@@ -291,7 +291,7 @@ async def get_areas():
 async def get_competitions_by_area(area_id: int):
     """Get competitions for a specific area"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             # Need to use area alpha3 code for Wyscout API
             areas = await wyscout.get_areas()
             area_code = None
@@ -331,7 +331,7 @@ async def get_competitions_by_area(area_id: int):
 async def get_teams_by_competition(competition_id: int):
     """Get teams for a specific competition"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             teams_data = await wyscout.get_competition_teams(competition_id)
             
             teams = []
@@ -392,7 +392,7 @@ async def get_competition_players_bulk(
     async def fetch_squad(tid):
         async with sem:
             try:
-                async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+                async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
                     squad_data = await wyscout.get_team_squad(tid)
                     player_list = squad_data.get("squad", [])
                     team_name = squad_data.get("team", {}).get("name", "Unknown")
@@ -449,7 +449,7 @@ async def get_players_by_team(team_id: int):
             return cached_players
 
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             squad_data = await wyscout.get_team_squad(team_id)
 
             player_list = squad_data.get("squad", [])
@@ -493,7 +493,7 @@ async def get_players_by_team(team_id: int):
 async def get_matches_by_competition(competition_id: int, limit: int = Query(20, le=100)):
     """Get recent matches for a specific competition"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             matches_data = await wyscout.get_competition_matches(competition_id)
             
             matches = []
@@ -525,7 +525,7 @@ async def smart_search(
 ):
     """Smart search that can find teams or players directly"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             results = {
                 "teams": [],
                 "players": []
@@ -580,7 +580,7 @@ async def search_players(
 ):
     """Legacy player search endpoint """
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             wyscout_results = await wyscout.search_players(query)
             
             players = []
@@ -607,7 +607,7 @@ async def search_players(
 @app.get("/api/player/{player_id}")
 async def get_player_details(player_id: int):
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             player = await wyscout.get_player(player_id, details="currentTeam")
             return player
     except Exception as e:
@@ -617,7 +617,7 @@ async def get_player_details(player_id: int):
 @app.get("/api/player/{player_id}/matches")
 async def get_player_matches(player_id: int):
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             matches = await wyscout.get_player_matches(player_id)
             return matches
     except Exception as e:
@@ -628,7 +628,7 @@ async def get_player_matches(player_id: int):
 async def get_match_players(match_id: int):
     """Get players who participated in a specific match"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             match_data = await wyscout.get_match_players(match_id)
             return match_data
     except Exception as e:
@@ -941,7 +941,7 @@ async def get_all_player_reports(player_id: str):
 @app.get("/api/sync/areas")
 async def sync_areas():
    try:
-       async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+       async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
            areas_data = await wyscout.get_areas()
            
            return {
@@ -991,7 +991,7 @@ async def process_career_data_async(career_raw, wyscout_client):
                 competition_name = competition_cache[competition_id]
             else:
                 try:
-                    credentials = f"{settings.WYSCOUT_API_KEY}:{settings.WYSCOUT_API_SECRET}"
+                    credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
                     encoded = base64.b64encode(credentials.encode()).decode()
                     headers = {"Authorization": f"Basic {encoded}"}
                     
@@ -1117,7 +1117,7 @@ async def process_career_data_enhanced(career_raw, wyscout_client):
                 competition_name = competition_cache[competition_id]
             else:
                 try:
-                    credentials = f"{settings.WYSCOUT_API_KEY}:{settings.WYSCOUT_API_SECRET}"
+                    credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
                     encoded = base64.b64encode(credentials.encode()).decode()
                     headers = {"Authorization": f"Basic {encoded}"}
 
@@ -1142,7 +1142,7 @@ async def process_career_data_enhanced(career_raw, wyscout_client):
                 season_name = season_cache[season_id]
             else:
                 try:
-                    credentials = f"{settings.WYSCOUT_API_KEY}:{settings.WYSCOUT_API_SECRET}"
+                    credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
                     encoded = base64.b64encode(credentials.encode()).decode()
                     headers = {"Authorization": f"Basic {encoded}"}
 
@@ -1219,7 +1219,7 @@ _player_info_cache: Dict[str, Any] = {}
 async def get_players_batch_info(request: BatchInfoRequest):
     """Get basic info for multiple players - parallel + cached."""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             results = {}
 
             # Return cached results immediately
@@ -1360,7 +1360,7 @@ async def get_players_batch_info(request: BatchInfoRequest):
 async def get_player_profile(player_id: int):
     """Get complete player profile with all data from Wyscout"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             # Get basic player info with image
             player = None
             try:
@@ -1381,7 +1381,7 @@ async def get_player_profile(player_id: int):
             career_data = None
             try:
                 async with httpx.AsyncClient() as client:
-                    credentials = f"{settings.WYSCOUT_API_KEY}:{settings.WYSCOUT_API_SECRET}"
+                    credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
                     encoded = base64.b64encode(credentials.encode()).decode()
                     headers = {"Authorization": f"Basic {encoded}"}
 
@@ -1476,7 +1476,7 @@ async def get_player_profile(player_id: int):
 async def get_team_profile(team_id: int):
    """Get complete team profile with logo and details"""
    try:
-       async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+       async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
            # Get basic team info
            team = await wyscout.get_team(team_id)
            
@@ -1508,7 +1508,7 @@ async def get_team_profile(team_id: int):
 async def get_player_recent_matches(player_id: int, limit: int = 50):
     """Get recent matches for a player"""
     try:
-        async with WyscoutClient(settings.WYSCOUT_API_KEY, settings.WYSCOUT_API_SECRET, settings.WYSCOUT_HOST) as wyscout:
+        async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             matches = await wyscout.get_player_matches(player_id)
             
             # Debug: ver qué datos llegan
@@ -1564,7 +1564,7 @@ async def get_player_recent_matches(player_id: int, limit: int = 50):
                     else:
                         # Si no está en cache, obtenerlo de Wyscout
                         try:
-                            credentials = f"{settings.WYSCOUT_API_KEY}:{settings.WYSCOUT_API_SECRET}"
+                            credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
                             encoded = base64.b64encode(credentials.encode()).decode()
                             headers = {"Authorization": f"Basic {encoded}"}
                             

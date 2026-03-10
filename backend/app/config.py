@@ -5,10 +5,20 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_KEY: str
 
-    # Wyscout
+    # Wyscout (supports both WYSCOUT_API_KEY/SECRET and WYSCOUT_USERNAME/PASSWORD)
     WYSCOUT_HOST: str = "https://apirest.wyscout.com"
     WYSCOUT_API_KEY: str = ""
     WYSCOUT_API_SECRET: str = ""
+    WYSCOUT_USERNAME: str = ""
+    WYSCOUT_PASSWORD: str = ""
+
+    @property
+    def wyscout_user(self) -> str:
+        return self.WYSCOUT_API_KEY or self.WYSCOUT_USERNAME
+
+    @property
+    def wyscout_pass(self) -> str:
+        return self.WYSCOUT_API_SECRET or self.WYSCOUT_PASSWORD
 
     # Security
     SECRET_KEY: str = "default-secret-key"
