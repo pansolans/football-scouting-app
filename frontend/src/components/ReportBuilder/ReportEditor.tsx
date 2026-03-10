@@ -374,10 +374,27 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="370" viewBox="0 0 400 370">${rings}${axes}${poly}${dots}${labels}</svg>`;
   };
 
-  const buildPageHtml = (page: ReportPage, pageIdx: number): string => {
-    const cover = report.cover_data;
-    const isFirst = pageIdx === 0;
+  const buildCoverHtml = (): string => {
+    const c = report.cover_data;
+    const overlay = (c.overlayOpacity ?? 60) / 100;
+    const align = c.titleAlign || 'center';
+    const textAlign = `text-align:${align};`;
+    const flexAlign = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
 
+    return `<div style="width:794px;height:1123px;background:#0d0d10;position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
+      ${c.backgroundImage ? `<img src="${c.backgroundImage}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,${overlay});"></div>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:${flexAlign};justify-content:center;padding:0 10%;${textAlign}">
+        ${c.clubLogo ? `<img src="${c.clubLogo}" style="height:80px;object-fit:contain;margin-bottom:24px;" crossorigin="anonymous"/>` : ''}
+        ${c.playerPhoto ? `<img src="${c.playerPhoto}" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:3px solid rgba(255,255,255,0.2);margin-bottom:24px;" crossorigin="anonymous"/>` : ''}
+        <h1 style="font-size:36px;font-weight:bold;color:#fff;margin:0 0 12px;line-height:1.2;">${c.title || ''}</h1>
+        ${c.subtitle ? `<p style="font-size:18px;color:rgba(255,255,255,0.7);margin:0 0 12px;">${c.subtitle}</p>` : ''}
+        ${c.date ? `<p style="font-size:14px;color:rgba(255,255,255,0.4);margin:0;">${c.date}</p>` : ''}
+      </div>
+    </div>`;
+  };
+
+  const buildPageHtml = (page: ReportPage, pageIdx: number, totalPages: number): string => {
     const blockToHtml = (block: ReportBlock): string => {
       const bs = block.style || DEFAULT_BLOCK_STYLE;
       const pos = `position:absolute;left:${bs.x}%;top:${bs.y}%;width:${bs.w}%;height:${bs.h}%;overflow:hidden;box-sizing:border-box;`;
@@ -420,20 +437,9 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       return `<div style="${pos}">${inner}</div>`;
     };
 
-    const coverHtml = isFirst ? `
-      <div style="position:absolute;left:3%;top:2%;width:94%;height:10%;padding:16px 24px;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;box-sizing:border-box;">
-        ${cover.clubLogo ? `<img src="${cover.clubLogo}" style="width:50px;height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
-        <div style="flex:1;">
-          <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${cover.title || ''}</h1>
-          ${cover.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${cover.subtitle}</p>` : ''}
-          ${cover.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${cover.date}</p>` : ''}
-        </div>
-        ${cover.playerPhoto ? `<img src="${cover.playerPhoto}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
-      </div>` : '';
-
     return `<div style="width:794px;height:1123px;background:#0d0d10;font-family:'Segoe UI',Arial,sans-serif;color:#fff;position:relative;box-sizing:border-box;">
-      ${coverHtml}${page.blocks.map(blockToHtml).join('')}
-      <div style="position:absolute;bottom:12px;right:24px;font-size:10px;color:#4b5563;">Pagina ${pageIdx + 1} de ${pages.length}</div>
+      ${page.blocks.map(blockToHtml).join('')}
+      <div style="position:absolute;bottom:12px;right:24px;font-size:10px;color:#4b5563;">Pagina ${pageIdx + 1} de ${totalPages}</div>
     </div>`;
   };
 
@@ -452,15 +458,32 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       container.style.top = '0';
       document.body.appendChild(container);
 
-      for (let i = 0; i < pages.length; i++) {
-        if (i > 0) pdf.addPage();
-        container.innerHTML = buildPageHtml(pages[i], i);
+      const hasCover = report.cover_data.enabled;
+      const totalPages = pages.length + (hasCover ? 1 : 0);
+      let pageNum = 0;
+
+      // Render cover page first if enabled
+      if (hasCover) {
+        container.innerHTML = buildCoverHtml();
         const el = container.firstElementChild as HTMLElement;
         const imgs = el.querySelectorAll('img');
         await Promise.allSettled(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })));
         await new Promise(r => setTimeout(r, 200));
         const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true });
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, pageH);
+        pageNum = 1;
+      }
+
+      for (let i = 0; i < pages.length; i++) {
+        if (pageNum > 0) pdf.addPage();
+        container.innerHTML = buildPageHtml(pages[i], i, totalPages);
+        const el = container.firstElementChild as HTMLElement;
+        const imgs = el.querySelectorAll('img');
+        await Promise.allSettled(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })));
+        await new Promise(r => setTimeout(r, 200));
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, pageH);
+        pageNum++;
       }
 
       document.body.removeChild(container);
@@ -507,6 +530,14 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
 
       {/* Page tabs */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+        {report.cover_data.enabled && (
+          <button
+            onClick={() => { setActivePage(-1); setSelectedBlock(null); }}
+            className={`px-4 py-2 rounded-lg text-xs font-medium cursor-pointer border-none transition-all ${
+              activePage === -1 ? 'bg-accent text-white' : 'bg-white/5 text-text-muted hover:bg-white/10 hover:text-text-secondary'
+            }`}
+          >Portada</button>
+        )}
         {pages.map((page, idx) => (
           <div key={page.id} className="flex items-center gap-0.5">
             <button
@@ -580,14 +611,12 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             </div>
           )}
 
-          {/* Cover (page 1 only) */}
-          {activePage === 0 && (
-            <CoverEditor cover={report.cover_data} onChange={cover_data => setReport(prev => ({ ...prev, cover_data }))} playerPhoto={playerPhoto} />
-          )}
+          {/* Cover config */}
+          <CoverEditor cover={report.cover_data} onChange={cover_data => setReport(prev => ({ ...prev, cover_data }))} playerPhoto={playerPhoto} />
 
           {/* Info */}
           <div className="card-elevated rounded-xl p-3">
-            <p className="text-[11px] text-text-secondary">{currentPage.blocks.length} objetos en pag. {activePage + 1}</p>
+            <p className="text-[11px] text-text-secondary">{activePage >= 0 ? `${currentPage.blocks.length} objetos en pag. ${activePage + 1}` : 'Portada seleccionada'}</p>
             <p className="text-[9px] text-text-muted mt-1">Arrastra la barra superior para mover.</p>
             <p className="text-[9px] text-text-muted">Arrastra la esquina verde para redimensionar.</p>
           </div>
@@ -601,28 +630,52 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             style={{ aspectRatio: '210/297' }}
             onClick={() => setSelectedBlock(null)}
           >
-            {/* Cover preview on page 1 */}
-            {activePage === 0 && report.cover_data.title && (
-              <div
-                className="absolute rounded-lg flex items-center gap-3 px-4 pointer-events-none"
-                style={{
-                  left: '3%', top: '2%', width: '94%', height: '10%',
-                  background: 'linear-gradient(135deg, rgba(0,191,99,0.2), #0d0d10, rgba(59,130,246,0.1))',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                {report.cover_data.clubLogo && <img src={report.cover_data.clubLogo} alt="" className="h-[60%] object-contain" />}
-                <div className="flex-1 min-w-0">
-                  <div className="text-white font-bold text-xs truncate">{report.cover_data.title}</div>
-                  {report.cover_data.subtitle && <div className="text-text-muted text-[9px] truncate">{report.cover_data.subtitle}</div>}
-                  {report.cover_data.date && <div className="text-text-muted text-[8px]">{report.cover_data.date}</div>}
+            {/* ─── Cover page view ─── */}
+            {activePage === -1 && report.cover_data.enabled && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                {/* Background image */}
+                {report.cover_data.backgroundImage && (
+                  <img
+                    src={report.cover_data.backgroundImage}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
+                {/* Overlay */}
+                <div
+                  className="absolute inset-0"
+                  style={{ backgroundColor: `rgba(0,0,0,${(report.cover_data.overlayOpacity ?? 60) / 100})` }}
+                />
+                {/* Content */}
+                <div
+                  className="relative z-10 flex flex-col gap-4 px-[10%] w-full"
+                  style={{ textAlign: report.cover_data.titleAlign || 'center' }}
+                >
+                  {report.cover_data.clubLogo && (
+                    <div className={`flex ${(report.cover_data.titleAlign || 'center') === 'center' ? 'justify-center' : (report.cover_data.titleAlign || 'center') === 'right' ? 'justify-end' : 'justify-start'}`}>
+                      <img src={report.cover_data.clubLogo} alt="" className="h-16 object-contain" />
+                    </div>
+                  )}
+                  {report.cover_data.playerPhoto && (
+                    <div className={`flex ${(report.cover_data.titleAlign || 'center') === 'center' ? 'justify-center' : (report.cover_data.titleAlign || 'center') === 'right' ? 'justify-end' : 'justify-start'}`}>
+                      <img src={report.cover_data.playerPhoto} alt="" className="w-24 h-24 rounded-xl object-cover border-2 border-white/20" />
+                    </div>
+                  )}
+                  <h1 className="text-white font-bold text-2xl leading-tight drop-shadow-lg m-0">
+                    {report.cover_data.title || 'Titulo del Informe'}
+                  </h1>
+                  {report.cover_data.subtitle && (
+                    <p className="text-white/70 text-sm m-0">{report.cover_data.subtitle}</p>
+                  )}
+                  {report.cover_data.date && (
+                    <p className="text-white/40 text-xs m-0">{report.cover_data.date}</p>
+                  )}
                 </div>
-                {report.cover_data.playerPhoto && <img src={report.cover_data.playerPhoto} alt="" className="h-[70%] aspect-square rounded-lg object-cover" />}
               </div>
             )}
 
-            {/* ─── Blocks on canvas ─── */}
-            {currentPage.blocks.map(block => {
+            {/* ─── Blocks on canvas (normal pages) ─── */}
+            {activePage >= 0 && currentPage.blocks.map(block => {
               const bs = block.style || DEFAULT_BLOCK_STYLE;
               const isSel = selectedBlock === block.id;
 
@@ -686,7 +739,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             })}
 
             {/* Empty state */}
-            {currentPage.blocks.length === 0 && !report.cover_data.title && (
+            {activePage >= 0 && currentPage.blocks.length === 0 && (
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <p className="text-text-muted text-base mb-1">Pagina vacia</p>
                 <p className="text-text-muted text-xs">Agrega objetos desde el panel izquierdo</p>

@@ -37,11 +37,15 @@ export interface ReportPage {
 }
 
 export interface CoverData {
+  enabled?: boolean;
   clubLogo?: string;
   playerPhoto?: string;
+  backgroundImage?: string;
   title: string;
   subtitle?: string;
   date?: string;
+  overlayOpacity?: number;  // 0-100, default 60
+  titleAlign?: 'left' | 'center' | 'right';
 }
 
 export interface BuilderReport {
