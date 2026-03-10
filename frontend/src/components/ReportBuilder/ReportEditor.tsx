@@ -10,6 +10,7 @@ import ImageBlock from './blocks/ImageBlock';
 import VideoBlock from './blocks/VideoBlock';
 import StatsTableBlock from './blocks/StatsTableBlock';
 import ShapeBlock from './blocks/ShapeBlock';
+import BannerBlock from './blocks/BannerBlock';
 
 interface Props {
   reportId?: string;
@@ -28,6 +29,7 @@ const BLOCK_SIZES: Record<BlockType, { w: number; h: number }> = {
   stats_table: { w: 88, h: 40 },
   divider: { w: 90, h: 1.5 },
   shape: { w: 40, h: 10 },
+  banner: { w: 94, h: 10 },
 };
 
 const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) => {
@@ -381,6 +383,92 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     setSaving(false);
   };
 
+  // ─── Templates ───
+  const [templates, setTemplates] = useState<BuilderReport[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+
+  const loadTemplates = async () => {
+    try {
+      const data = await reportBuilderService.list(true);
+      setTemplates(data);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { loadTemplates(); }, []);
+
+  const saveAsTemplate = async () => {
+    const name = prompt('Nombre de la plantilla:');
+    if (!name) return;
+    try {
+      // Clone current report structure but clear content
+      const cleanBlock = (b: ReportBlock): ReportBlock => {
+        const empty: Record<string, any> = {
+          header: { text: b.content?.text || 'Titulo', level: b.content?.level || 1 },
+          text: { text: '' },
+          image: { url: '', caption: '' },
+          video: { url: '', caption: '' },
+          stats_table: { reportIds: [], categories: ['tecnico', 'fisico', 'mental'] },
+          divider: { style: 'accent' },
+          shape: { ...b.content },
+          banner: { title: b.content?.title || 'Titulo', subtitle: '', date: '', logoUrl: '', photoUrl: '' },
+        };
+        return { ...b, id: crypto.randomUUID(), content: empty[b.type] || b.content };
+      };
+
+      const templatePages = (report.pages || []).map(p => ({
+        id: crypto.randomUUID(),
+        blocks: p.blocks.map(cleanBlock),
+      }));
+
+      const coverBlocks = (report.cover_data.blocks || []).map(cleanBlock);
+
+      await reportBuilderService.create({
+        title: name,
+        is_template: true,
+        template_name: name,
+        cover_data: {
+          ...report.cover_data,
+          blocks: coverBlocks,
+          title: name,
+        },
+        blocks: templatePages.flatMap(p => p.blocks),
+        pages: templatePages,
+      });
+      alert('Plantilla guardada!');
+      loadTemplates();
+    } catch (e) { console.error(e); alert('Error al guardar plantilla'); }
+  };
+
+  const applyTemplate = (tmpl: BuilderReport) => {
+    // Generate new IDs for all blocks
+    const reId = (b: ReportBlock): ReportBlock => ({ ...b, id: crypto.randomUUID(), content: { ...b.content } });
+    const newPages = (tmpl.pages || []).map(p => ({ id: crypto.randomUUID(), blocks: p.blocks.map(reId) }));
+    const newCoverBlocks = (tmpl.cover_data?.blocks || []).map(reId);
+
+    setReport(prev => ({
+      ...prev,
+      pages: newPages,
+      blocks: newPages.flatMap(p => p.blocks),
+      cover_data: {
+        ...prev.cover_data,
+        enabled: tmpl.cover_data?.enabled,
+        backgroundImage: tmpl.cover_data?.backgroundImage,
+        overlayOpacity: tmpl.cover_data?.overlayOpacity,
+        blocks: newCoverBlocks,
+      },
+    }));
+    setActivePage(0);
+    setShowTemplates(false);
+  };
+
+  const deleteTemplate = async (id: string) => {
+    if (!window.confirm('Eliminar plantilla?')) return;
+    try {
+      await reportBuilderService.delete(id);
+      setTemplates(prev => prev.filter(t => t.id !== id));
+    } catch (e) { alert('Error al eliminar'); }
+  };
+
   // ─── PDF Export ───
   const buildRadarSvg = (): string => {
     if (playerReports.length === 0) return '';
@@ -450,6 +538,18 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           }
           case 'divider':
             return '<hr style="border:none;border-top:2px solid rgba(0,191,99,0.25);margin:0;"/>';
+          case 'banner': {
+            const bc = block.content || {};
+            return `<div style="width:100%;height:100%;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;padding:16px 24px;box-sizing:border-box;">
+              ${bc.logoUrl ? `<img src="${bc.logoUrl}" style="height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
+              <div style="flex:1;">
+                <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${bc.title || ''}</h1>
+                ${bc.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${bc.subtitle}</p>` : ''}
+                ${bc.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${bc.date}</p>` : ''}
+              </div>
+              ${bc.photoUrl ? `<img src="${bc.photoUrl}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+            </div>`;
+          }
           default: return '';
         }
       })();
@@ -499,6 +599,18 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             const label = sc.label || '';
             return `<div style="width:100%;height:100%;background:${bg};opacity:${op};border-radius:${br}px;${bw > 0 ? `border:${bw}px solid ${bc};` : ''}box-sizing:border-box;display:flex;align-items:center;justify-content:center;">${label ? `<span style="color:#fff;font-weight:600;font-size:13px;text-align:center;">${label}</span>` : ''}</div>`;
           }
+          case 'banner': {
+            const bnr = block.content || {};
+            return `<div style="width:100%;height:100%;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;padding:16px 24px;box-sizing:border-box;">
+              ${bnr.logoUrl ? `<img src="${bnr.logoUrl}" style="height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
+              <div style="flex:1;">
+                <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${bnr.title || ''}</h1>
+                ${bnr.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${bnr.subtitle}</p>` : ''}
+                ${bnr.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${bnr.date}</p>` : ''}
+              </div>
+              ${bnr.photoUrl ? `<img src="${bnr.photoUrl}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+            </div>`;
+          }
           default: return '';
         }
       })();
@@ -506,20 +618,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       return `<div style="${pos}">${inner}</div>`;
     };
 
-    const cover = report.cover_data;
-    const headerBarHtml = pageIdx === 0 && cover.title ? `
-      <div style="position:absolute;left:3%;top:2%;width:94%;height:10%;padding:16px 24px;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;box-sizing:border-box;">
-        ${cover.clubLogo ? `<img src="${cover.clubLogo}" style="width:50px;height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
-        <div style="flex:1;">
-          <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${cover.title}</h1>
-          ${cover.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${cover.subtitle}</p>` : ''}
-          ${cover.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${cover.date}</p>` : ''}
-        </div>
-        ${cover.playerPhoto ? `<img src="${cover.playerPhoto}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
-      </div>` : '';
-
     return `<div style="width:794px;height:1123px;background:#0d0d10;font-family:'Segoe UI',Arial,sans-serif;color:#fff;position:relative;box-sizing:border-box;">
-      ${headerBarHtml}${page.blocks.map(blockToHtml).join('')}
+      ${page.blocks.map(blockToHtml).join('')}
       <div style="position:absolute;bottom:12px;right:24px;font-size:10px;color:#4b5563;">Pagina ${pageIdx + 1} de ${totalPages}</div>
     </div>`;
   };
@@ -586,6 +686,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;
       case 'divider': return <div style={{ borderTop: '2px solid rgba(0,191,99,0.25)', width: '100%', marginTop: '40%' }} />;
       case 'shape': return <ShapeBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
+      case 'banner': return <BannerBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       default: return null;
     }
   };
@@ -600,6 +701,12 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         </div>
         <div className="flex items-center gap-2">
           {saved && <span className="text-accent text-xs">Guardado</span>}
+          <button onClick={() => setShowTemplates(!showTemplates)} className="px-3 py-2 bg-white/8 text-text-secondary rounded-lg text-xs font-medium cursor-pointer border-none hover:bg-white/12 transition-colors">
+            Plantillas
+          </button>
+          <button onClick={saveAsTemplate} className="px-3 py-2 bg-purple-500/15 text-purple-400 rounded-lg text-xs font-medium cursor-pointer border-none hover:bg-purple-500/25 transition-colors">
+            Guardar formato
+          </button>
           <button onClick={save} disabled={saving} className="px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm font-semibold cursor-pointer border-none transition-colors disabled:opacity-50">
             {saving ? 'Guardando...' : 'Guardar'}
           </button>
@@ -608,6 +715,45 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           </button>
         </div>
       </div>
+
+      {/* Templates panel */}
+      {showTemplates && (
+        <div className="mb-4 p-4 card-elevated rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-text">Mis Plantillas</h4>
+            <button onClick={() => setShowTemplates(false)} className="text-text-muted hover:text-text text-xs cursor-pointer border-none bg-transparent">Cerrar</button>
+          </div>
+          {templates.length === 0 ? (
+            <p className="text-text-muted text-xs py-4 text-center">No hay plantillas guardadas. Arma un informe y usa "Guardar formato" para crear una.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {templates.map(tmpl => (
+                <div key={tmpl.id} className="bg-white/5 border border-border-strong rounded-lg p-3 hover:border-accent/30 transition-all group">
+                  <div className="text-xs font-medium text-text truncate mb-1">{tmpl.template_name || tmpl.title}</div>
+                  <div className="text-[10px] text-text-muted mb-2">
+                    {tmpl.pages?.length || 1} pag. - {tmpl.blocks?.length || 0} bloques
+                    {tmpl.cover_data?.enabled && ' + portada'}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => applyTemplate(tmpl)}
+                      className="flex-1 py-1.5 bg-accent/15 text-accent text-[10px] rounded cursor-pointer border-none hover:bg-accent/25 font-medium"
+                    >
+                      Usar
+                    </button>
+                    <button
+                      onClick={() => tmpl.id && deleteTemplate(tmpl.id)}
+                      className="px-2 py-1.5 bg-danger/10 text-danger/60 text-[10px] rounded cursor-pointer border-none hover:bg-danger/20 hover:text-danger"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Page tabs */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
@@ -809,26 +955,6 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
                   </div>
                 )}
               </>
-            )}
-
-            {/* ─── Header bar on page 1 ─── */}
-            {activePage === 0 && report.cover_data.title && (
-              <div
-                className="absolute rounded-lg flex items-center gap-3 px-4 pointer-events-none z-[5]"
-                style={{
-                  left: '3%', top: '2%', width: '94%', height: '10%',
-                  background: 'linear-gradient(135deg, rgba(0,191,99,0.2), #0d0d10, rgba(59,130,246,0.1))',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                {report.cover_data.clubLogo && <img src={report.cover_data.clubLogo} alt="" className="h-[60%] object-contain" />}
-                <div className="flex-1 min-w-0">
-                  <div className="text-white font-bold text-xs truncate">{report.cover_data.title}</div>
-                  {report.cover_data.subtitle && <div className="text-text-muted text-[9px] truncate">{report.cover_data.subtitle}</div>}
-                  {report.cover_data.date && <div className="text-text-muted text-[8px]">{report.cover_data.date}</div>}
-                </div>
-                {report.cover_data.playerPhoto && <img src={report.cover_data.playerPhoto} alt="" className="h-[70%] aspect-square rounded-lg object-cover" />}
-              </div>
             )}
 
             {/* ─── Blocks on canvas ─── */}

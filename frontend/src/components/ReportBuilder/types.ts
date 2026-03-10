@@ -1,4 +1,4 @@
-export type BlockType = 'header' | 'text' | 'image' | 'video' | 'stats_table' | 'divider' | 'shape';
+export type BlockType = 'header' | 'text' | 'image' | 'video' | 'stats_table' | 'divider' | 'shape' | 'banner';
 
 export interface HeaderContent { text: string; level: 1 | 2 | 3; }
 export interface TextContent { text: string; }
@@ -13,6 +13,13 @@ export interface ShapeContent {
   borderColor: string;
   borderWidth: number;   // px
   label?: string;        // optional text inside
+}
+export interface BannerContent {
+  title: string;
+  subtitle?: string;
+  date?: string;
+  logoUrl?: string;
+  photoUrl?: string;
 }
 
 export interface BlockStyle {
@@ -76,6 +83,7 @@ export const createBlock = (type: BlockType): ReportBlock => {
     case 'stats_table': return { id, type, content: { reportIds: [], categories: ['tecnico', 'fisico', 'mental'] } };
     case 'divider': return { id, type, content: { style: 'accent' } };
     case 'shape': return { id, type, content: { backgroundColor: '#00bf63', opacity: 100, borderRadius: 0, borderColor: 'transparent', borderWidth: 0, label: '' } };
+    case 'banner': return { id, type, content: { title: 'Titulo del Informe', subtitle: '', date: new Date().toISOString().split('T')[0], logoUrl: '', photoUrl: '' } };
   }
 };
 
@@ -92,4 +100,5 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   stats_table: 'Estadisticas',
   divider: 'Separador',
   shape: 'Forma',
+  banner: 'Barra',
 };
