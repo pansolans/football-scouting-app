@@ -537,7 +537,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             return `<div style="${tCss}line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
           }
           case 'image':
-            return block.content?.url ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;" crossorigin="anonymous"/>` : '';
+            return block.content?.url ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:8px;"></div>` : '';
           case 'shape': {
             const sc = block.content || {};
             const bg = sc.backgroundColor || '#00bf63';
@@ -553,13 +553,13 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           case 'banner': {
             const bc = block.content || {};
             return `<div style="width:100%;height:100%;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;padding:16px 24px;box-sizing:border-box;">
-              ${bc.logoUrl ? `<img src="${bc.logoUrl}" style="height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
+              ${bc.logoUrl ? `<div style="width:50px;height:50px;background-image:url(${bc.logoUrl});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>` : ''}
               <div style="flex:1;">
                 <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${bc.title || ''}</h1>
                 ${bc.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${bc.subtitle}</p>` : ''}
                 ${bc.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${bc.date}</p>` : ''}
               </div>
-              ${bc.photoUrl ? `<img src="${bc.photoUrl}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+              ${bc.photoUrl ? `<div style="width:55px;height:55px;border-radius:8px;background-image:url(${bc.photoUrl});background-size:cover;background-position:center;"></div>` : ''}
             </div>`;
           }
           default: return '';
@@ -569,7 +569,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     };
 
     return `<div style="width:794px;height:1123px;background:#0d0d10;position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
-      ${c.backgroundImage ? `<img src="${c.backgroundImage}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+      ${c.backgroundImage ? `<div style="position:absolute;inset:0;background-image:url(${c.backgroundImage});background-size:cover;background-position:center;"></div>` : ''}
       <div style="position:absolute;inset:0;background:rgba(0,0,0,${overlay});"></div>
       ${cb.map(blockToHtml).join('')}
     </div>`;
@@ -593,7 +593,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           }
           case 'image':
             return block.content?.url
-              ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;" crossorigin="anonymous"/>`
+              ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:8px;"></div>`
               : '';
           case 'video':
             return block.content?.url ? `<div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:6px;"><p style="color:#9ca3af;font-size:12px;margin:0;">Video: ${block.content.url}</p></div>` : '';
@@ -617,13 +617,13 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           case 'banner': {
             const bnr = block.content || {};
             return `<div style="width:100%;height:100%;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;padding:16px 24px;box-sizing:border-box;">
-              ${bnr.logoUrl ? `<img src="${bnr.logoUrl}" style="height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
+              ${bnr.logoUrl ? `<div style="width:50px;height:50px;background-image:url(${bnr.logoUrl});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>` : ''}
               <div style="flex:1;">
                 <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${bnr.title || ''}</h1>
                 ${bnr.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${bnr.subtitle}</p>` : ''}
                 ${bnr.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${bnr.date}</p>` : ''}
               </div>
-              ${bnr.photoUrl ? `<img src="${bnr.photoUrl}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+              ${bnr.photoUrl ? `<div style="width:55px;height:55px;border-radius:8px;background-image:url(${bnr.photoUrl});background-size:cover;background-position:center;"></div>` : ''}
             </div>`;
           }
           default: return '';
@@ -658,15 +658,38 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       const totalPages = pages.length + (hasCover ? 1 : 0);
       let pageNum = 0;
 
+      // Helper: preload all images (both <img> tags and background-image divs)
+      const preloadImages = async (el: HTMLElement) => {
+        // Preload <img> tags
+        const imgs = el.querySelectorAll('img');
+        const imgPromises = Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; }));
+        // Preload background-image URLs
+        const allEls = el.querySelectorAll('*');
+        const bgUrls: string[] = [];
+        allEls.forEach(node => {
+          const bg = (node as HTMLElement).style?.backgroundImage;
+          if (bg) {
+            const match = bg.match(/url\(["']?([^"')]+)["']?\)/);
+            if (match?.[1]) bgUrls.push(match[1]);
+          }
+        });
+        const bgPromises = bgUrls.map(url => new Promise<void>(res => {
+          const img = new Image();
+          img.onload = () => res();
+          img.onerror = () => res();
+          img.src = url;
+        }));
+        await Promise.allSettled([...imgPromises, ...bgPromises]);
+        await new Promise(r => setTimeout(r, 300));
+      };
+
       // Render cover page first if enabled
       if (hasCover) {
         container.innerHTML = buildCoverHtml();
         const el = container.firstElementChild as HTMLElement;
-        const imgs = el.querySelectorAll('img');
-        await Promise.allSettled(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })));
-        await new Promise(r => setTimeout(r, 200));
-        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true });
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, pageH);
+        await preloadImages(el);
+        const canvas = await html2canvas(el, { scale: 3, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, pageH);
         pageNum = 1;
       }
 
@@ -674,11 +697,9 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         if (pageNum > 0) pdf.addPage();
         container.innerHTML = buildPageHtml(pages[i], i, totalPages);
         const el = container.firstElementChild as HTMLElement;
-        const imgs = el.querySelectorAll('img');
-        await Promise.allSettled(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })));
-        await new Promise(r => setTimeout(r, 200));
-        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true });
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, pageH);
+        await preloadImages(el);
+        const canvas = await html2canvas(el, { scale: 3, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, pageH);
         pageNum++;
       }
 
