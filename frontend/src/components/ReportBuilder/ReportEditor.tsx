@@ -506,8 +506,20 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       return `<div style="${pos}">${inner}</div>`;
     };
 
+    const cover = report.cover_data;
+    const headerBarHtml = pageIdx === 0 && cover.title ? `
+      <div style="position:absolute;left:3%;top:2%;width:94%;height:10%;padding:16px 24px;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;box-sizing:border-box;">
+        ${cover.clubLogo ? `<img src="${cover.clubLogo}" style="width:50px;height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
+        <div style="flex:1;">
+          <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${cover.title}</h1>
+          ${cover.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${cover.subtitle}</p>` : ''}
+          ${cover.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${cover.date}</p>` : ''}
+        </div>
+        ${cover.playerPhoto ? `<img src="${cover.playerPhoto}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+      </div>` : '';
+
     return `<div style="width:794px;height:1123px;background:#0d0d10;font-family:'Segoe UI',Arial,sans-serif;color:#fff;position:relative;box-sizing:border-box;">
-      ${page.blocks.map(blockToHtml).join('')}
+      ${headerBarHtml}${page.blocks.map(blockToHtml).join('')}
       <div style="position:absolute;bottom:12px;right:24px;font-size:10px;color:#4b5563;">Pagina ${pageIdx + 1} de ${totalPages}</div>
     </div>`;
   };
@@ -797,6 +809,26 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
                   </div>
                 )}
               </>
+            )}
+
+            {/* ─── Header bar on page 1 ─── */}
+            {activePage === 0 && report.cover_data.title && (
+              <div
+                className="absolute rounded-lg flex items-center gap-3 px-4 pointer-events-none z-[5]"
+                style={{
+                  left: '3%', top: '2%', width: '94%', height: '10%',
+                  background: 'linear-gradient(135deg, rgba(0,191,99,0.2), #0d0d10, rgba(59,130,246,0.1))',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
+              >
+                {report.cover_data.clubLogo && <img src={report.cover_data.clubLogo} alt="" className="h-[60%] object-contain" />}
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-bold text-xs truncate">{report.cover_data.title}</div>
+                  {report.cover_data.subtitle && <div className="text-text-muted text-[9px] truncate">{report.cover_data.subtitle}</div>}
+                  {report.cover_data.date && <div className="text-text-muted text-[8px]">{report.cover_data.date}</div>}
+                </div>
+                {report.cover_data.playerPhoto && <img src={report.cover_data.playerPhoto} alt="" className="h-[70%] aspect-square rounded-lg object-cover" />}
+              </div>
             )}
 
             {/* ─── Blocks on canvas ─── */}
