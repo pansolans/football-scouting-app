@@ -488,27 +488,32 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       { label: 'Posicion.', value: avg('posicionamiento') },
       { label: 'Liderazgo', value: avg('liderazgo') },
     ];
-    const n = metrics.length, cx = 200, cy = 180, R = 105;
+    const n = metrics.length, cx = 400, cy = 360, R = 210;
     const step = (2 * Math.PI) / n;
     const xy = (i: number, r: number) => ({ x: cx + r * Math.sin(i * step), y: cy - r * Math.cos(i * step) });
     const rings = [0.25, 0.5, 0.75, 1].map(p => {
       const pts = Array.from({ length: n }, (_, i) => xy(i, R * p));
-      return `<polygon points="${pts.map(p => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>`;
+      return `<polygon points="${pts.map(p => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
     }).join('');
-    const axes = Array.from({ length: n }, (_, i) => `<line x1="${cx}" y1="${cy}" x2="${xy(i, R).x}" y2="${xy(i, R).y}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`).join('');
+    const axes = Array.from({ length: n }, (_, i) => `<line x1="${cx}" y1="${cy}" x2="${xy(i, R).x}" y2="${xy(i, R).y}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`).join('');
     const pts = metrics.map((m, i) => xy(i, R * (m.value / 10)));
-    const poly = `<polygon points="${pts.map(p => `${p.x},${p.y}`).join(' ')}" fill="rgba(0,191,99,0.25)" stroke="#00bf63" stroke-width="1.5"/>`;
-    const dots = pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#00bf63"/>`).join('');
+    const poly = `<polygon points="${pts.map(p => `${p.x},${p.y}`).join(' ')}" fill="rgba(0,191,99,0.25)" stroke="#00bf63" stroke-width="3"/>`;
+    const dots = pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#00bf63"/>`).join('');
     const labels = metrics.map((m, i) => {
-      const p = xy(i, R + 28);
-      const a = p.x < cx - 10 ? 'end' : p.x > cx + 10 ? 'start' : 'middle';
-      return `<text x="${p.x}" y="${p.y + 4}" fill="#d1d5db" font-size="11" text-anchor="${a}" font-family="Segoe UI,sans-serif">${m.label} (${m.value.toFixed(1)})</text>`;
+      const p = xy(i, R + 56);
+      const a = p.x < cx - 20 ? 'end' : p.x > cx + 20 ? 'start' : 'middle';
+      return `<text x="${p.x}" y="${p.y + 8}" fill="#d1d5db" font-size="22" text-anchor="${a}" font-family="Segoe UI,sans-serif">${m.label} (${m.value.toFixed(1)})</text>`;
     }).join('');
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="370" viewBox="0 0 400 370">${rings}${axes}${poly}${dots}${labels}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="740" viewBox="0 0 800 740">${rings}${axes}${poly}${dots}${labels}</svg>`;
   };
 
+  // PDF_SCALE: factor for doubling base HTML size (794→1588)
+  const PDF_SCALE = 2;
+  const px = (n: number) => `${n * PDF_SCALE}px`;
+
   const textStyleToCss = (ts: any, defaults: { fontSize: string; color: string; fontWeight?: string }) => {
-    const fs = ts?.fontSize ? `${ts.fontSize}px` : defaults.fontSize;
+    const rawFs = ts?.fontSize ? ts.fontSize : parseInt(defaults.fontSize);
+    const fs = `${rawFs * PDF_SCALE}px`;
     const col = ts?.color || defaults.color;
     const fw = ts?.bold === false ? 'normal' : ts?.bold ? 'bold' : (defaults.fontWeight || 'normal');
     const fi = ts?.italic ? 'italic' : 'normal';
@@ -528,38 +533,38 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       const inner = (() => {
         switch (block.type) {
           case 'header': {
-            const defSizes: Record<string, string> = { '1': '36px', '2': '26px', '3': '20px' };
-            const hCss = textStyleToCss(block.content?.textStyle, { fontSize: defSizes[String(block.content?.level)] || '26px', color: '#fff', fontWeight: 'bold' });
-            return `<h2 style="${hCss}margin:0;padding:6px 0;">${block.content?.text || ''}</h2>`;
+            const defSizes: Record<string, string> = { '1': '36', '2': '26', '3': '20' };
+            const hCss = textStyleToCss(block.content?.textStyle, { fontSize: defSizes[String(block.content?.level)] || '26', color: '#fff', fontWeight: 'bold' });
+            return `<h2 style="${hCss}margin:0;padding:${px(6)} 0;">${block.content?.text || ''}</h2>`;
           }
           case 'text': {
-            const tCss = textStyleToCss(block.content?.textStyle, { fontSize: '14px', color: 'rgba(255,255,255,0.7)' });
+            const tCss = textStyleToCss(block.content?.textStyle, { fontSize: '14', color: 'rgba(255,255,255,0.7)' });
             return `<div style="${tCss}line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
           }
           case 'image':
-            return block.content?.url ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:8px;"></div>` : '';
+            return block.content?.url ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:${px(8)};"></div>` : '';
           case 'shape': {
             const sc = block.content || {};
             const bg = sc.backgroundColor || '#00bf63';
             const op = (sc.opacity ?? 100) / 100;
-            const br = sc.borderRadius ?? 0;
-            const bw = sc.borderWidth ?? 0;
+            const br = (sc.borderRadius ?? 0) * PDF_SCALE;
+            const bw = (sc.borderWidth ?? 0) * PDF_SCALE;
             const bc = sc.borderColor || 'transparent';
             const label = sc.label || '';
-            return `<div style="width:100%;height:100%;background:${bg};opacity:${op};border-radius:${br}px;${bw > 0 ? `border:${bw}px solid ${bc};` : ''}box-sizing:border-box;display:flex;align-items:center;justify-content:center;">${label ? `<span style="color:#fff;font-weight:600;font-size:13px;text-align:center;">${label}</span>` : ''}</div>`;
+            return `<div style="width:100%;height:100%;background:${bg};opacity:${op};border-radius:${br}px;${bw > 0 ? `border:${bw}px solid ${bc};` : ''}box-sizing:border-box;display:flex;align-items:center;justify-content:center;">${label ? `<span style="color:#fff;font-weight:600;font-size:${px(13)};text-align:center;">${label}</span>` : ''}</div>`;
           }
           case 'divider':
-            return '<hr style="border:none;border-top:2px solid rgba(0,191,99,0.25);margin:0;"/>';
+            return `<hr style="border:none;border-top:${px(2)} solid rgba(0,191,99,0.25);margin:0;"/>`;
           case 'banner': {
             const bc = block.content || {};
-            return `<div style="width:100%;height:100%;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;padding:16px 24px;box-sizing:border-box;">
-              ${bc.logoUrl ? `<div style="width:50px;height:50px;background-image:url(${bc.logoUrl});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>` : ''}
+            return `<div style="width:100%;height:100%;border-radius:${px(10)};background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:${px(20)};padding:${px(16)} ${px(24)};box-sizing:border-box;">
+              ${bc.logoUrl ? `<div style="width:${px(50)};height:${px(50)};background-image:url(${bc.logoUrl});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>` : ''}
               <div style="flex:1;">
-                <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${bc.title || ''}</h1>
-                ${bc.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${bc.subtitle}</p>` : ''}
-                ${bc.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${bc.date}</p>` : ''}
+                <h1 style="font-size:${px(20)};font-weight:bold;color:#fff;margin:0;">${bc.title || ''}</h1>
+                ${bc.subtitle ? `<p style="font-size:${px(12)};color:#9ca3af;margin:${px(3)} 0 0;">${bc.subtitle}</p>` : ''}
+                ${bc.date ? `<p style="font-size:${px(10)};color:#6b7280;margin:${px(3)} 0 0;">${bc.date}</p>` : ''}
               </div>
-              ${bc.photoUrl ? `<div style="width:55px;height:55px;border-radius:8px;background-image:url(${bc.photoUrl});background-size:cover;background-position:center;"></div>` : ''}
+              ${bc.photoUrl ? `<div style="width:${px(55)};height:${px(55)};border-radius:${px(8)};background-image:url(${bc.photoUrl});background-size:cover;background-position:center;"></div>` : ''}
             </div>`;
           }
           default: return '';
@@ -568,7 +573,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       return `<div style="${pos}">${inner}</div>`;
     };
 
-    return `<div style="width:794px;height:1123px;background:#0d0d10;position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
+    return `<div style="width:1588px;height:2246px;background:#0d0d10;position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
       ${c.backgroundImage ? `<div style="position:absolute;inset:0;background-image:url(${c.backgroundImage});background-size:${c.bgZoom ?? 100}%;background-position:${c.bgPositionX ?? 50}% ${c.bgPositionY ?? 50}%;background-repeat:no-repeat;"></div>` : ''}
       <div style="position:absolute;inset:0;background:rgba(0,0,0,${overlay});"></div>
       ${cb.map(blockToHtml).join('')}
@@ -583,47 +588,47 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       const inner = (() => {
         switch (block.type) {
           case 'header': {
-            const defSz: Record<string, string> = { '1': '28px', '2': '22px', '3': '17px' };
-            const hStyle = textStyleToCss(block.content?.textStyle, { fontSize: defSz[String(block.content?.level)] || '22px', color: '#fff', fontWeight: 'bold' });
-            return `<h2 style="${hStyle}margin:0;padding:6px 0;border-bottom:3px solid rgba(0,191,99,0.4);">${block.content?.text || ''}</h2>`;
+            const defSz: Record<string, string> = { '1': '28', '2': '22', '3': '17' };
+            const hStyle = textStyleToCss(block.content?.textStyle, { fontSize: defSz[String(block.content?.level)] || '22', color: '#fff', fontWeight: 'bold' });
+            return `<h2 style="${hStyle}margin:0;padding:${px(6)} 0;border-bottom:${px(3)} solid rgba(0,191,99,0.4);">${block.content?.text || ''}</h2>`;
           }
           case 'text': {
-            const tStyle = textStyleToCss(block.content?.textStyle, { fontSize: '12px', color: '#d1d5db' });
+            const tStyle = textStyleToCss(block.content?.textStyle, { fontSize: '12', color: '#d1d5db' });
             return `<div style="${tStyle}line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
           }
           case 'image':
             return block.content?.url
-              ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:8px;"></div>`
+              ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:${px(8)};"></div>`
               : '';
           case 'video':
-            return block.content?.url ? `<div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:6px;"><p style="color:#9ca3af;font-size:12px;margin:0;">Video: ${block.content.url}</p></div>` : '';
+            return block.content?.url ? `<div style="padding:${px(8)} ${px(12)};background:rgba(255,255,255,0.05);border-radius:${px(6)};"><p style="color:#9ca3af;font-size:${px(12)};margin:0;">Video: ${block.content.url}</p></div>` : '';
           case 'stats_table': {
             const svg = buildRadarSvg();
-            if (!svg) return '<p style="color:#6b7280;font-size:12px;margin:0;">Sin datos</p>';
-            return `<p style="color:#00bf63;font-size:13px;font-weight:600;margin:0 0 6px;text-align:center;">Promedios de ${playerReports.length} reportes</p><div style="display:flex;justify-content:center;">${svg}</div>`;
+            if (!svg) return `<p style="color:#6b7280;font-size:${px(12)};margin:0;">Sin datos</p>`;
+            return `<p style="color:#00bf63;font-size:${px(13)};font-weight:600;margin:0 0 ${px(6)};text-align:center;">Promedios de ${playerReports.length} reportes</p><div style="display:flex;justify-content:center;">${svg}</div>`;
           }
           case 'divider':
-            return '<hr style="border:none;border-top:2px solid rgba(0,191,99,0.25);margin:0;"/>';
+            return `<hr style="border:none;border-top:${px(2)} solid rgba(0,191,99,0.25);margin:0;"/>`;
           case 'shape': {
             const sc = block.content || {};
             const bg = sc.backgroundColor || '#00bf63';
             const op = (sc.opacity ?? 100) / 100;
-            const br = sc.borderRadius ?? 0;
-            const bw = sc.borderWidth ?? 0;
+            const br = (sc.borderRadius ?? 0) * PDF_SCALE;
+            const bw = (sc.borderWidth ?? 0) * PDF_SCALE;
             const bc = sc.borderColor || 'transparent';
             const label = sc.label || '';
-            return `<div style="width:100%;height:100%;background:${bg};opacity:${op};border-radius:${br}px;${bw > 0 ? `border:${bw}px solid ${bc};` : ''}box-sizing:border-box;display:flex;align-items:center;justify-content:center;">${label ? `<span style="color:#fff;font-weight:600;font-size:13px;text-align:center;">${label}</span>` : ''}</div>`;
+            return `<div style="width:100%;height:100%;background:${bg};opacity:${op};border-radius:${br}px;${bw > 0 ? `border:${bw}px solid ${bc};` : ''}box-sizing:border-box;display:flex;align-items:center;justify-content:center;">${label ? `<span style="color:#fff;font-weight:600;font-size:${px(13)};text-align:center;">${label}</span>` : ''}</div>`;
           }
           case 'banner': {
             const bnr = block.content || {};
-            return `<div style="width:100%;height:100%;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;padding:16px 24px;box-sizing:border-box;">
-              ${bnr.logoUrl ? `<div style="width:50px;height:50px;background-image:url(${bnr.logoUrl});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>` : ''}
+            return `<div style="width:100%;height:100%;border-radius:${px(10)};background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:${px(20)};padding:${px(16)} ${px(24)};box-sizing:border-box;">
+              ${bnr.logoUrl ? `<div style="width:${px(50)};height:${px(50)};background-image:url(${bnr.logoUrl});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>` : ''}
               <div style="flex:1;">
-                <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${bnr.title || ''}</h1>
-                ${bnr.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${bnr.subtitle}</p>` : ''}
-                ${bnr.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${bnr.date}</p>` : ''}
+                <h1 style="font-size:${px(20)};font-weight:bold;color:#fff;margin:0;">${bnr.title || ''}</h1>
+                ${bnr.subtitle ? `<p style="font-size:${px(12)};color:#9ca3af;margin:${px(3)} 0 0;">${bnr.subtitle}</p>` : ''}
+                ${bnr.date ? `<p style="font-size:${px(10)};color:#6b7280;margin:${px(3)} 0 0;">${bnr.date}</p>` : ''}
               </div>
-              ${bnr.photoUrl ? `<div style="width:55px;height:55px;border-radius:8px;background-image:url(${bnr.photoUrl});background-size:cover;background-position:center;"></div>` : ''}
+              ${bnr.photoUrl ? `<div style="width:${px(55)};height:${px(55)};border-radius:${px(8)};background-image:url(${bnr.photoUrl});background-size:cover;background-position:center;"></div>` : ''}
             </div>`;
           }
           default: return '';
@@ -633,9 +638,9 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       return `<div style="${pos}">${inner}</div>`;
     };
 
-    return `<div style="width:794px;height:1123px;background:#0d0d10;font-family:'Segoe UI',Arial,sans-serif;color:#fff;position:relative;box-sizing:border-box;">
+    return `<div style="width:1588px;height:2246px;background:#0d0d10;font-family:'Segoe UI',Arial,sans-serif;color:#fff;position:relative;box-sizing:border-box;">
       ${page.blocks.map(blockToHtml).join('')}
-      <div style="position:absolute;bottom:12px;right:24px;font-size:10px;color:#4b5563;">Pagina ${pageIdx + 1} de ${totalPages}</div>
+      <div style="position:absolute;bottom:${px(12)};right:${px(24)};font-size:${px(10)};color:#4b5563;">Pagina ${pageIdx + 1} de ${totalPages}</div>
     </div>`;
   };
 
@@ -688,8 +693,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         container.innerHTML = buildCoverHtml();
         const el = container.firstElementChild as HTMLElement;
         await preloadImages(el);
-        const canvas = await html2canvas(el, { scale: 3, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, pageH);
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
         pageNum = 1;
       }
 
@@ -698,8 +703,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         container.innerHTML = buildPageHtml(pages[i], i, totalPages);
         const el = container.firstElementChild as HTMLElement;
         await preloadImages(el);
-        const canvas = await html2canvas(el, { scale: 3, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, pageH);
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
         pageNum++;
       }
 
