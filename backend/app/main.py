@@ -2094,19 +2094,27 @@ async def get_builder_report(report_id: str, current_user: dict = Depends(get_cu
 @app.post("/api/report-builder")
 async def create_builder_report(report: BuilderReportCreate, current_user: dict = Depends(get_current_user)):
     try:
+        user_id = current_user.get("sub") or current_user.get("id") or current_user.get("user_id")
+        # Store template_name inside cover_data to avoid missing column
+        cover = report.cover_data or {}
+        if report.template_name:
+            cover["template_name"] = report.template_name
         data = {
             "title": report.title,
             "player_id": report.player_id,
             "player_name": report.player_name,
             "player_wyscout_id": report.player_wyscout_id,
-            "cover_data": report.cover_data,
+            "cover_data": cover,
             "blocks": report.blocks,
             "pages": report.pages,
             "is_template": report.is_template,
+            "user_id": user_id,
         }
         # Remove None values so DB defaults apply
         data = {k: v for k, v in data.items() if v is not None}
+        logger.info(f"Creating builder report: is_template={report.is_template}, title={report.title}, user={user_id}")
         result = supabase.table("report_builder_reports").insert(data).execute()
+        logger.info(f"Created builder report: {result.data[0]['id'] if result.data else 'FAILED'}")
         if result.data:
             return result.data[0]
         raise HTTPException(status_code=500, detail="Failed to create report")
@@ -2119,12 +2127,15 @@ async def create_builder_report(report: BuilderReportCreate, current_user: dict 
 @app.put("/api/report-builder/{report_id}")
 async def update_builder_report(report_id: str, report: BuilderReportCreate, current_user: dict = Depends(get_current_user)):
     try:
+        cover = report.cover_data or {}
+        if report.template_name:
+            cover["template_name"] = report.template_name
         data = {
             "title": report.title,
             "player_id": report.player_id,
             "player_name": report.player_name,
             "player_wyscout_id": report.player_wyscout_id,
-            "cover_data": report.cover_data,
+            "cover_data": cover,
             "blocks": report.blocks,
             "pages": report.pages,
             "is_template": report.is_template,

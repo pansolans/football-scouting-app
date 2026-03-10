@@ -57,6 +57,7 @@ export interface CoverData {
   bgZoom?: number;          // 100 = normal, 200 = 2x, etc. default 100
   bgPositionX?: number;     // % horizontal position, default 50
   bgPositionY?: number;     // % vertical position, default 50
+  template_name?: string;   // stored here since DB has no separate column
   blocks?: ReportBlock[];   // movable elements on cover page
   // Legacy fields (kept for backwards compat, ignored if blocks exist)
   clubLogo?: string;

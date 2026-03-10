@@ -770,7 +770,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {templates.map(tmpl => (
                 <div key={tmpl.id} className="bg-white/5 border border-border-strong rounded-lg p-3 hover:border-accent/30 transition-all group">
-                  <div className="text-xs font-medium text-text truncate mb-1">{tmpl.template_name || tmpl.title}</div>
+                  <div className="text-xs font-medium text-text truncate mb-1">{tmpl.template_name || tmpl.cover_data?.template_name || tmpl.title}</div>
                   <div className="text-[10px] text-text-muted mb-2">
                     {tmpl.pages?.length || 1} pag. - {tmpl.blocks?.length || 0} bloques
                     {tmpl.cover_data?.enabled && ' + portada'}
