@@ -1,0 +1,701 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { BuilderReport, ReportBlock, ReportPage, BlockType, BlockStyle, DEFAULT_BLOCK_STYLE, createBlock, createPage, BLOCK_LABELS } from './types';
+import { reportBuilderService } from '../../services/reportBuilderService';
+import { scoutingService, playerService, ScoutReport } from '../../services/api';
+import BlockPalette from './BlockPalette';
+import CoverEditor from './CoverEditor';
+import HeaderBlock from './blocks/HeaderBlock';
+import TextBlock from './blocks/TextBlock';
+import ImageBlock from './blocks/ImageBlock';
+import VideoBlock from './blocks/VideoBlock';
+import StatsTableBlock from './blocks/StatsTableBlock';
+
+interface Props {
+  reportId?: string;
+  onBack: () => void;
+  preselectedPlayer?: { playerId: string; playerName: string };
+}
+
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+// Default sizes per block type (% of page)
+const BLOCK_SIZES: Record<BlockType, { w: number; h: number }> = {
+  header: { w: 90, h: 8 },
+  text: { w: 88, h: 18 },
+  image: { w: 70, h: 35 },
+  video: { w: 60, h: 8 },
+  stats_table: { w: 88, h: 40 },
+  divider: { w: 90, h: 1.5 },
+};
+
+const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) => {
+  const [report, setReport] = useState<BuilderReport>({
+    title: 'Nuevo Informe',
+    cover_data: { title: 'Informe de Jugador', date: new Date().toISOString().split('T')[0] },
+    blocks: [],
+    pages: [createPage()],
+    is_template: false,
+  });
+
+  const [activePage, setActivePage] = useState(0);
+  const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+  const [interaction, setInteraction] = useState<{
+    type: 'move' | 'resize';
+    blockId: string;
+    startX: number;
+    startY: number;
+    origStyle: BlockStyle;
+  } | null>(null);
+  const [playerReports, setPlayerReports] = useState<ScoutReport[]>([]);
+  const [playerPhoto, setPlayerPhoto] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  const pages = report.pages || [{ id: crypto.randomUUID(), blocks: report.blocks }];
+  const currentPage = pages[activePage] || pages[0];
+
+  const setPages = (updater: (prev: ReportPage[]) => ReportPage[]) => {
+    setReport(prev => {
+      const cur = prev.pages || [{ id: crypto.randomUUID(), blocks: prev.blocks }];
+      const newPages = updater(cur);
+      return { ...prev, pages: newPages, blocks: newPages.flatMap(p => p.blocks) };
+    });
+  };
+
+  // ─── Load ───
+  useEffect(() => {
+    if (reportId) {
+      reportBuilderService.get(reportId).then(r => {
+        if (!r.pages || r.pages.length === 0) {
+          r.pages = [{ id: crypto.randomUUID(), blocks: r.blocks || [] }];
+        }
+        setReport(r);
+        if (r.player_id) loadPlayerData(r.player_id);
+      }).catch(console.error);
+    }
+  }, [reportId]);
+
+  useEffect(() => {
+    if (preselectedPlayer && !reportId) {
+      const { playerId, playerName } = preselectedPlayer;
+      setReport(prev => ({
+        ...prev,
+        player_id: playerId,
+        player_name: playerName,
+        cover_data: { ...prev.cover_data, title: `Informe: ${playerName}` },
+      }));
+      loadPlayerData(playerId);
+    }
+  }, [preselectedPlayer]);
+
+  // ─── Drag / Resize via window events ───
+  useEffect(() => {
+    if (!interaction) return;
+
+    const handleMove = (e: PointerEvent) => {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const dx = ((e.clientX - interaction.startX) / rect.width) * 100;
+      const dy = ((e.clientY - interaction.startY) / rect.height) * 100;
+      const o = interaction.origStyle;
+
+      const newStyle: BlockStyle = interaction.type === 'move'
+        ? { ...o, x: clamp(o.x + dx, 0, 100 - o.w), y: clamp(o.y + dy, 0, 100 - o.h) }
+        : { ...o, w: clamp(o.w + dx, 5, 100 - o.x), h: clamp(o.h + dy, 2, 100 - o.y) };
+
+      setReport(prev => {
+        const newPages = (prev.pages || []).map(p => ({
+          ...p,
+          blocks: p.blocks.map(b => b.id === interaction.blockId ? { ...b, style: newStyle } : b),
+        }));
+        return { ...prev, pages: newPages, blocks: newPages.flatMap(p => p.blocks) };
+      });
+    };
+
+    const handleUp = () => setInteraction(null);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+  }, [interaction]);
+
+  // ─── Data loading ───
+  const loadPlayerData = async (playerId: string, autoGenerate = false) => {
+    try {
+      const [reports, profileData] = await Promise.allSettled([
+        scoutingService.getPlayerReports(playerId),
+        playerService.getPlayersBatchInfo([parseInt(playerId)], [], true),
+      ]);
+      let loadedReports: ScoutReport[] = [];
+      let playerInfo: any = null;
+      if (reports.status === 'fulfilled') { loadedReports = reports.value; setPlayerReports(loadedReports); }
+      if (profileData.status === 'fulfilled') {
+        playerInfo = Object.values(profileData.value)[0] as any;
+        if (playerInfo?.player_image) {
+          setPlayerPhoto(playerInfo.player_image);
+          setReport(prev => ({ ...prev, cover_data: { ...prev.cover_data, playerPhoto: playerInfo.player_image } }));
+        }
+      }
+      if (autoGenerate && loadedReports.length > 0) {
+        const newPages = generatePagesFromReports(loadedReports, playerInfo);
+        setReport(prev => ({ ...prev, pages: newPages, blocks: newPages.flatMap(p => p.blocks) }));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const generatePagesFromReports = (reports: ScoutReport[], playerInfo: any): ReportPage[] => {
+    const id = () => crypto.randomUUID();
+    const pagesOut: ReportPage[] = [];
+    const s = (x: number, y: number, w: number, h: number): BlockStyle => ({ x, y, w, h });
+
+    // Page 1: info + radar
+    const p1: ReportBlock[] = [];
+    p1.push({ id: id(), type: 'header', content: { text: 'Resumen de Scouting', level: 1 }, style: s(5, 14, 90, 8) });
+    if (playerInfo) {
+      const lines = [
+        playerInfo.team_name ? `Equipo: ${playerInfo.team_name}` : '',
+        playerInfo.position ? `Posicion: ${playerInfo.position}` : '',
+        playerInfo.age ? `Edad: ${playerInfo.age} años` : '',
+        playerInfo.height ? `Altura: ${playerInfo.height}cm` : '',
+        playerInfo.foot ? `Pie: ${playerInfo.foot === 'right' ? 'Derecho' : playerInfo.foot === 'left' ? 'Izquierdo' : 'Ambidiestro'}` : '',
+        playerInfo.market_value ? `Valor de Mercado: EUR ${(playerInfo.market_value / 1000000).toFixed(1)}M` : '',
+        playerInfo.contract_expires ? `Contrato hasta: ${new Date(playerInfo.contract_expires).toLocaleDateString('es-ES')}` : '',
+      ].filter(Boolean).join('\n');
+      if (lines) p1.push({ id: id(), type: 'text', content: { text: lines }, style: s(5, 20, 90, 14) });
+    }
+    p1.push({ id: id(), type: 'divider', content: { style: 'accent' }, style: s(5, 35, 90, 1.5) });
+    p1.push({ id: id(), type: 'stats_table', content: { reportIds: [], categories: ['tecnico', 'fisico', 'mental'] }, style: s(5, 38, 90, 40) });
+    pagesOut.push({ id: id(), blocks: p1 });
+
+    reports.forEach((r, idx) => {
+      const blocks: ReportBlock[] = [];
+      let y = 3;
+      const add = (type: BlockType, content: any, h: number) => {
+        blocks.push({ id: id(), type, content, style: s(5, y, 90, h) });
+        y += h + 1.5;
+      };
+      add('header', { text: `Reporte ${idx + 1}${r.fecha_observacion ? ` — ${r.fecha_observacion}` : ''}${r.competicion ? ` (${r.competicion})` : ''}`, level: 2 }, 5);
+      add('text', { text: `Rating General: ${r.overall_rating}/10` }, 3.5);
+      add('text', { text: `TECNICO\nTecnica: ${r.tecnica_individual}/10 | Pase: ${r.pase}/10 | Primer Toque: ${r.primer_toque}/10\nControl: ${r.control_balon}/10 | Vision: ${r.vision_juego}/10` }, 9);
+      add('text', { text: `FISICO\nVelocidad: ${r.velocidad}/10 | Resistencia: ${r.resistencia}/10 | Fuerza: ${r.fuerza}/10\nSalto: ${r.salto}/10 | Agilidad: ${r.agilidad}/10` }, 9);
+      add('text', { text: `MENTAL\nTactica: ${r.inteligencia_tactica}/10 | Posicionamiento: ${r.posicionamiento}/10\nConcentracion: ${r.concentracion}/10 | Liderazgo: ${r.liderazgo}/10 | Equipo: ${r.trabajo_equipo}/10` }, 9);
+      if (r.fortalezas) add('text', { text: `FORTALEZAS: ${r.fortalezas}` }, 7);
+      if (r.debilidades) add('text', { text: `DEBILIDADES: ${r.debilidades}` }, 7);
+      if (r.notes) add('text', { text: `NOTAS: ${r.notes}` }, 10);
+      if (r.recomendacion) add('text', { text: `RECOMENDACION: ${r.recomendacion}${r.condicion_mercado ? ` | MERCADO: ${r.condicion_mercado}` : ''}` }, 5);
+      pagesOut.push({ id: id(), blocks });
+    });
+
+    return pagesOut;
+  };
+
+  // ─── Import report data into current page ───
+  const importReportData = () => {
+    if (playerReports.length === 0) return;
+    const id = () => crypto.randomUUID();
+    const nextY = getNextY();
+
+    // Build one big text with ALL report data
+    const lines: string[] = [];
+    playerReports.forEach((r, idx) => {
+      if (idx > 0) lines.push('\n─────────────────────────────────');
+      lines.push(`REPORTE ${idx + 1}${r.fecha_observacion ? ` — ${r.fecha_observacion}` : ''}${r.competicion ? ` (${r.competicion})` : ''}`);
+      lines.push(`Rating General: ${r.overall_rating}/10`);
+      lines.push('');
+      lines.push(`TECNICO: Tecnica ${r.tecnica_individual}/10 | Pase ${r.pase}/10 | Primer Toque ${r.primer_toque}/10 | Control ${r.control_balon}/10 | Vision ${r.vision_juego}/10`);
+      lines.push(`FISICO: Velocidad ${r.velocidad}/10 | Resistencia ${r.resistencia}/10 | Fuerza ${r.fuerza}/10 | Salto ${r.salto}/10 | Agilidad ${r.agilidad}/10`);
+      lines.push(`MENTAL: Tactica ${r.inteligencia_tactica}/10 | Posicionamiento ${r.posicionamiento}/10 | Concentracion ${r.concentracion}/10 | Liderazgo ${r.liderazgo}/10 | Equipo ${r.trabajo_equipo}/10`);
+      if (r.fortalezas) lines.push(`\nFORTALEZAS: ${r.fortalezas}`);
+      if (r.debilidades) lines.push(`DEBILIDADES: ${r.debilidades}`);
+      if (r.notes) lines.push(`\nNOTAS: ${r.notes}`);
+      if (r.recomendacion) lines.push(`RECOMENDACION: ${r.recomendacion}${r.condicion_mercado ? ` | MERCADO: ${r.condicion_mercado}` : ''}`);
+    });
+
+    // Insert: one header + one radar + one text block with everything
+    const newBlocks: ReportBlock[] = [
+      { id: id(), type: 'header', content: { text: `Datos de ${playerReports.length} Reporte${playerReports.length > 1 ? 's' : ''}`, level: 1 }, style: { x: 3, y: nextY, w: 94, h: 7 } },
+      { id: id(), type: 'stats_table', content: { reportIds: [], categories: ['tecnico', 'fisico', 'mental'] }, style: { x: 3, y: nextY + 9, w: 94, h: 40 } },
+      { id: id(), type: 'text', content: { text: lines.join('\n') }, style: { x: 3, y: nextY + 51, w: 94, h: 45 } },
+    ];
+
+    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...newBlocks] } : p));
+  };
+
+  // ─── Search ───
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try { setSearchResults(await playerService.searchPlayers(searchQuery)); } catch (e) { console.error(e); }
+    setSearching(false);
+  };
+
+  const selectPlayer = (player: any) => {
+    const pid = String(player.wyscout_id || player.id);
+    setReport(prev => ({
+      ...prev, player_id: pid, player_name: player.name, player_wyscout_id: player.wyscout_id || player.id,
+      cover_data: { ...prev.cover_data, title: `Informe: ${player.name}` },
+    }));
+    setSearchResults([]); setSearchQuery('');
+    loadPlayerData(pid);
+  };
+
+  // ─── Page ops ───
+  const addPage = () => { setPages(prev => [...prev, createPage()]); setActivePage(pages.length); };
+  const deletePage = (idx: number) => {
+    if (pages.length <= 1) return;
+    setPages(prev => prev.filter((_, i) => i !== idx));
+    setActivePage(Math.max(0, activePage - 1));
+  };
+
+  // ─── Block ops ───
+  const getNextY = (): number => {
+    if (currentPage.blocks.length === 0) return 3;
+    let maxBottom = 0;
+    currentPage.blocks.forEach(b => {
+      const st = b.style || DEFAULT_BLOCK_STYLE;
+      maxBottom = Math.max(maxBottom, st.y + st.h);
+    });
+    return Math.min(maxBottom + 2, 90);
+  };
+
+  const addBlock = (type: BlockType) => {
+    const nextY = getNextY();
+    const sz = BLOCK_SIZES[type];
+    const block = createBlock(type);
+    block.style = { x: (100 - sz.w) / 2, y: nextY, w: sz.w, h: sz.h };
+    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, block] } : p));
+    setSelectedBlock(block.id);
+  };
+
+  const updateBlock = (blockId: string, content: any) => {
+    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: p.blocks.map(b => b.id === blockId ? { ...b, content } : b) } : p));
+  };
+
+  // When an image loads, resize the block to match the image's real aspect ratio
+  const fitBlockToImage = (blockId: string, imgW: number, imgH: number) => {
+    if (!imgW || !imgH) return;
+    const ratio = imgH / imgW; // e.g. 0.75 for landscape, 1.5 for portrait
+    // A4 page ratio: 297/210 ≈ 1.414. Canvas % are relative to width and height independently.
+    // To make block match image ratio: if block is W% wide, its pixel width = canvasW * W/100
+    // We want pixel height = pixel width * ratio → H% = W% * ratio * (canvasW / canvasH)
+    // canvasW/canvasH = 210/297 ≈ 0.707
+    const pageRatio = 210 / 297;
+    setPages(prev => prev.map((p, i) => {
+      if (i !== activePage) return p;
+      return {
+        ...p,
+        blocks: p.blocks.map(b => {
+          if (b.id !== blockId) return b;
+          const bs = b.style || DEFAULT_BLOCK_STYLE;
+          const newH = clamp(bs.w * ratio * pageRatio, 5, 90);
+          return { ...b, style: { ...bs, h: newH } };
+        }),
+      };
+    }));
+  };
+
+  const deleteBlock = (blockId: string) => {
+    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: p.blocks.filter(b => b.id !== blockId) } : p));
+    if (selectedBlock === blockId) setSelectedBlock(null);
+  };
+
+  const duplicateBlock = (block: ReportBlock) => {
+    const bs = block.style || DEFAULT_BLOCK_STYLE;
+    const newBlock: ReportBlock = { ...block, id: crypto.randomUUID(), content: { ...block.content }, style: { ...bs, x: bs.x + 2, y: Math.min(bs.y + 3, 90) } };
+    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, newBlock] } : p));
+    setSelectedBlock(newBlock.id);
+  };
+
+  // ─── Interaction start ───
+  const startInteraction = (e: React.PointerEvent, blockId: string, type: 'move' | 'resize') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const block = currentPage.blocks.find(b => b.id === blockId);
+    if (!block) return;
+    setSelectedBlock(blockId);
+    setInteraction({ type, blockId, startX: e.clientX, startY: e.clientY, origStyle: block.style || DEFAULT_BLOCK_STYLE });
+  };
+
+  // ─── Save ───
+  const save = async () => {
+    setSaving(true);
+    try {
+      if (report.id) { setReport(await reportBuilderService.update(report.id, report)); }
+      else { setReport(await reportBuilderService.create(report)); }
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+    } catch (e) { console.error(e); alert('Error al guardar'); }
+    setSaving(false);
+  };
+
+  // ─── PDF Export ───
+  const buildRadarSvg = (): string => {
+    if (playerReports.length === 0) return '';
+    const avg = (key: string) => {
+      const vals = playerReports.map(r => (r as any)[key]).filter((v: any) => typeof v === 'number');
+      return vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
+    };
+    const metrics = [
+      { label: 'Tecnica', value: avg('tecnica_individual') },
+      { label: 'Pase', value: avg('pase') },
+      { label: 'Vision', value: avg('vision_juego') },
+      { label: 'Velocidad', value: avg('velocidad') },
+      { label: 'Resistencia', value: avg('resistencia') },
+      { label: 'Fuerza', value: avg('fuerza') },
+      { label: 'Agilidad', value: avg('agilidad') },
+      { label: 'Tactica', value: avg('inteligencia_tactica') },
+      { label: 'Posicion.', value: avg('posicionamiento') },
+      { label: 'Liderazgo', value: avg('liderazgo') },
+    ];
+    const n = metrics.length, cx = 200, cy = 180, R = 105;
+    const step = (2 * Math.PI) / n;
+    const xy = (i: number, r: number) => ({ x: cx + r * Math.sin(i * step), y: cy - r * Math.cos(i * step) });
+    const rings = [0.25, 0.5, 0.75, 1].map(p => {
+      const pts = Array.from({ length: n }, (_, i) => xy(i, R * p));
+      return `<polygon points="${pts.map(p => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>`;
+    }).join('');
+    const axes = Array.from({ length: n }, (_, i) => `<line x1="${cx}" y1="${cy}" x2="${xy(i, R).x}" y2="${xy(i, R).y}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`).join('');
+    const pts = metrics.map((m, i) => xy(i, R * (m.value / 10)));
+    const poly = `<polygon points="${pts.map(p => `${p.x},${p.y}`).join(' ')}" fill="rgba(0,191,99,0.25)" stroke="#00bf63" stroke-width="1.5"/>`;
+    const dots = pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#00bf63"/>`).join('');
+    const labels = metrics.map((m, i) => {
+      const p = xy(i, R + 28);
+      const a = p.x < cx - 10 ? 'end' : p.x > cx + 10 ? 'start' : 'middle';
+      return `<text x="${p.x}" y="${p.y + 4}" fill="#d1d5db" font-size="11" text-anchor="${a}" font-family="Segoe UI,sans-serif">${m.label} (${m.value.toFixed(1)})</text>`;
+    }).join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="370" viewBox="0 0 400 370">${rings}${axes}${poly}${dots}${labels}</svg>`;
+  };
+
+  const buildPageHtml = (page: ReportPage, pageIdx: number): string => {
+    const cover = report.cover_data;
+    const isFirst = pageIdx === 0;
+
+    const blockToHtml = (block: ReportBlock): string => {
+      const bs = block.style || DEFAULT_BLOCK_STYLE;
+      const pos = `position:absolute;left:${bs.x}%;top:${bs.y}%;width:${bs.w}%;height:${bs.h}%;overflow:hidden;box-sizing:border-box;`;
+
+      const inner = (() => {
+        switch (block.type) {
+          case 'header': {
+            const sizes: Record<string, string> = { '1': '28px', '2': '22px', '3': '17px' };
+            return `<h2 style="font-size:${sizes[String(block.content?.level)] || '22px'};font-weight:bold;color:#fff;margin:0;padding:6px 0;border-bottom:3px solid rgba(0,191,99,0.4);">${block.content?.text || ''}</h2>`;
+          }
+          case 'text':
+            return `<div style="font-size:12px;color:#d1d5db;line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+          case 'image':
+            return block.content?.url
+              ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;display:block;" crossorigin="anonymous"/>`
+              : '';
+          case 'video':
+            return block.content?.url ? `<div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:6px;"><p style="color:#9ca3af;font-size:12px;margin:0;">Video: ${block.content.url}</p></div>` : '';
+          case 'stats_table': {
+            const svg = buildRadarSvg();
+            if (!svg) return '<p style="color:#6b7280;font-size:12px;margin:0;">Sin datos</p>';
+            return `<p style="color:#00bf63;font-size:13px;font-weight:600;margin:0 0 6px;text-align:center;">Promedios de ${playerReports.length} reportes</p><div style="display:flex;justify-content:center;">${svg}</div>`;
+          }
+          case 'divider':
+            return '<hr style="border:none;border-top:2px solid rgba(0,191,99,0.25);margin:0;"/>';
+          default: return '';
+        }
+      })();
+
+      return `<div style="${pos}">${inner}</div>`;
+    };
+
+    const coverHtml = isFirst ? `
+      <div style="position:absolute;left:3%;top:2%;width:94%;height:10%;padding:16px 24px;border-radius:10px;background:linear-gradient(135deg,rgba(0,191,99,0.2),#0d0d10,rgba(59,130,246,0.1));border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:20px;box-sizing:border-box;">
+        ${cover.clubLogo ? `<img src="${cover.clubLogo}" style="width:50px;height:50px;object-fit:contain;" crossorigin="anonymous"/>` : ''}
+        <div style="flex:1;">
+          <h1 style="font-size:20px;font-weight:bold;color:#fff;margin:0;">${cover.title || ''}</h1>
+          ${cover.subtitle ? `<p style="font-size:12px;color:#9ca3af;margin:3px 0 0;">${cover.subtitle}</p>` : ''}
+          ${cover.date ? `<p style="font-size:10px;color:#6b7280;margin:3px 0 0;">${cover.date}</p>` : ''}
+        </div>
+        ${cover.playerPhoto ? `<img src="${cover.playerPhoto}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;" crossorigin="anonymous"/>` : ''}
+      </div>` : '';
+
+    return `<div style="width:794px;height:1123px;background:#0d0d10;font-family:'Segoe UI',Arial,sans-serif;color:#fff;position:relative;box-sizing:border-box;">
+      ${coverHtml}${page.blocks.map(blockToHtml).join('')}
+      <div style="position:absolute;bottom:12px;right:24px;font-size:10px;color:#4b5563;">Pagina ${pageIdx + 1} de ${pages.length}</div>
+    </div>`;
+  };
+
+  const exportPdf = async () => {
+    setShowPreview(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      document.body.appendChild(container);
+
+      for (let i = 0; i < pages.length; i++) {
+        if (i > 0) pdf.addPage();
+        container.innerHTML = buildPageHtml(pages[i], i);
+        const el = container.firstElementChild as HTMLElement;
+        const imgs = el.querySelectorAll('img');
+        await Promise.allSettled(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })));
+        await new Promise(r => setTimeout(r, 200));
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, pageH);
+      }
+
+      document.body.removeChild(container);
+      pdf.save(`Informe_${report.player_name || 'Sin_jugador'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (e) {
+      console.error('PDF export error:', e);
+      alert('Error al exportar PDF');
+    }
+    setShowPreview(false);
+  };
+
+  // ─── Render block content ───
+  const renderBlock = (block: ReportBlock) => {
+    switch (block.type) {
+      case 'header': return <HeaderBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
+      case 'text': return <TextBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
+      case 'image': return <ImageBlock content={block.content} onChange={c => updateBlock(block.id, c)} onImageLoad={(w, h) => fitBlockToImage(block.id, w, h)} readOnly={false} />;
+      case 'video': return <VideoBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
+      case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;
+      case 'divider': return <div style={{ borderTop: '2px solid rgba(0,191,99,0.25)', width: '100%', marginTop: '40%' }} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="animate-fade-in" style={{ userSelect: interaction ? 'none' : 'auto' }}>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-4 p-3 card-glass rounded-xl sticky top-16 z-30">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="px-3 py-2 bg-white/8 text-text-secondary rounded-lg text-sm cursor-pointer border-none hover:bg-white/12 transition-colors">← Volver</button>
+          <input type="text" value={report.title} onChange={e => setReport(prev => ({ ...prev, title: e.target.value }))} className="bg-transparent border-none outline-none text-lg font-bold text-text" />
+        </div>
+        <div className="flex items-center gap-2">
+          {saved && <span className="text-accent text-xs">Guardado</span>}
+          <button onClick={save} disabled={saving} className="px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm font-semibold cursor-pointer border-none transition-colors disabled:opacity-50">
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+          <button onClick={exportPdf} className="px-4 py-2 bg-info/15 text-info rounded-lg text-sm font-medium cursor-pointer border-none hover:bg-info/25 transition-colors">
+            Exportar PDF
+          </button>
+        </div>
+      </div>
+
+      {/* Page tabs */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+        {pages.map((page, idx) => (
+          <div key={page.id} className="flex items-center gap-0.5">
+            <button
+              onClick={() => { setActivePage(idx); setSelectedBlock(null); }}
+              className={`px-4 py-2 rounded-lg text-xs font-medium cursor-pointer border-none transition-all ${
+                idx === activePage ? 'bg-accent text-white' : 'bg-white/5 text-text-muted hover:bg-white/10 hover:text-text-secondary'
+              }`}
+            >Pag {idx + 1}</button>
+            {pages.length > 1 && (
+              <button onClick={() => deletePage(idx)} className="p-1 text-text-muted hover:text-danger text-[10px] cursor-pointer border-none bg-transparent">✕</button>
+            )}
+          </div>
+        ))}
+        <button onClick={addPage} className="px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-dashed border-border-strong text-text-muted hover:text-accent hover:border-accent/30 bg-transparent transition-colors">
+          + Pagina
+        </button>
+      </div>
+
+      <div className="flex gap-5">
+        {/* ─── Sidebar ─── */}
+        <div className="w-[220px] shrink-0 space-y-3">
+          {/* Player */}
+          <div className="card-elevated rounded-xl p-3">
+            <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Jugador</h4>
+            {report.player_name ? (
+              <div className="flex items-center gap-2 p-2 bg-accent/10 rounded-lg">
+                {playerPhoto && <img src={playerPhoto} alt="" className="w-9 h-9 rounded-lg object-cover" />}
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-text truncate">{report.player_name}</div>
+                  <div className="text-[10px] text-text-muted">{playerReports.length} reportes</div>
+                </div>
+                <button onClick={() => { setReport(prev => ({ ...prev, player_id: undefined, player_name: undefined, player_wyscout_id: undefined })); setPlayerReports([]); setPlayerPhoto(''); }} className="text-[10px] text-text-muted hover:text-danger cursor-pointer border-none bg-transparent">✕</button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-1">
+                  <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="Buscar..." className="flex-1 p-1.5 bg-surface border border-border-strong rounded-md text-[11px] text-text placeholder:text-text-muted outline-none focus:border-accent/50" />
+                  <button onClick={handleSearch} disabled={searching} className="px-2 py-1 bg-accent text-white rounded-md text-[10px] cursor-pointer border-none">{searching ? '...' : 'Ir'}</button>
+                </div>
+                {searchResults.length > 0 && (
+                  <div className="max-h-[160px] overflow-auto rounded-lg border border-border-strong">
+                    {searchResults.map((p: any) => (
+                      <button key={p.id} onClick={() => selectPlayer(p)} className="w-full text-left p-2 hover:bg-white/5 border-none bg-transparent cursor-pointer">
+                        <div className="text-[11px] font-medium text-text">{p.name}</div>
+                        <div className="text-[9px] text-text-muted">{p.position} - {p.team}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Blocks palette */}
+          <div className="card-elevated rounded-xl p-3">
+            <BlockPalette onAdd={addBlock} />
+          </div>
+
+          {/* Import report data button */}
+          {report.player_name && playerReports.length > 0 && (
+            <div className="card-elevated rounded-xl p-3">
+              <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Datos de Reportes</h4>
+              <p className="text-[10px] text-text-muted mb-2">{playerReports.length} reporte{playerReports.length > 1 ? 's' : ''} disponible{playerReports.length > 1 ? 's' : ''}</p>
+              <button
+                onClick={importReportData}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-accent/15 hover:bg-accent/25 border border-accent/30 hover:border-accent/50 transition-all cursor-pointer text-accent text-xs font-semibold"
+              >
+                <span>📋</span> Traer Info de Reportes
+              </button>
+              <p className="text-[9px] text-text-muted mt-1.5">Inserta ratings, notas y radar en la pagina actual. Podes editar y mover todo.</p>
+            </div>
+          )}
+
+          {/* Cover (page 1 only) */}
+          {activePage === 0 && (
+            <CoverEditor cover={report.cover_data} onChange={cover_data => setReport(prev => ({ ...prev, cover_data }))} playerPhoto={playerPhoto} />
+          )}
+
+          {/* Info */}
+          <div className="card-elevated rounded-xl p-3">
+            <p className="text-[11px] text-text-secondary">{currentPage.blocks.length} objetos en pag. {activePage + 1}</p>
+            <p className="text-[9px] text-text-muted mt-1">Arrastra la barra superior para mover.</p>
+            <p className="text-[9px] text-text-muted">Arrastra la esquina verde para redimensionar.</p>
+          </div>
+        </div>
+
+        {/* ─── Canvas (A4 page) ─── */}
+        <div className="flex-1 min-w-0">
+          <div
+            ref={canvasRef}
+            className="relative bg-[#0d0d10] rounded-xl border-2 border-border-strong overflow-hidden"
+            style={{ aspectRatio: '210/297' }}
+            onClick={() => setSelectedBlock(null)}
+          >
+            {/* Cover preview on page 1 */}
+            {activePage === 0 && report.cover_data.title && (
+              <div
+                className="absolute rounded-lg flex items-center gap-3 px-4 pointer-events-none"
+                style={{
+                  left: '3%', top: '2%', width: '94%', height: '10%',
+                  background: 'linear-gradient(135deg, rgba(0,191,99,0.2), #0d0d10, rgba(59,130,246,0.1))',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
+              >
+                {report.cover_data.clubLogo && <img src={report.cover_data.clubLogo} alt="" className="h-[60%] object-contain" />}
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-bold text-xs truncate">{report.cover_data.title}</div>
+                  {report.cover_data.subtitle && <div className="text-text-muted text-[9px] truncate">{report.cover_data.subtitle}</div>}
+                  {report.cover_data.date && <div className="text-text-muted text-[8px]">{report.cover_data.date}</div>}
+                </div>
+                {report.cover_data.playerPhoto && <img src={report.cover_data.playerPhoto} alt="" className="h-[70%] aspect-square rounded-lg object-cover" />}
+              </div>
+            )}
+
+            {/* ─── Blocks on canvas ─── */}
+            {currentPage.blocks.map(block => {
+              const bs = block.style || DEFAULT_BLOCK_STYLE;
+              const isSel = selectedBlock === block.id;
+
+              return (
+                <div
+                  key={block.id}
+                  className={`absolute group ${isSel ? 'z-20' : 'z-10'}`}
+                  style={{ left: `${bs.x}%`, top: `${bs.y}%`, width: `${bs.w}%`, height: `${bs.h}%` }}
+                  onClick={e => { e.stopPropagation(); setSelectedBlock(block.id); }}
+                >
+                  {/* Border */}
+                  <div className={`absolute inset-0 rounded-lg pointer-events-none transition-all ${
+                    isSel ? 'ring-2 ring-accent shadow-lg shadow-accent/20' : 'ring-1 ring-transparent group-hover:ring-white/20'
+                  }`} />
+
+                  {/* Move handle (top bar) */}
+                  <div
+                    className={`absolute top-0 left-0 right-0 h-5 cursor-move z-10 flex items-center justify-between px-2 rounded-t-lg transition-opacity ${
+                      isSel ? 'bg-accent/30 opacity-100' : 'opacity-0 group-hover:opacity-70 bg-black/40'
+                    }`}
+                    onPointerDown={e => startInteraction(e, block.id, 'move')}
+                  >
+                    <div className="flex items-center gap-1">
+                      <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" className="text-white/60">
+                        <circle cx="2" cy="2" r="1" /><circle cx="6" cy="2" r="1" />
+                        <circle cx="2" cy="6" r="1" /><circle cx="6" cy="6" r="1" />
+                      </svg>
+                      <span className="text-[8px] uppercase tracking-wider text-white/70 font-medium">{BLOCK_LABELS[block.type]}</span>
+                    </div>
+                    {isSel && (
+                      <div className="flex gap-1">
+                        <button onClick={e => { e.stopPropagation(); duplicateBlock(block); }} className="text-[9px] text-white/60 hover:text-white border-none bg-transparent cursor-pointer" title="Duplicar">⧉</button>
+                        <button onClick={e => { e.stopPropagation(); deleteBlock(block.id); }} className="text-[9px] text-white/60 hover:text-red-400 border-none bg-transparent cursor-pointer" title="Eliminar">✕</button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className={`absolute inset-0 pt-5 rounded-lg ${isSel ? 'overflow-auto' : 'overflow-hidden'}`}>
+                    <div className="w-full h-full px-1">
+                      {renderBlock(block)}
+                    </div>
+                  </div>
+
+                  {/* Resize handles (visible when selected) */}
+                  {isSel && (
+                    <>
+                      {/* Bottom-right */}
+                      <div
+                        className="absolute bottom-0 right-0 w-3.5 h-3.5 cursor-nwse-resize z-30 bg-accent rounded-tl-md"
+                        onPointerDown={e => startInteraction(e, block.id, 'resize')}
+                      />
+                      {/* Bottom-left */}
+                      <div className="absolute bottom-0 left-0 w-2 h-2 bg-accent/60 rounded-tr-md pointer-events-none" />
+                      {/* Top-right */}
+                      <div className="absolute top-0 right-0 w-2 h-2 bg-accent/60 rounded-bl-md pointer-events-none" />
+                    </>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Empty state */}
+            {currentPage.blocks.length === 0 && !report.cover_data.title && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-text-muted text-base mb-1">Pagina vacia</p>
+                <p className="text-text-muted text-xs">Agrega objetos desde el panel izquierdo</p>
+              </div>
+            )}
+
+            {/* Page number */}
+            <div className="absolute bottom-2 right-3 text-[9px] text-text-muted/50 pointer-events-none">
+              {activePage + 1} / {pages.length}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PDF overlay */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+          <div className="text-white text-lg">Generando PDF...</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ReportEditor;

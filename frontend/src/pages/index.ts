@@ -1,0 +1,10 @@
+export { default as DashboardTab } from './DashboardTab';
+export { default as PlayerDetailView } from './PlayerDetailView';
+export { default as QuickSearchTab } from './QuickSearchTab';
+export { default as BrowseTab } from './BrowseTab';
+export { default as ReportsTab } from './ReportsTab';
+export { default as RecommendationsTab } from './RecommendationsTab';
+export { default as PlayerProfileTab } from './PlayerProfileTab';
+export { default as ReportFormModal } from './ReportFormModal';
+export { default as ManualPlayersTab } from './ManualPlayersTab';
+export { default as InformesTab } from './InformesTab';
