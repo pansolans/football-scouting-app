@@ -211,7 +211,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
             Filtros Avanzados
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Filtro de Nacionalidad */}
             <div>
               <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
@@ -266,7 +266,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
                   placeholder="Min"
                   value={ageFilter.min}
                   onChange={(e) => setAgeFilter({ ...ageFilter, min: e.target.value })}
-                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none"
+                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none min-w-0"
                 />
                 <span className="text-text-muted">-</span>
                 <input
@@ -274,7 +274,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
                   placeholder="Max"
                   value={ageFilter.max}
                   onChange={(e) => setAgeFilter({ ...ageFilter, max: e.target.value })}
-                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none"
+                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none min-w-0"
                 />
               </div>
             </div>
@@ -289,37 +289,34 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
                   type="date"
                   value={contractFilter.from}
                   onChange={(e) => setContractFilter({ ...contractFilter, from: e.target.value })}
-                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none"
+                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none min-w-0"
                 />
-                <span className="text-text-muted">-</span>
+                <span className="text-text-muted shrink-0">-</span>
                 <input
                   type="date"
                   value={contractFilter.to}
                   onChange={(e) => setContractFilter({ ...contractFilter, to: e.target.value })}
-                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none"
+                  className="flex-1 py-2.5 px-3 border border-border-strong rounded-md text-sm bg-elevated text-text focus:border-accent/50 focus:outline-none min-w-0"
                 />
               </div>
             </div>
+          </div>
 
-            {/* Botón cargar contratos */}
-            <div>
-              <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
-                Info Contratos
-              </label>
-              <button
-                onClick={loadContracts}
-                disabled={loadingExtra || extraLoaded}
-                className={`w-full py-2.5 px-3 rounded-md text-sm font-medium transition-colors ${
-                  extraLoaded
-                    ? 'bg-accent/20 text-accent cursor-default'
-                    : loadingExtra
-                    ? 'bg-white/8 text-text-muted cursor-wait'
-                    : 'bg-accent text-white cursor-pointer hover:bg-accent-dark'
-                }`}
-              >
-                {extraLoaded ? 'Contratos cargados' : loadingExtra ? 'Cargando...' : 'Cargar contratos'}
-              </button>
-            </div>
+          {/* Botón cargar contratos - fila separada */}
+          <div className="mt-4">
+            <button
+              onClick={loadContracts}
+              disabled={loadingExtra || extraLoaded}
+              className={`py-2.5 px-6 rounded-md text-sm font-medium transition-colors ${
+                extraLoaded
+                  ? 'bg-accent/20 text-accent cursor-default'
+                  : loadingExtra
+                  ? 'bg-white/8 text-text-muted cursor-wait'
+                  : 'bg-accent text-white cursor-pointer hover:bg-accent-dark'
+              }`}
+            >
+              {extraLoaded ? 'Contratos cargados' : loadingExtra ? 'Cargando...' : 'Cargar contratos'}
+            </button>
           </div>
         </div>
       )}
