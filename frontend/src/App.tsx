@@ -458,9 +458,10 @@ useEffect(() => {
       const wid = String(player.wyscout_id || player.id);
       const extra = browseExtraInfo[wid];
       const contractExp = extra?.contract_expires || player.contractExpires;
-      if (!contractExp) return false;
+      // Si no hay datos de contrato, mantener al jugador (no excluirlo)
+      if (!contractExp) return true;
       const contractDate = new Date(contractExp);
-      if (isNaN(contractDate.getTime())) return false;
+      if (isNaN(contractDate.getTime())) return true;
       const meetsFrom = !contractFilter.from || contractDate >= new Date(contractFilter.from);
       const meetsTo = !contractFilter.to || contractDate <= new Date(contractFilter.to);
       return meetsFrom && meetsTo;
