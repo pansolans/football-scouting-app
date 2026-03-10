@@ -120,23 +120,6 @@ const StatsTableBlock: React.FC<Props> = ({ reports, readOnly }) => {
         </svg>
       </div>
 
-      {/* Category Tables */}
-      {Object.entries(CATEGORIES).map(([key, cat]) => (
-        <div key={key}>
-          <h4 className="text-xs uppercase tracking-widest text-text-muted font-medium mb-2">{cat.label}</h4>
-          <div className="grid grid-cols-5 gap-2">
-            {cat.fields.map((field, i) => {
-              const val = avg(field);
-              return (
-                <div key={field} className={`p-2 rounded-lg text-center ${getRatingBg(val)}`}>
-                  <div className={`text-lg font-bold ${getRatingColor(val)}`}>{val.toFixed(1)}</div>
-                  <div className="text-[10px] text-text-muted mt-0.5">{cat.labels[i]}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
     </div>
   );
 };

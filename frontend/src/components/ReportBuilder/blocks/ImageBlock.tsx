@@ -43,7 +43,7 @@ const ImageBlock: React.FC<Props> = ({ content, onChange, onImageLoad, readOnly 
   if (readOnly && content.url) {
     return (
       <div className="w-full h-full">
-        <img src={content.url} alt={content.caption || ''} className="w-full h-full object-cover rounded-lg" onLoad={handleImgLoad} />
+        <img src={content.url} alt={content.caption || ''} className="w-full h-full object-contain rounded-lg" onLoad={handleImgLoad} />
       </div>
     );
   }
@@ -52,7 +52,7 @@ const ImageBlock: React.FC<Props> = ({ content, onChange, onImageLoad, readOnly 
     <div className="w-full h-full relative">
       {content.url ? (
         <div className="relative w-full h-full group">
-          <img src={content.url} alt={content.caption || ''} className="w-full h-full object-cover rounded-lg" onLoad={handleImgLoad} />
+          <img src={content.url} alt={content.caption || ''} className="w-full h-full object-contain rounded-lg" onLoad={handleImgLoad} />
           <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-1.5 bg-black/60 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
             <input
               type="text"

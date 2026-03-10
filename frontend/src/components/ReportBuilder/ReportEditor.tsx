@@ -437,7 +437,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           case 'text':
             return `<div style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
           case 'image':
-            return block.content?.url ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;display:block;" crossorigin="anonymous"/>` : '';
+            return block.content?.url ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;" crossorigin="anonymous"/>` : '';
           case 'shape': {
             const sc = block.content || {};
             const bg = sc.backgroundColor || '#00bf63';
@@ -478,7 +478,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             return `<div style="font-size:12px;color:#d1d5db;line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
           case 'image':
             return block.content?.url
-              ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;display:block;" crossorigin="anonymous"/>`
+              ? `<img src="${block.content.url}" style="width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;" crossorigin="anonymous"/>`
               : '';
           case 'video':
             return block.content?.url ? `<div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:6px;"><p style="color:#9ca3af;font-size:12px;margin:0;">Video: ${block.content.url}</p></div>` : '';
