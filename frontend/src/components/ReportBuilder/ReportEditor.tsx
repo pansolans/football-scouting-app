@@ -665,10 +665,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
 
       // Helper: preload all images (both <img> tags and background-image divs)
       const preloadImages = async (el: HTMLElement) => {
-        // Preload <img> tags
         const imgs = el.querySelectorAll('img');
         const imgPromises = Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; }));
-        // Preload background-image URLs
         const allEls = el.querySelectorAll('*');
         const bgUrls: string[] = [];
         allEls.forEach(node => {
@@ -688,6 +686,63 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         await new Promise(r => setTimeout(r, 300));
       };
 
+      // Helper: load image as HTMLImageElement for direct PDF embedding
+      const loadImg = (url: string): Promise<HTMLImageElement | null> =>
+        new Promise(res => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => res(img);
+          img.onerror = () => res(null);
+          img.src = url;
+        });
+
+      // Helper: overlay image blocks directly on PDF (bypasses html2canvas for sharp images)
+      const overlayImages = async (blocks: ReportBlock[]) => {
+        for (const block of blocks) {
+          if (block.type !== 'image' || !block.content?.url) continue;
+          const bs = block.style || DEFAULT_BLOCK_STYLE;
+          const img = await loadImg(block.content.url);
+          if (!img) continue;
+
+          // Block position in mm on the PDF page
+          const bx = (bs.x / 100) * pageW;
+          const by = (bs.y / 100) * pageH;
+          const bw = (bs.w / 100) * pageW;
+          const bh = (bs.h / 100) * pageH;
+
+          // Fit image inside block maintaining aspect ratio (contain)
+          const imgRatio = img.naturalWidth / img.naturalHeight;
+          const boxRatio = bw / bh;
+          let drawW: number, drawH: number, drawX: number, drawY: number;
+          if (imgRatio > boxRatio) {
+            drawW = bw;
+            drawH = bw / imgRatio;
+            drawX = bx;
+            drawY = by + (bh - drawH) / 2;
+          } else {
+            drawH = bh;
+            drawW = bh * imgRatio;
+            drawX = bx + (bw - drawW) / 2;
+            drawY = by;
+          }
+
+          // Determine format from URL
+          const isPng = block.content.url.includes('.png') || block.content.url.startsWith('data:image/png');
+          const fmt = isPng ? 'PNG' : 'JPEG';
+
+          // Draw image from a temp canvas to get the data at full resolution
+          const tmpCanvas = document.createElement('canvas');
+          tmpCanvas.width = img.naturalWidth;
+          tmpCanvas.height = img.naturalHeight;
+          const ctx = tmpCanvas.getContext('2d');
+          if (!ctx) continue;
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = tmpCanvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', 1.0);
+
+          pdf.addImage(dataUrl, fmt, drawX, drawY, drawW, drawH);
+        }
+      };
+
       // Render cover page first if enabled
       if (hasCover) {
         container.innerHTML = buildCoverHtml();
@@ -695,6 +750,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         await preloadImages(el);
         const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
+        // Overlay cover image blocks at full quality
+        await overlayImages(report.cover_data.blocks || []);
         pageNum = 1;
       }
 
@@ -705,6 +762,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         await preloadImages(el);
         const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
+        // Overlay page image blocks at full quality
+        await overlayImages(pages[i].blocks);
         pageNum++;
       }
 
