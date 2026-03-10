@@ -519,6 +519,10 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   const PDF_SCALE = 2;
   const px = (n: number) => `${n * PDF_SCALE}px`;
 
+  // Scale inline font-size values in rich text HTML for PDF export
+  const scaleRichHtml = (html: string): string =>
+    html.replace(/font-size:\s*(\d+(?:\.\d+)?)px/g, (_, s) => `font-size:${Math.round(parseFloat(s) * PDF_SCALE)}px`);
+
   const textStyleToCss = (ts: any, defaults: { fontSize: string; color: string; fontWeight?: string }) => {
     const rawFs = ts?.fontSize ? ts.fontSize : parseInt(defaults.fontSize);
     const fs = `${rawFs * PDF_SCALE}px`;
@@ -543,11 +547,11 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           case 'header': {
             const defSizes: Record<string, string> = { '1': '36', '2': '26', '3': '20' };
             const hCss = textStyleToCss(block.content?.textStyle, { fontSize: defSizes[String(block.content?.level)] || '26', color: '#fff', fontWeight: 'bold' });
-            return `<h2 style="${hCss}margin:0;padding:${px(6)} 0;">${block.content?.text || ''}</h2>`;
+            return `<h2 style="${hCss}margin:0;padding:${px(6)} 0;">${scaleRichHtml(block.content?.text || '')}</h2>`;
           }
           case 'text': {
             const tCss = textStyleToCss(block.content?.textStyle, { fontSize: '14', color: 'rgba(255,255,255,0.7)' });
-            return `<div style="${tCss}line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+            return `<div style="${tCss}line-height:1.6;white-space:pre-wrap;">${scaleRichHtml(block.content?.text || '')}</div>`;
           }
           case 'image':
             return block.content?.url ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:${px(8)};"></div>` : '';
@@ -598,11 +602,11 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           case 'header': {
             const defSz: Record<string, string> = { '1': '28', '2': '22', '3': '17' };
             const hStyle = textStyleToCss(block.content?.textStyle, { fontSize: defSz[String(block.content?.level)] || '22', color: '#fff', fontWeight: 'bold' });
-            return `<h2 style="${hStyle}margin:0;padding:${px(6)} 0;border-bottom:${px(3)} solid rgba(0,191,99,0.4);">${block.content?.text || ''}</h2>`;
+            return `<h2 style="${hStyle}margin:0;padding:${px(6)} 0;border-bottom:${px(3)} solid rgba(0,191,99,0.4);">${scaleRichHtml(block.content?.text || '')}</h2>`;
           }
           case 'text': {
             const tStyle = textStyleToCss(block.content?.textStyle, { fontSize: '12', color: '#d1d5db' });
-            return `<div style="${tStyle}line-height:1.6;white-space:pre-wrap;">${block.content?.text || ''}</div>`;
+            return `<div style="${tStyle}line-height:1.6;white-space:pre-wrap;">${scaleRichHtml(block.content?.text || '')}</div>`;
           }
           case 'image':
             return block.content?.url
