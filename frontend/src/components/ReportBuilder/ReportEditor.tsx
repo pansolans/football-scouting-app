@@ -389,9 +389,13 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
 
   const loadTemplates = async () => {
     try {
+      console.log('[ReportEditor] Loading templates...');
       const data = await reportBuilderService.list(true);
+      console.log('[ReportEditor] Templates loaded:', data.length, data.map((t: any) => t.title));
       setTemplates(data);
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error('[ReportEditor] Error loading templates:', e?.response?.status, e?.response?.data, e?.message);
+    }
   };
 
   useEffect(() => { loadTemplates(); }, []);
@@ -422,7 +426,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
 
       const coverBlocks = (report.cover_data.blocks || []).map(cleanBlock);
 
-      await reportBuilderService.create({
+      const result = await reportBuilderService.create({
         title: name,
         is_template: true,
         template_name: name,
@@ -434,9 +438,13 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         blocks: templatePages.flatMap(p => p.blocks),
         pages: templatePages,
       });
+      console.log('[ReportEditor] Template saved:', result);
       alert('Plantilla guardada!');
       loadTemplates();
-    } catch (e) { console.error(e); alert('Error al guardar plantilla'); }
+    } catch (e: any) {
+      console.error('[ReportEditor] Error saving template:', e?.response?.status, e?.response?.data, e?.message);
+      alert('Error al guardar plantilla: ' + (e?.response?.data?.detail || e?.message || 'Error desconocido'));
+    }
   };
 
   const applyTemplate = (tmpl: BuilderReport) => {
@@ -802,7 +810,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         <div className="flex items-center gap-2">
           {saved && <span className="text-accent text-xs">Guardado</span>}
           <button onClick={() => setShowTemplates(!showTemplates)} className="px-3 py-2 bg-white/8 text-text-secondary rounded-lg text-xs font-medium cursor-pointer border-none hover:bg-white/12 transition-colors">
-            Plantillas
+            Plantillas{templates.length > 0 ? ` (${templates.length})` : ''}
           </button>
           <button onClick={saveAsTemplate} className="px-3 py-2 bg-purple-500/15 text-purple-400 rounded-lg text-xs font-medium cursor-pointer border-none hover:bg-purple-500/25 transition-colors">
             Guardar formato
