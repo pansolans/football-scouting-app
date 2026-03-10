@@ -67,6 +67,44 @@ const CoverEditor: React.FC<Props> = ({ cover, onChange, onAddCoverBlock }) => {
             <input ref={bgRef} type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
           </div>
 
+          {/* Background zoom & position */}
+          {cover.backgroundImage && (
+            <div className="space-y-2">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">
+                  Zoom: {cover.bgZoom ?? 100}%
+                </label>
+                <input
+                  type="range" min="100" max="300" step="5" value={cover.bgZoom ?? 100}
+                  onChange={e => onChange({ ...cover, bgZoom: parseInt(e.target.value) })}
+                  className="w-full h-1.5 accent-[#00bf63]"
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">
+                    Pos. horizontal: {cover.bgPositionX ?? 50}%
+                  </label>
+                  <input
+                    type="range" min="0" max="100" value={cover.bgPositionX ?? 50}
+                    onChange={e => onChange({ ...cover, bgPositionX: parseInt(e.target.value) })}
+                    className="w-full h-1.5 accent-[#00bf63]"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">
+                    Pos. vertical: {cover.bgPositionY ?? 50}%
+                  </label>
+                  <input
+                    type="range" min="0" max="100" value={cover.bgPositionY ?? 50}
+                    onChange={e => onChange({ ...cover, bgPositionY: parseInt(e.target.value) })}
+                    className="w-full h-1.5 accent-[#00bf63]"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Overlay opacity */}
           <div>
             <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">

@@ -54,6 +54,9 @@ export interface CoverData {
   enabled?: boolean;
   backgroundImage?: string;
   overlayOpacity?: number;  // 0-100, default 60
+  bgZoom?: number;          // 100 = normal, 200 = 2x, etc. default 100
+  bgPositionX?: number;     // % horizontal position, default 50
+  bgPositionY?: number;     // % vertical position, default 50
   blocks?: ReportBlock[];   // movable elements on cover page
   // Legacy fields (kept for backwards compat, ignored if blocks exist)
   clubLogo?: string;

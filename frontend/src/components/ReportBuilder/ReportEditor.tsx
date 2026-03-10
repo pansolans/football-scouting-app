@@ -569,7 +569,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     };
 
     return `<div style="width:794px;height:1123px;background:#0d0d10;position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
-      ${c.backgroundImage ? `<div style="position:absolute;inset:0;background-image:url(${c.backgroundImage});background-size:cover;background-position:center;"></div>` : ''}
+      ${c.backgroundImage ? `<div style="position:absolute;inset:0;background-image:url(${c.backgroundImage});background-size:${c.bgZoom ?? 100}%;background-position:${c.bgPositionX ?? 50}% ${c.bgPositionY ?? 50}%;background-repeat:no-repeat;"></div>` : ''}
       <div style="position:absolute;inset:0;background:rgba(0,0,0,${overlay});"></div>
       ${cb.map(blockToHtml).join('')}
     </div>`;
@@ -982,7 +982,15 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             {isCoverActive && (
               <>
                 {report.cover_data.backgroundImage && (
-                  <img src={report.cover_data.backgroundImage} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      backgroundImage: `url(${report.cover_data.backgroundImage})`,
+                      backgroundSize: `${report.cover_data.bgZoom ?? 100}%`,
+                      backgroundPosition: `${report.cover_data.bgPositionX ?? 50}% ${report.cover_data.bgPositionY ?? 50}%`,
+                      backgroundRepeat: 'no-repeat',
+                    }}
+                  />
                 )}
                 <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: `rgba(0,0,0,${(report.cover_data.overlayOpacity ?? 60) / 100})` }} />
                 {coverBlocks.length === 0 && (
