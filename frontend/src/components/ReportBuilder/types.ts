@@ -1,4 +1,4 @@
-export type BlockType = 'header' | 'text' | 'image' | 'video' | 'stats_table' | 'divider';
+export type BlockType = 'header' | 'text' | 'image' | 'video' | 'stats_table' | 'divider' | 'shape';
 
 export interface HeaderContent { text: string; level: 1 | 2 | 3; }
 export interface TextContent { text: string; }
@@ -6,6 +6,14 @@ export interface ImageContent { url: string; caption?: string; width?: number; }
 export interface VideoContent { url: string; caption?: string; }
 export interface StatsTableContent { reportIds: string[]; categories: string[]; }
 export interface DividerContent { style?: 'solid' | 'dashed' | 'accent'; }
+export interface ShapeContent {
+  backgroundColor: string;
+  opacity: number;       // 0-100
+  borderRadius: number;  // px
+  borderColor: string;
+  borderWidth: number;   // px
+  label?: string;        // optional text inside
+}
 
 export interface BlockStyle {
   x: number;  // % from left (0-100)
@@ -61,6 +69,7 @@ export const createBlock = (type: BlockType): ReportBlock => {
     case 'video': return { id, type, content: { url: '', caption: '' } };
     case 'stats_table': return { id, type, content: { reportIds: [], categories: ['tecnico', 'fisico', 'mental'] } };
     case 'divider': return { id, type, content: { style: 'accent' } };
+    case 'shape': return { id, type, content: { backgroundColor: '#00bf63', opacity: 100, borderRadius: 0, borderColor: 'transparent', borderWidth: 0, label: '' } };
   }
 };
 
@@ -76,4 +85,5 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   video: 'Video',
   stats_table: 'Estadisticas',
   divider: 'Separador',
+  shape: 'Forma',
 };

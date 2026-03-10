@@ -9,6 +9,7 @@ import TextBlock from './blocks/TextBlock';
 import ImageBlock from './blocks/ImageBlock';
 import VideoBlock from './blocks/VideoBlock';
 import StatsTableBlock from './blocks/StatsTableBlock';
+import ShapeBlock from './blocks/ShapeBlock';
 
 interface Props {
   reportId?: string;
@@ -26,6 +27,7 @@ const BLOCK_SIZES: Record<BlockType, { w: number; h: number }> = {
   video: { w: 60, h: 8 },
   stats_table: { w: 88, h: 40 },
   divider: { w: 90, h: 1.5 },
+  shape: { w: 40, h: 10 },
 };
 
 const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) => {
@@ -401,6 +403,16 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           }
           case 'divider':
             return '<hr style="border:none;border-top:2px solid rgba(0,191,99,0.25);margin:0;"/>';
+          case 'shape': {
+            const sc = block.content || {};
+            const bg = sc.backgroundColor || '#00bf63';
+            const op = (sc.opacity ?? 100) / 100;
+            const br = sc.borderRadius ?? 0;
+            const bw = sc.borderWidth ?? 0;
+            const bc = sc.borderColor || 'transparent';
+            const label = sc.label || '';
+            return `<div style="width:100%;height:100%;background:${bg};opacity:${op};border-radius:${br}px;${bw > 0 ? `border:${bw}px solid ${bc};` : ''}box-sizing:border-box;display:flex;align-items:center;justify-content:center;">${label ? `<span style="color:#fff;font-weight:600;font-size:13px;text-align:center;">${label}</span>` : ''}</div>`;
+          }
           default: return '';
         }
       })();
@@ -469,6 +481,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       case 'video': return <VideoBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;
       case 'divider': return <div style={{ borderTop: '2px solid rgba(0,191,99,0.25)', width: '100%', marginTop: '40%' }} />;
+      case 'shape': return <ShapeBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       default: return null;
     }
   };

@@ -12,10 +12,11 @@ const ICONS: Record<BlockType, string> = {
   video: '▶',
   stats_table: '📊',
   divider: '—',
+  shape: '■',
 };
 
 const BlockPalette: React.FC<Props> = ({ onAdd }) => {
-  const types: BlockType[] = ['header', 'text', 'image', 'video', 'stats_table', 'divider'];
+  const types: BlockType[] = ['header', 'text', 'image', 'video', 'stats_table', 'divider', 'shape'];
 
   return (
     <div className="space-y-2">
