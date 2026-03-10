@@ -614,6 +614,72 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
           {/* Cover config */}
           <CoverEditor cover={report.cover_data} onChange={cover_data => setReport(prev => ({ ...prev, cover_data }))} playerPhoto={playerPhoto} />
 
+          {/* Shape editor (when a shape block is selected) */}
+          {(() => {
+            if (!selectedBlock || activePage < 0) return null;
+            const block = currentPage.blocks.find(b => b.id === selectedBlock);
+            if (!block || block.type !== 'shape') return null;
+            const sc = {
+              backgroundColor: block.content.backgroundColor || '#00bf63',
+              opacity: block.content.opacity ?? 100,
+              borderRadius: block.content.borderRadius ?? 0,
+              borderColor: block.content.borderColor || 'transparent',
+              borderWidth: block.content.borderWidth ?? 0,
+              label: block.content.label || '',
+            };
+            const update = (partial: Partial<typeof sc>) => updateBlock(block.id, { ...sc, ...partial });
+            const PRESET_COLORS = ['#00bf63','#3b82f6','#ef4444','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#ffffff','#6b7280','#0d0d10'];
+            return (
+              <div className="card-elevated rounded-xl p-3 space-y-3">
+                <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium">Editar Forma</h4>
+                {/* Color */}
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1.5">Color</label>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {PRESET_COLORS.map(color => (
+                      <button
+                        key={color}
+                        onClick={() => update({ backgroundColor: color })}
+                        className="w-6 h-6 rounded cursor-pointer border-none transition-transform hover:scale-110"
+                        style={{
+                          backgroundColor: color,
+                          outline: sc.backgroundColor === color ? '2px solid #00bf63' : '1px solid rgba(255,255,255,0.2)',
+                          outlineOffset: '1px',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <input type="color" value={sc.backgroundColor} onChange={e => update({ backgroundColor: e.target.value })} className="w-full h-7 rounded cursor-pointer border border-white/10" />
+                </div>
+                {/* Opacity */}
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">Opacidad: {sc.opacity}%</label>
+                  <input type="range" min="5" max="100" value={sc.opacity} onChange={e => update({ opacity: parseInt(e.target.value) })} className="w-full h-1.5 accent-[#00bf63]" />
+                </div>
+                {/* Border radius */}
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">Redondeo: {sc.borderRadius}px</label>
+                  <input type="range" min="0" max="50" value={sc.borderRadius} onChange={e => update({ borderRadius: parseInt(e.target.value) })} className="w-full h-1.5 accent-[#00bf63]" />
+                </div>
+                {/* Border */}
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">Borde: {sc.borderWidth}px</label>
+                  <div className="flex gap-2 items-center">
+                    <input type="range" min="0" max="8" value={sc.borderWidth} onChange={e => update({ borderWidth: parseInt(e.target.value) })} className="flex-1 h-1.5 accent-[#00bf63]" />
+                    {sc.borderWidth > 0 && (
+                      <input type="color" value={sc.borderColor === 'transparent' ? '#ffffff' : sc.borderColor} onChange={e => update({ borderColor: e.target.value })} className="w-7 h-7 rounded cursor-pointer border border-white/10" />
+                    )}
+                  </div>
+                </div>
+                {/* Label */}
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">Texto (opcional)</label>
+                  <input type="text" value={sc.label} onChange={e => update({ label: e.target.value })} placeholder="Texto dentro..." className="w-full p-1.5 bg-white/5 border border-white/10 rounded text-[11px] text-white placeholder:text-white/30 outline-none focus:border-[#00bf63]/50" />
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Info */}
           <div className="card-elevated rounded-xl p-3">
             <p className="text-[11px] text-text-secondary">{activePage >= 0 ? `${currentPage.blocks.length} objetos en pag. ${activePage + 1}` : 'Portada seleccionada'}</p>
