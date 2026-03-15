@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { playerService, healthService, scoutingService, Player, ScoutReport, ScoutReportCreate, HealthStatus } from './services/api';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -10,6 +10,7 @@ import PlayerProfile from './components/PlayerProfile';
 import { API_URL } from './config';
 import { DashboardTab, PlayerDetailView, QuickSearchTab, BrowseTab, ReportsTab, RecommendationsTab, PlayerProfileTab, ReportFormModal, ManualPlayersTab, InformesTab } from './pages';
 import { getClubConfig } from './utils/clubConfig';
+import { reportBuilderService } from './services/reportBuilderService';
 import { calculateAverageScore, getLatestRecommendation, calculateCategoryAverages, getRatingColor, getPositionColor } from './utils/reportUtils';
 import { TabId } from './types';
 
@@ -88,6 +89,7 @@ const MainApp: React.FC = () => {
 
   // Estado para pre-cargar jugador en Informes
   const [informePlayerData, setInformePlayerData] = useState<{ playerId: string; playerName: string } | null>(null);
+  const [existingInformeNames, setExistingInformeNames] = useState<string[]>([]);
 
   // Estados para el sistema de mercados - AGREGAR ESTOS
   const [selectedMarketPlayer, setSelectedMarketPlayer] = useState<any>(null);
@@ -163,6 +165,33 @@ const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
   const [playerMatches, setPlayerMatches] = useState<any[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
 
+  // Jugadores pendientes de informe: 3+ visorias O recomendación "Hacer informe"
+  const pendingInformePlayers = useMemo(() => {
+    const counts = new Map<string, { name: string; id: string; count: number; hacerInforme: boolean }>();
+    // Agrupar reportes por jugador, ordenados por fecha desc para obtener la última recomendación
+    const sortedReports = [...scoutReports].sort((a, b) =>
+      new Date(b.fecha_observacion || b.created_at || '').getTime() -
+      new Date(a.fecha_observacion || a.created_at || '').getTime()
+    );
+    sortedReports.forEach(r => {
+      const existing = counts.get(r.player_name);
+      if (existing) {
+        existing.count++;
+      } else {
+        counts.set(r.player_name, {
+          name: r.player_name,
+          id: r.player_id,
+          count: 1,
+          hacerInforme: r.recomendacion === 'Hacer informe',
+        });
+      }
+    });
+    const namesLower = existingInformeNames.map(n => n.toLowerCase());
+    return Array.from(counts.values())
+      .filter(p => (p.count >= 3 || p.hacerInforme) && !namesLower.includes(p.name.toLowerCase()))
+      .sort((a, b) => b.count - a.count);
+  }, [scoutReports, existingInformeNames]);
+
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -176,6 +205,11 @@ const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
         const reports = await scoutingService.getReports();
         setScoutReports(Array.isArray(reports) ? reports : []);
 
+        // Cargar nombres de informes existentes
+        try {
+          const informes = await reportBuilderService.list(false);
+          setExistingInformeNames(informes.map(i => i.player_name).filter(Boolean) as string[]);
+        } catch (e) { console.error('Error loading informes:', e); }
 
         const areasData = await playerService.getAreas();
         setAreas(Array.isArray(areasData) ? areasData : []);
@@ -376,7 +410,6 @@ const openMarketModal = async (player: any) => {
           setSelectedTeam(null);
           setSelectedTeams([]);
           setTeamPlayers([]);
-          searchPlayersWithFilters();
         } catch (error) {
           console.error('Failed to load teams:', error);
         } finally {
@@ -393,7 +426,16 @@ useEffect(() => {
     if (selectedTeams.length > 0 && selectedCompetition) {
       setLoading(true);
       try {
-        const allPlayers = await playerService.getCompetitionPlayers(selectedCompetition, selectedTeams);
+        const rawPlayers = await playerService.getCompetitionPlayers(selectedCompetition, selectedTeams);
+
+        // Deduplicar por wyscout_id (un jugador puede aparecer en múltiples equipos)
+        const seen = new Set<string>();
+        const allPlayers = rawPlayers.filter((p: any) => {
+          const pid = String(p.wyscout_id || p.id);
+          if (seen.has(pid)) return false;
+          seen.add(pid);
+          return true;
+        });
 
         setAllPlayersData(allPlayers);
         setTeamPlayers(allPlayers);
@@ -650,27 +692,10 @@ useEffect(() => {
     }
   };
 
-// Reemplazar las funciones con estas versiones corregidas
-const searchPlayersWithFilters = () => {
-  if (teamPlayers.length > 0) {
-    const nationalities = Array.from(new Set(
-      teamPlayers.map((player: any) => 
-        player.nationality || player.nationality
-      ).filter(Boolean)
-    )).sort();
-    setAvailableNationalities(nationalities);
-  }
-};
-
 const clearAllFilters = () => {
-  setSelectedNationalities([] as any);
+  setSelectedNationalities([]);
   setAgeFilter({ min: '', max: '' });
   setShowNationalityFilter(false);
-  
-  // Volver a cargar sin filtros
-  if (selectedCompetition) {
-    setTeamPlayers([]);
-  }
 };
   
   // Cargar jugadores manuales
@@ -939,6 +964,11 @@ const clearAllFilters = () => {
               scoutReports={scoutReports}
               healthStatus={healthStatus}
               wyscoutStatus={wyscoutStatus}
+              onCreateInforme={(playerId, playerName) => {
+                setInformePlayerData({ playerId, playerName });
+                setActiveTab('informes' as TabId);
+              }}
+              existingInformeNames={existingInformeNames}
             />
           )}
 
@@ -969,6 +999,7 @@ const clearAllFilters = () => {
               selectedTeams={selectedTeams}
               setSelectedTeams={setSelectedTeams}
               teamPlayers={teamPlayers}
+              hasLoadedPlayers={allPlayersData.length > 0}
               selectedNationalities={selectedNationalities}
               setSelectedNationalities={setSelectedNationalities}
               showNationalityFilter={showNationalityFilter}
@@ -1066,6 +1097,7 @@ const clearAllFilters = () => {
             <InformesTab
               preselectedPlayer={informePlayerData}
               onClearPreselected={() => setInformePlayerData(null)}
+              pendingPlayers={pendingInformePlayers}
             />
           )}
 

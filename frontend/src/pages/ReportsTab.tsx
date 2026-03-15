@@ -309,6 +309,9 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                           )}
                           {report.recomendacion && (
                             <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${
+                              report.recomendacion.toLowerCase().includes('hacer informe') ? 'bg-accent/15 text-accent' :
+                              report.recomendacion.toLowerCase().includes('continuar') ? 'bg-blue-500/15 text-blue-400' :
+                              report.recomendacion.toLowerCase().includes('encima') ? 'bg-orange-500/15 text-orange-400' :
                               report.recomendacion.toLowerCase().includes('comprar') ? 'bg-accent/15 text-accent' :
                               report.recomendacion.toLowerCase().includes('seguir') ? 'bg-blue-500/15 text-blue-400' :
                               'bg-red-500/15 text-red-400'

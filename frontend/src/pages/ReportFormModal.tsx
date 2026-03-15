@@ -420,10 +420,10 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                     className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm cursor-pointer focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
                   >
                     <option value="">Seleccionar...</option>
-                    <option value="Comprar">Comprar</option>
-                    <option value="Seguir">Seguir Observando</option>
-                    <option value="Descartar">Descartar</option>
-                    <option value="Prestamo">Prestamo</option>
+                    <option value="Continuar visoria">Continuar visoria</option>
+                    <option value="Descartar por encima">Descartar por encima</option>
+                    <option value="Descartar por debajo">Descartar por debajo</option>
+                    <option value="Hacer informe">Hacer informe</option>
                   </select>
                 </div>
 

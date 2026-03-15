@@ -12,6 +12,7 @@ interface BrowseTabProps {
   selectedTeams: number[];
   setSelectedTeams: (teams: number[]) => void;
   teamPlayers: any[];
+  hasLoadedPlayers: boolean;
   selectedNationalities: string[];
   setSelectedNationalities: (nats: string[]) => void;
   showNationalityFilter: boolean;
@@ -41,6 +42,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
   selectedTeams,
   setSelectedTeams,
   teamPlayers,
+  hasLoadedPlayers,
   selectedNationalities,
   setSelectedNationalities,
   showNationalityFilter,
@@ -205,7 +207,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
       </div>
 
       {/* Filtros avanzados */}
-      {teamPlayers.length > 0 && (
+      {hasLoadedPlayers && (
         <div className="bg-card border border-border-strong rounded-lg p-6">
           <h3 className="text-base font-medium text-text tracking-tight mb-4">
             Filtros Avanzados
@@ -322,7 +324,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
       )}
 
       {/* Players List */}
-      {teamPlayers.length > 0 && (
+      {hasLoadedPlayers && (
         <div className="bg-card border border-border-strong rounded-lg p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-medium text-text tracking-tight">
@@ -333,6 +335,11 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
             )}
           </div>
 
+          {teamPlayers.length === 0 ? (
+            <div className="text-center py-8 text-text-muted">
+              <p>No se encontraron jugadores con los filtros seleccionados</p>
+            </div>
+          ) : (
           <div className="grid">
             {teamPlayers.map((player: any) => {
               const extra = getExtra(player);
@@ -414,6 +421,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
               );
             })}
           </div>
+          )}
         </div>
       )}
     </div>

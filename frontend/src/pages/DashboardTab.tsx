@@ -7,11 +7,40 @@ interface DashboardTabProps {
   scoutReports: ScoutReport[];
   healthStatus: HealthStatus | null;
   wyscoutStatus: any;
+  onCreateInforme?: (playerId: string, playerName: string) => void;
+  existingInformeNames?: string[];
 }
 
-const DashboardTab: React.FC<DashboardTabProps> = ({ totalReports, avgRating, scoutReports, healthStatus, wyscoutStatus }) => {
+const DashboardTab: React.FC<DashboardTabProps> = ({ totalReports, avgRating, scoutReports, healthStatus, wyscoutStatus, onCreateInforme, existingInformeNames = [] }) => {
   const uniquePlayers = new Set(scoutReports.map(r => r.player_id)).size;
   const topRated = [...scoutReports].sort((a, b) => b.overall_rating - a.overall_rating).slice(0, 3);
+
+  // Jugadores pendientes: 3+ visorias O recomendación "Hacer informe"
+  const playerReportCounts = new Map<string, { name: string; id: string; count: number; hacerInforme: boolean }>();
+  const sortedReports = [...scoutReports].sort((a, b) =>
+    new Date(b.fecha_observacion || b.created_at || '').getTime() -
+    new Date(a.fecha_observacion || a.created_at || '').getTime()
+  );
+  sortedReports.forEach(r => {
+    const existing = playerReportCounts.get(r.player_name);
+    if (existing) {
+      existing.count++;
+    } else {
+      playerReportCounts.set(r.player_name, {
+        name: r.player_name,
+        id: r.player_id,
+        count: 1,
+        hacerInforme: r.recomendacion === 'Hacer informe',
+      });
+    }
+  });
+  const allCandidates = Array.from(playerReportCounts.values())
+    .filter(p => p.count >= 3 || p.hacerInforme)
+    .sort((a, b) => b.count - a.count);
+
+  const informeNamesLower = existingInformeNames.map(n => n.toLowerCase());
+  const pendingInformes = allCandidates.filter(p => !informeNamesLower.includes(p.name.toLowerCase()));
+  const completedInformes = allCandidates.filter(p => informeNamesLower.includes(p.name.toLowerCase()));
 
   return (
     <div className="grid gap-8 animate-fade-in">
@@ -107,6 +136,79 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ totalReports, avgRating, sc
           <div className="text-sm text-text-muted">Rating Promedio</div>
         </div>
       </div>
+
+      {/* Players needing informe (3+ visorias) */}
+      {allCandidates.length > 0 && (
+        <div className="card-elevated rounded-xl p-6 border-l-4 border-l-accent animate-fade-in-up" style={{ animationDelay: '0.35s' }}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-6 rounded-full bg-gradient-to-b from-accent to-accent-dark" />
+            <h3 className="text-base font-semibold text-text tracking-tight">Informes de Jugadores</h3>
+            {pendingInformes.length > 0 && (
+              <span className="text-[11px] bg-accent/15 text-accent font-medium px-2 py-0.5 rounded-full">
+                {pendingInformes.length} pendiente{pendingInformes.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-text-muted mb-4">Jugadores con 3 o mas visorias. Se recomienda generar un informe.</p>
+
+          {/* Pending */}
+          {pendingInformes.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">Pendientes</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {pendingInformes.map(player => (
+                  <div
+                    key={player.name}
+                    onClick={() => onCreateInforme?.(player.id, player.name)}
+                    className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-accent/20 hover:bg-accent/10 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center text-accent text-xs font-bold">
+                        {player.name?.charAt(0) || '?'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-text m-0">{player.name}</p>
+                        <p className="text-xs text-text-muted m-0">{player.count} visorias</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-medium bg-accent/15 text-accent px-2 py-1 rounded">
+                      Hacer informe
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed */}
+          {completedInformes.length > 0 && (
+            <div>
+              <p className="text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">Realizados</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {completedInformes.map(player => (
+                  <div
+                    key={player.name}
+                    className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-border opacity-70"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent/60 text-xs font-bold">
+                        {player.name?.charAt(0) || '?'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-text-secondary m-0">{player.name}</p>
+                        <p className="text-xs text-text-muted m-0">{player.count} visorias</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-medium bg-accent/10 text-accent/60 px-2 py-1 rounded">
+                      Informe realizado
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Two columns: Top Rated + System Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

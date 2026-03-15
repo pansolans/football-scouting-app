@@ -138,24 +138,30 @@ const RecommendationsTab: React.FC<RecommendationsTabProps> = ({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="stat-card p-4 text-center">
-          <div className="text-3xl font-bold text-gradient">
-            {scoutReports.filter(r => r.recomendacion === 'Comprar').length}
-          </div>
-          <div className="text-[11px] uppercase tracking-widest text-text-muted mt-1">Para Comprar</div>
-        </div>
-        <div className="bg-card border border-border-strong p-4 rounded-lg text-center">
           <div className="text-3xl font-bold text-blue-400">
-            {scoutReports.filter(r => r.recomendacion === 'Seguir').length}
+            {scoutReports.filter(r => r.recomendacion === 'Continuar visoria').length}
           </div>
-          <div className="text-[11px] uppercase tracking-widest text-text-muted mt-1">Para Seguir</div>
+          <div className="text-[11px] uppercase tracking-widest text-text-muted mt-1">Continuar Visoria</div>
         </div>
         <div className="bg-card border border-border-strong p-4 rounded-lg text-center">
           <div className="text-3xl font-bold text-red-400">
-            {scoutReports.filter(r => r.recomendacion === 'Descartar').length}
+            {scoutReports.filter(r => r.recomendacion === 'Descartar por encima').length}
           </div>
-          <div className="text-[11px] uppercase tracking-widest text-text-muted mt-1">Para Descartar</div>
+          <div className="text-[11px] uppercase tracking-widest text-text-muted mt-1">Desc. por Encima</div>
+        </div>
+        <div className="bg-card border border-border-strong p-4 rounded-lg text-center">
+          <div className="text-3xl font-bold text-red-400">
+            {scoutReports.filter(r => r.recomendacion === 'Descartar por debajo').length}
+          </div>
+          <div className="text-[11px] uppercase tracking-widest text-text-muted mt-1">Desc. por Debajo</div>
+        </div>
+        <div className="bg-card border border-border-strong p-4 rounded-lg text-center">
+          <div className="text-3xl font-bold text-gradient">
+            {scoutReports.filter(r => r.recomendacion === 'Hacer informe').length}
+          </div>
+          <div className="text-[11px] uppercase tracking-widest text-text-muted mt-1">Hacer Informe</div>
         </div>
         <div className="bg-card border border-border-strong p-4 rounded-lg text-center">
           <div className="text-3xl font-bold text-white">
@@ -192,9 +198,10 @@ const RecommendationsTab: React.FC<RecommendationsTabProps> = ({
             className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text cursor-pointer focus:border-accent/50 focus:outline-none"
           >
             <option value="">Todas</option>
-            <option value="Comprar">Para Comprar</option>
-            <option value="Seguir">Para Seguir</option>
-            <option value="Descartar">Para Descartar</option>
+            <option value="Continuar visoria">Continuar Visoria</option>
+            <option value="Descartar por encima">Descartar por Encima</option>
+            <option value="Descartar por debajo">Descartar por Debajo</option>
+            <option value="Hacer informe">Hacer Informe</option>
           </select>
         </div>
         <div>
@@ -295,8 +302,10 @@ const RecommendationsTab: React.FC<RecommendationsTabProps> = ({
                           {/* Recommendation */}
                           {player.recomendacion && (
                             <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${
-                              player.recomendacion === 'Comprar' ? 'bg-accent/15 text-accent' :
-                              player.recomendacion === 'Seguir' ? 'bg-blue-500/15 text-blue-400' : 'bg-red-500/15 text-red-400'
+                              player.recomendacion === 'Hacer informe' ? 'bg-accent/15 text-accent' :
+                              player.recomendacion === 'Continuar visoria' ? 'bg-blue-500/15 text-blue-400' :
+                              player.recomendacion === 'Descartar por encima' ? 'bg-orange-500/15 text-orange-400' :
+                              'bg-red-500/15 text-red-400'
                             }`}>
                               {player.recomendacion}
                             </span>

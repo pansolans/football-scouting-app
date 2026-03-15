@@ -5,9 +5,11 @@ import { BuilderReport } from './types';
 interface Props {
   onEdit: (id: string) => void;
   onNew: () => void;
+  pendingPlayers?: { name: string; id: string; count: number }[];
+  onCreateInforme?: (playerId: string, playerName: string) => void;
 }
 
-const ReportList: React.FC<Props> = ({ onEdit, onNew }) => {
+const ReportList: React.FC<Props> = ({ onEdit, onNew, pendingPlayers = [], onCreateInforme }) => {
   const [reports, setReports] = useState<BuilderReport[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +62,77 @@ const ReportList: React.FC<Props> = ({ onEdit, onNew }) => {
           </button>
         </div>
       </div>
+
+      {/* Pending / Completed informes */}
+      {!loading && (pendingPlayers.length > 0 || reports.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Pending */}
+          {pendingPlayers.length > 0 && (
+            <div className="bg-card border border-accent/20 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-amber-400" />
+                <h4 className="text-sm font-semibold text-text m-0">Informes Pendientes</h4>
+                <span className="text-[11px] bg-amber-500/15 text-amber-400 font-medium px-2 py-0.5 rounded-full ml-auto">
+                  {pendingPlayers.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {pendingPlayers.map(p => (
+                  <div
+                    key={p.name}
+                    onClick={() => onCreateInforme?.(p.id, p.name)}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.03] hover:bg-accent/10 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-400 text-[10px] font-bold">
+                        {p.name?.charAt(0)}
+                      </div>
+                      <span className="text-sm text-text">{p.name}</span>
+                      <span className="text-[11px] text-text-muted">{p.count} visorias</span>
+                    </div>
+                    <span className="text-[11px] font-medium text-accent">Crear</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed */}
+          {reports.length > 0 && (
+            <div className="bg-card border border-border-strong rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-accent" />
+                <h4 className="text-sm font-semibold text-text m-0">Informes Realizados</h4>
+                <span className="text-[11px] bg-accent/15 text-accent font-medium px-2 py-0.5 rounded-full ml-auto">
+                  {reports.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {reports.slice(0, 5).map(r => (
+                  <div
+                    key={r.id}
+                    onClick={() => r.id && onEdit(r.id)}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center text-accent text-[10px] font-bold">
+                        {(r.player_name || r.title)?.charAt(0)}
+                      </div>
+                      <span className="text-sm text-text">{r.player_name || r.title}</span>
+                    </div>
+                    <span className="text-[11px] text-text-muted">
+                      {r.updated_at ? new Date(r.updated_at).toLocaleDateString('es-ES') : ''}
+                    </span>
+                  </div>
+                ))}
+                {reports.length > 5 && (
+                  <p className="text-[11px] text-text-muted text-center m-0 pt-1">y {reports.length - 5} mas...</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Reports Grid */}
       {loading ? (

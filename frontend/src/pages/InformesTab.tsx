@@ -5,9 +5,10 @@ import ReportEditor from '../components/ReportBuilder/ReportEditor';
 interface Props {
   preselectedPlayer?: { playerId: string; playerName: string } | null;
   onClearPreselected?: () => void;
+  pendingPlayers?: { name: string; id: string; count: number }[];
 }
 
-const InformesTab: React.FC<Props> = ({ preselectedPlayer, onClearPreselected }) => {
+const InformesTab: React.FC<Props> = ({ preselectedPlayer, onClearPreselected, pendingPlayers = [] }) => {
   const [view, setView] = useState<'list' | 'editor'>('list');
   const [editingId, setEditingId] = useState<string | undefined>();
   const [newPlayerData, setNewPlayerData] = useState<{ playerId: string; playerName: string } | undefined>();
@@ -34,6 +35,12 @@ const InformesTab: React.FC<Props> = ({ preselectedPlayer, onClearPreselected })
     setView('editor');
   };
 
+  const handleCreateInforme = (playerId: string, playerName: string) => {
+    setEditingId(undefined);
+    setNewPlayerData({ playerId, playerName });
+    setView('editor');
+  };
+
   const handleBack = () => {
     setEditingId(undefined);
     setNewPlayerData(undefined);
@@ -41,7 +48,12 @@ const InformesTab: React.FC<Props> = ({ preselectedPlayer, onClearPreselected })
   };
 
   return view === 'list' ? (
-    <ReportList onEdit={handleEdit} onNew={handleNew} />
+    <ReportList
+      onEdit={handleEdit}
+      onNew={handleNew}
+      pendingPlayers={pendingPlayers}
+      onCreateInforme={handleCreateInforme}
+    />
   ) : (
     <ReportEditor reportId={editingId} onBack={handleBack} preselectedPlayer={newPlayerData} />
   );

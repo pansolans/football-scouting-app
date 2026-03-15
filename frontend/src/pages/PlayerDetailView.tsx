@@ -14,8 +14,14 @@ const PlayerDetailView: React.FC<PlayerDetailViewProps> = ({ playerName, reports
   const latestRecommendation = getLatestRecommendation(reports);
 
   const getRecommendationClass = (rec: string | undefined | null) => {
-    if (rec === 'comprar') return 'bg-accent/15 text-accent';
-    if (rec === 'seguir') return 'bg-blue-500/15 text-blue-400';
+    const r = (rec || '').toLowerCase();
+    if (r === 'hacer informe') return 'bg-accent/15 text-accent';
+    if (r === 'continuar visoria') return 'bg-blue-500/15 text-blue-400';
+    if (r === 'descartar por encima') return 'bg-orange-500/15 text-orange-400';
+    if (r === 'descartar por debajo') return 'bg-red-500/15 text-red-400';
+    // Legacy values
+    if (r === 'comprar') return 'bg-accent/15 text-accent';
+    if (r === 'seguir') return 'bg-blue-500/15 text-blue-400';
     return 'bg-red-500/15 text-red-400';
   };
 

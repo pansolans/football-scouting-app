@@ -433,7 +433,17 @@ async def get_competition_players_bulk(
     for squad_players in results:
         cached_players.extend(squad_players)
 
-    return cached_players
+    # Deduplicar jugadores por wyscout_id (un jugador puede aparecer en múltiples equipos)
+    seen_ids = set()
+    unique_players = []
+    for player in cached_players:
+        pid = player.get("wyscout_id") or player.get("id")
+        if pid and pid not in seen_ids:
+            seen_ids.add(pid)
+            unique_players.append(player)
+        elif not pid:
+            unique_players.append(player)
+    return unique_players
 
 # Caché de squads: {team_id: (timestamp, players_list)}
 _squad_cache: Dict[int, tuple] = {}
@@ -685,7 +695,7 @@ class ScoutReportCreate(BaseModel):
     debilidades: Optional[str] = ""
     
     # Sistema de seguimiento
-    recomendacion: Optional[str] = ""  # "Comprar", "Seguir", "Descartar"
+    recomendacion: Optional[str] = ""  # "Continuar visoria", "Descartar por encima", "Descartar por debajo", "Hacer informe"
     condicion_mercado: Optional[str] = ""  # "Libre", "Último año", "Contrato largo"
     agente: Optional[str] = ""
     tags: Optional[List[str]] = []  # ["Promesa", "Listo para primer equipo", etc]
