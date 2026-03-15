@@ -838,7 +838,7 @@ const clearAllFilters = () => {
     { id: 'manual-players', label: 'Jugadores' },
     { id: 'markets', label: 'Mercados' },
     { id: 'informes', label: 'Informes' },
-    { id: 'player-profiles', label: 'Perfiles' }
+    // { id: 'player-profiles', label: 'Perfiles' } // Oculto temporalmente
   ];
 
   return (
