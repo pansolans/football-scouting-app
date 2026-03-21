@@ -20,6 +20,13 @@ const RichTextEditor: React.FC<Props> = ({
   const savedRange = useRef<Range | null>(null);
   const [fontSize, setFontSize] = useState(style?.fontSize ? parseInt(String(style.fontSize)) : 14);
 
+  // Set initial content on mount
+  useEffect(() => {
+    if (ref.current && html) {
+      ref.current.innerHTML = html;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync external html changes into the div
   useEffect(() => {
     if (ref.current && html !== lastHtml.current) {
