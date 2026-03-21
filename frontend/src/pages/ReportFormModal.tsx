@@ -29,10 +29,10 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
   if (!showReportForm || !selectedPlayer) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
-      <div className="bg-card border border-border-strong rounded-lg w-[90%] max-w-[1000px] max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] p-0 md:p-4">
+      <div className="bg-card border border-border-strong rounded-none md:rounded-lg w-full h-full md:w-[90%] md:max-w-[1000px] md:max-h-[90vh] md:h-auto overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-elevated px-6 py-4 border-b border-border-strong">
+        <div className="bg-elevated px-4 md:px-6 py-3 md:py-4 border-b border-border-strong">
           <h2 className="text-base font-medium text-text m-0">
             Reporte de Scouting Profesional
           </h2>
@@ -97,7 +97,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                 </div>
 
                 {/* Selector de Partido */}
-                <div className="col-span-2">
+                <div className="col-span-1 md:col-span-2">
                   <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
                     Seleccionar Partido Jugado
                   </label>
