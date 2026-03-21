@@ -904,8 +904,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   // ─── Render block content ───
   const renderBlock = (block: ReportBlock) => {
     switch (block.type) {
-      case 'header': return <HeaderBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.headerColor} />;
-      case 'text': return <TextBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.defaultTextColor} />;
+      case 'header': return <HeaderBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.headerColor} isSelected={selectedBlock === block.id} />;
+      case 'text': return <TextBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.defaultTextColor} isSelected={selectedBlock === block.id} />;
       case 'image': return <ImageBlock content={block.content} onChange={c => updateBlock(block.id, c)} onImageLoad={(w, h) => fitBlockToImage(block.id, w, h)} readOnly={false} />;
       case 'video': return <VideoBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;

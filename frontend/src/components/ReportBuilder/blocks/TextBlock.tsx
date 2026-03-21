@@ -7,9 +7,10 @@ interface Props {
   onChange: (content: TextContent) => void;
   readOnly?: boolean;
   defaultColor?: string;
+  isSelected?: boolean;
 }
 
-const TextBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColor = '#d1d5db' }) => {
+const TextBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColor = '#d1d5db', isSelected = false }) => {
   const ts = content.textStyle || {};
   const align = ts.align || 'left';
 
@@ -31,6 +32,7 @@ const TextBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColor 
       style={{ fontSize: '14px', color: defaultColor, lineHeight: 1.6 }}
       align={align}
       onAlignChange={a => onChange({ ...content, textStyle: { ...ts, align: a } })}
+      showToolbar={isSelected}
     />
   );
 };

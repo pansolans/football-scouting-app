@@ -8,6 +8,7 @@ interface Props {
   singleLine?: boolean;
   align?: 'left' | 'center' | 'right';
   onAlignChange?: (align: 'left' | 'center' | 'right') => void;
+  showToolbar?: boolean;
 }
 
 const COLORS = ['#ffffff', '#d1d5db', '#9ca3af', '#00bf63', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280'];
@@ -24,7 +25,7 @@ const FONTS = [
 ];
 
 const RichTextEditor: React.FC<Props> = ({
-  html, onChange, placeholder, style, singleLine, align = 'left', onAlignChange,
+  html, onChange, placeholder, style, singleLine, align = 'left', onAlignChange, showToolbar = true,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const lastHtml = useRef(html);
@@ -117,8 +118,8 @@ const RichTextEditor: React.FC<Props> = ({
 
   return (
     <div className="space-y-1.5 h-full">
-      {/* Toolbar */}
-      <div className="flex items-center gap-1 flex-wrap">
+      {/* Toolbar - only visible when selected */}
+      {showToolbar && <div className="flex items-center gap-1 flex-wrap">
         <button onMouseDown={pd} onClick={() => exec('bold')}
           className="px-1.5 py-0.5 rounded text-[9px] font-bold cursor-pointer border-none bg-white/5 text-text-muted hover:bg-white/15 hover:text-white">B</button>
         <button onMouseDown={pd} onClick={() => exec('italic')}
@@ -179,7 +180,7 @@ const RichTextEditor: React.FC<Props> = ({
         ))}
         <input type="color" onChange={e => { restoreSelection(); exec('foreColor', e.target.value); }}
           onMouseDown={e => e.stopPropagation()} className="w-5 h-4 rounded cursor-pointer border border-white/10" />
-      </div>
+      </div>}
       {/* Editor */}
       <div className="relative">
         <div

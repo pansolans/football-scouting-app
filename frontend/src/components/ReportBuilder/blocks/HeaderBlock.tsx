@@ -7,11 +7,12 @@ interface Props {
   onChange: (content: HeaderContent) => void;
   readOnly?: boolean;
   defaultColor?: string;
+  isSelected?: boolean;
 }
 
 const DEFAULT_SIZES: Record<number, number> = { 1: 30, 2: 24, 3: 18 };
 
-const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColor = '#ffffff' }) => {
+const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColor = '#ffffff', isSelected = false }) => {
   const ts = content.textStyle || {};
   const fontSize = DEFAULT_SIZES[content.level] || 24;
   const align = ts.align || 'left';
@@ -27,20 +28,22 @@ const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColo
 
   return (
     <div className="space-y-1 h-full">
-      {/* Level selector */}
-      <div className="flex items-center gap-1">
-        {[1, 2, 3].map(l => (
-          <button
-            key={l}
-            onClick={() => onChange({ ...content, level: l as 1 | 2 | 3 })}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-medium cursor-pointer border-none transition-colors ${
-              content.level === l ? 'bg-accent text-white' : 'bg-white/8 text-text-muted hover:bg-white/12'
-            }`}
-          >
-            H{l}
-          </button>
-        ))}
-      </div>
+      {/* Level selector - only when selected */}
+      {isSelected && (
+        <div className="flex items-center gap-1">
+          {[1, 2, 3].map(l => (
+            <button
+              key={l}
+              onClick={() => onChange({ ...content, level: l as 1 | 2 | 3 })}
+              className={`px-1.5 py-0.5 rounded text-[9px] font-medium cursor-pointer border-none transition-colors ${
+                content.level === l ? 'bg-accent text-white' : 'bg-white/8 text-text-muted hover:bg-white/12'
+              }`}
+            >
+              H{l}
+            </button>
+          ))}
+        </div>
+      )}
       <RichTextEditor
         html={content.text}
         onChange={text => onChange({ ...content, text })}
@@ -49,6 +52,7 @@ const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColo
         style={{ fontSize: `${fontSize}px`, color: defaultColor, fontWeight: 'bold' }}
         align={align}
         onAlignChange={a => onChange({ ...content, textStyle: { ...ts, align: a } })}
+        showToolbar={isSelected}
       />
     </div>
   );
