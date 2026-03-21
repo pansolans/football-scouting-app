@@ -1126,103 +1126,108 @@ def process_transfers(transfers_raw):
 
 
 async def process_career_data_enhanced(career_raw, wyscout_client):
-    """Enhanced career data processing - more entries, more stats"""
+    """Enhanced career data processing - parallel fetching for speed"""
     if not career_raw or "career" not in career_raw:
         return []
 
-    career_timeline = []
     career_list = career_raw["career"]
-
-    # Show ALL entries with appearances (not just last 6)
     entries_with_apps = [e for e in career_list if e.get("appearances", 0) > 0]
 
+    # Collect unique IDs to fetch
+    team_ids = set()
+    comp_ids = set()
+    season_ids = set()
+    for entry in entries_with_apps:
+        if entry.get("teamId"): team_ids.add(entry["teamId"])
+        cid = entry.get("competitionId")
+        if cid and cid not in competition_cache: comp_ids.add(cid)
+        sid = entry.get("seasonId")
+        if sid and sid not in season_cache: season_ids.add(sid)
+
+    # Fetch all teams, competitions, seasons in parallel
+    credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
+    encoded = base64.b64encode(credentials.encode()).decode()
+    headers = {"Authorization": f"Basic {encoded}"}
+
+    team_data_map = {}
+    comp_data_map = {}
+    season_data_map = {}
+
+    async def fetch_team(tid):
+        try:
+            data = await wyscout_client.get_team(tid)
+            if data: team_data_map[tid] = data
+        except:
+            pass
+
+    async def fetch_comp(cid):
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"https://apirest.wyscout.com/v3/competitions/{cid}", headers=headers, timeout=5.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    name = data.get("name", "Liga Desconocida")
+                    comp_data_map[cid] = name
+                    competition_cache[cid] = name
+        except:
+            pass
+
+    async def fetch_season(sid):
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"https://apirest.wyscout.com/v3/seasons/{sid}", headers=headers, timeout=5.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    name = data.get("name", "")
+                    if name:
+                        season_data_map[sid] = name
+                        season_cache[sid] = name
+        except:
+            pass
+
+    # Run ALL fetches in parallel
+    await asyncio.gather(
+        *[fetch_team(tid) for tid in team_ids],
+        *[fetch_comp(cid) for cid in comp_ids],
+        *[fetch_season(sid) for sid in season_ids],
+    )
+
+    # Build timeline using cached/fetched data
+    career_timeline = []
     for entry in entries_with_apps:
         team_id = entry.get("teamId")
         competition_id = entry.get("competitionId")
         season_id = entry.get("seasonId")
 
-        # TEAM
         team_name = "Equipo Desconocido"
         team_city = ""
         team_country = ""
-        try:
-            if team_id:
-                team_data = await wyscout_client.get_team(team_id)
-                if team_data:
-                    team_name = team_data.get("name", "Equipo Desconocido")
-                    team_city = team_data.get("city", "")
-                    area = team_data.get("area", {})
-                    team_country = area.get("name", "") if isinstance(area, dict) else ""
-        except:
-            pass
+        if team_id and team_id in team_data_map:
+            td = team_data_map[team_id]
+            team_name = td.get("name", "Equipo Desconocido")
+            team_city = td.get("city", "")
+            area = td.get("area", {})
+            team_country = area.get("name", "") if isinstance(area, dict) else ""
 
-        # COMPETITION
         competition_name = "Liga Desconocida"
         if competition_id:
-            if competition_id in competition_cache:
-                competition_name = competition_cache[competition_id]
-            else:
-                try:
-                    credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
-                    encoded = base64.b64encode(credentials.encode()).decode()
-                    headers = {"Authorization": f"Basic {encoded}"}
+            competition_name = competition_cache.get(competition_id, comp_data_map.get(competition_id, "Liga Desconocida"))
 
-                    async with httpx.AsyncClient() as client:
-                        response = await client.get(
-                            f"https://apirest.wyscout.com/v3/competitions/{competition_id}",
-                            headers=headers,
-                            timeout=5.0
-                        )
-
-                        if response.status_code == 200:
-                            comp_data = response.json()
-                            competition_name = comp_data.get("name", "Liga Desconocida")
-                            competition_cache[competition_id] = competition_name
-                except:
-                    competition_name = "Liga Desconocida"
-
-        # SEASON - try to get real season name
         season_name = ""
         if season_id:
-            if season_id in season_cache:
-                season_name = season_cache[season_id]
-            else:
-                try:
-                    credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
-                    encoded = base64.b64encode(credentials.encode()).decode()
-                    headers = {"Authorization": f"Basic {encoded}"}
+            season_name = season_cache.get(season_id, season_data_map.get(season_id, ""))
 
-                    async with httpx.AsyncClient() as client:
-                        response = await client.get(
-                            f"https://apirest.wyscout.com/v3/seasons/{season_id}",
-                            headers=headers,
-                            timeout=5.0
-                        )
-
-                        if response.status_code == 200:
-                            season_data = response.json()
-                            season_name = season_data.get("name", "")
-                            season_cache[season_id] = season_name
-                except:
-                    pass
-
-        # Fallback period estimation
         if not season_name:
-            if season_id and season_id > 190000:
-                season_name = "2024/25"
-            elif season_id and season_id > 185000:
-                season_name = "2023/24"
-            elif season_id and season_id > 180000:
-                season_name = "2022/23"
-            elif season_id and season_id > 175000:
-                season_name = "2021/22"
-            else:
-                season_name = "Unknown"
+            if season_id and season_id > 190000: season_name = "2024/25"
+            elif season_id and season_id > 185000: season_name = "2023/24"
+            elif season_id and season_id > 180000: season_name = "2022/23"
+            elif season_id and season_id > 175000: season_name = "2021/22"
+            else: season_name = "Unknown"
 
         appearances = entry.get("appearances", 0)
         minutes = entry.get("minutesPlayed", 0)
 
-        timeline_entry = {
+        career_timeline.append({
             "period": season_name,
             "season_id": season_id,
             "team_name": team_name,
@@ -1243,13 +1248,9 @@ async def process_career_data_enhanced(career_raw, wyscout_client):
             "substitute_on_bench": entry.get("substituteOnBench", 0),
             "penalties": entry.get("penalties", 0),
             "avg_minutes_per_game": round(minutes / max(appearances, 1))
-        }
+        })
 
-        career_timeline.append(timeline_entry)
-
-    # Sort by season_id descending (most recent first)
     career_timeline.sort(key=lambda x: x.get("season_id", 0) or 0, reverse=True)
-
     return career_timeline
 
 
