@@ -37,6 +37,12 @@ export const clubConfigs: Record<string, ClubConfig> = {
     logo: 'https://i.imgur.com/0qe0Wxg.jpeg',
     name: 'TAGENCY'
   },
+  'CA Colón': {
+    primaryColor: '#00668c',
+    secondaryColor: '#b6ccd8',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Escudo_del_C._A._Col%C3%B3n.png',
+    name: 'CA Colón'
+  },
 };
 
 export const getClubConfig = (organization: string): ClubConfig => {
