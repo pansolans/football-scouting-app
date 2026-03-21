@@ -84,9 +84,11 @@ export interface ScoutReport {
   tags?: string[];
   precio_estimado?: number;
   a_prestamo?: boolean;
-  prestamo_equipo?: string;
+  prestamo_club_dueno?: string;
   prestamo_inicio?: string;
   prestamo_fin?: string;
+  contrato_dueno_inicio?: string;
+  contrato_dueno_fin?: string;
 
   fecha_observacion?: string;
   tipo_visionado?: string;
@@ -147,9 +149,11 @@ export interface ScoutReportCreate {
   tags?: string[];
   precio_estimado?: number;
   a_prestamo?: boolean;
-  prestamo_equipo?: string;
+  prestamo_club_dueno?: string;
   prestamo_inicio?: string;
   prestamo_fin?: string;
+  contrato_dueno_inicio?: string;
+  contrato_dueno_fin?: string;
 
   fecha_observacion?: string;
   tipo_visionado?: string;

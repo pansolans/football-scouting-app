@@ -703,9 +703,11 @@ class ScoutReportCreate(BaseModel):
 
     # Préstamo
     a_prestamo: Optional[bool] = False
-    prestamo_equipo: Optional[str] = ""
+    prestamo_club_dueno: Optional[str] = ""
     prestamo_inicio: Optional[str] = ""
     prestamo_fin: Optional[str] = ""
+    contrato_dueno_inicio: Optional[str] = ""
+    contrato_dueno_fin: Optional[str] = ""
 
     # Metadata
     fecha_observacion: Optional[str] = ""
@@ -759,9 +761,11 @@ class ScoutReportResponse(BaseModel):
     precio_estimado: Optional[float] = None
 
     a_prestamo: Optional[bool] = False
-    prestamo_equipo: Optional[str] = None
+    prestamo_club_dueno: Optional[str] = None
     prestamo_inicio: Optional[str] = None
     prestamo_fin: Optional[str] = None
+    contrato_dueno_inicio: Optional[str] = None
+    contrato_dueno_fin: Optional[str] = None
 
     fecha_observacion: Optional[str] = None
     tipo_visionado: Optional[str] = None

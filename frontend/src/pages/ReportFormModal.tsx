@@ -449,7 +449,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                     <input
                       type="checkbox"
                       checked={reportForm.a_prestamo || false}
-                      onChange={(e) => setReportForm({ ...reportForm, a_prestamo: e.target.checked, ...(!e.target.checked && { prestamo_equipo: '', prestamo_inicio: '', prestamo_fin: '' }) })}
+                      onChange={(e) => setReportForm({ ...reportForm, a_prestamo: e.target.checked, ...(!e.target.checked && { prestamo_club_dueno: '', prestamo_inicio: '', prestamo_fin: '', contrato_dueno_inicio: '', contrato_dueno_fin: '' }) })}
                       className="w-4 h-4 accent-accent cursor-pointer"
                     />
                     <span className="text-[11px] uppercase tracking-widest text-text-muted font-medium">A Préstamo</span>
@@ -458,15 +458,15 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
 
                 {reportForm.a_prestamo && (
                   <>
-                    <div>
+                    <div className="col-span-1 md:col-span-2">
                       <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
-                        Equipo Destino
+                        Club Dueño del Pase
                       </label>
                       <input
                         type="text"
-                        placeholder="Nombre del equipo..."
-                        value={reportForm.prestamo_equipo || ''}
-                        onChange={(e) => setReportForm({ ...reportForm, prestamo_equipo: e.target.value })}
+                        placeholder="Nombre del club..."
+                        value={reportForm.prestamo_club_dueno || ''}
+                        onChange={(e) => setReportForm({ ...reportForm, prestamo_club_dueno: e.target.value })}
                         className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
                       />
                     </div>
@@ -489,6 +489,28 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                         type="date"
                         value={reportForm.prestamo_fin || ''}
                         onChange={(e) => setReportForm({ ...reportForm, prestamo_fin: e.target.value })}
+                        className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                        Inicio Contrato con Dueño del Pase
+                      </label>
+                      <input
+                        type="date"
+                        value={reportForm.contrato_dueno_inicio || ''}
+                        onChange={(e) => setReportForm({ ...reportForm, contrato_dueno_inicio: e.target.value })}
+                        className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                        Fin Contrato con Dueño del Pase
+                      </label>
+                      <input
+                        type="date"
+                        value={reportForm.contrato_dueno_fin || ''}
+                        onChange={(e) => setReportForm({ ...reportForm, contrato_dueno_fin: e.target.value })}
                         className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
                       />
                     </div>
