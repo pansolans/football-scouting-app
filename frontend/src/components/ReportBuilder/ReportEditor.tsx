@@ -226,56 +226,41 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   // ─── Import report data into current page ───
   const importReportData = () => {
     if (playerReports.length === 0) return;
-    const id = () => crypto.randomUUID();
     const nextY = getNextY();
 
-    // Build one big text with ALL report data
-    const lines: string[] = [];
+    // Build HTML directly
+    const parts: string[] = [];
     playerReports.forEach((r, idx) => {
-      if (idx > 0) lines.push('\n─────────────────────────────────');
-      lines.push(`REPORTE ${idx + 1}${r.fecha_observacion ? ` — ${r.fecha_observacion}` : ''}${r.competicion ? ` (${r.competicion})` : ''}`);
-      lines.push(`Rating General: ${r.overall_rating}/10`);
-      lines.push('');
-      lines.push(`TECNICO: Tecnica ${r.tecnica_individual}/10 | Pase ${r.pase}/10 | Primer Toque ${r.primer_toque}/10 | Control ${r.control_balon}/10 | Vision ${r.vision_juego}/10`);
-      lines.push(`FISICO: Velocidad ${r.velocidad}/10 | Resistencia ${r.resistencia}/10 | Fuerza ${r.fuerza}/10 | Salto ${r.salto}/10 | Agilidad ${r.agilidad}/10`);
-      lines.push(`MENTAL: Tactica ${r.inteligencia_tactica}/10 | Posicionamiento ${r.posicionamiento}/10 | Concentracion ${r.concentracion}/10 | Liderazgo ${r.liderazgo}/10 | Equipo ${r.trabajo_equipo}/10`);
-      if (r.fortalezas) lines.push(`\nFORTALEZAS: ${r.fortalezas}`);
-      if (r.debilidades) lines.push(`DEBILIDADES: ${r.debilidades}`);
-      if (r.notes) lines.push(`\nNOTAS: ${r.notes}`);
-      if (r.recomendacion) lines.push(`RECOMENDACION: ${r.recomendacion}`);
-      if (r.condicion_mercado) lines.push(`CONDICION DE MERCADO: ${r.condicion_mercado}`);
+      if (idx > 0) parts.push('<br>─────────────────────────────────<br>');
+      parts.push(`<b>REPORTE ${idx + 1}</b>${r.fecha_observacion ? ` — ${r.fecha_observacion}` : ''}${r.competicion ? ` (${r.competicion})` : ''}<br>`);
+      parts.push(`Rating General: <b>${r.overall_rating}/10</b><br><br>`);
+      parts.push(`<b>TECNICO:</b> Tecnica ${r.tecnica_individual}/10 | Pase ${r.pase}/10 | Primer Toque ${r.primer_toque}/10 | Control ${r.control_balon}/10 | Vision ${r.vision_juego}/10<br>`);
+      parts.push(`<b>FISICO:</b> Velocidad ${r.velocidad}/10 | Resistencia ${r.resistencia}/10 | Fuerza ${r.fuerza}/10 | Salto ${r.salto}/10 | Agilidad ${r.agilidad}/10<br>`);
+      parts.push(`<b>MENTAL:</b> Tactica ${r.inteligencia_tactica}/10 | Posicionamiento ${r.posicionamiento}/10 | Concentracion ${r.concentracion}/10 | Liderazgo ${r.liderazgo}/10 | Equipo ${r.trabajo_equipo}/10<br>`);
+      if (r.fortalezas) parts.push(`<br><b>FORTALEZAS:</b> ${r.fortalezas}<br>`);
+      if (r.debilidades) parts.push(`<b>DEBILIDADES:</b> ${r.debilidades}<br>`);
+      if (r.notes) parts.push(`<br><b>NOTAS:</b> ${r.notes}<br>`);
+      if (r.recomendacion) parts.push(`<b>RECOMENDACION:</b> ${r.recomendacion}<br>`);
+      if (r.condicion_mercado) parts.push(`<b>CONDICION DE MERCADO:</b> ${r.condicion_mercado}<br>`);
       if (r.condicion_mercado === 'A prestamo') {
-        if (r.prestamo_club_dueno) lines.push(`CLUB DUEÑO DEL PASE: ${r.prestamo_club_dueno}`);
-        if (r.prestamo_inicio) lines.push(`PRESTAMO: ${r.prestamo_inicio} a ${r.prestamo_fin || '?'}`);
-        if (r.contrato_dueno_inicio) lines.push(`CONTRATO DUEÑO: ${r.contrato_dueno_inicio} a ${r.contrato_dueno_fin || '?'}`);
+        if (r.prestamo_club_dueno) parts.push(`<b>CLUB DUEÑO DEL PASE:</b> ${r.prestamo_club_dueno}<br>`);
+        if (r.prestamo_inicio) parts.push(`<b>PRESTAMO:</b> ${r.prestamo_inicio} a ${r.prestamo_fin || '?'}<br>`);
+        if (r.contrato_dueno_inicio) parts.push(`<b>CONTRATO DUEÑO:</b> ${r.contrato_dueno_inicio} a ${r.contrato_dueno_fin || '?'}<br>`);
       }
-      if (r.precio_estimado) lines.push(`PRECIO ESTIMADO: EUR ${r.precio_estimado}M`);
-      if (r.agente) lines.push(`AGENTE: ${r.agente}`);
+      if (r.precio_estimado) parts.push(`<b>PRECIO ESTIMADO:</b> EUR ${r.precio_estimado}M<br>`);
+      if (r.agente) parts.push(`<b>AGENTE:</b> ${r.agente}<br>`);
     });
 
-    // Convert plain text to HTML (RichTextEditor expects HTML)
-    const textHtml = lines.join('\n').replace(/\n/g, '<br>');
+    const textHtml = parts.join('');
+    const blockId = crypto.randomUUID();
+    const textBlock: ReportBlock = {
+      id: blockId, type: 'text',
+      content: { text: textHtml },
+      style: { x: 3, y: nextY, w: 94, h: Math.min(90, 97 - nextY) },
+    };
 
-    // Page 1: header + radar on current page
-    const radarBlocks: ReportBlock[] = [
-      { id: id(), type: 'header', content: { text: `Datos de ${playerReports.length} Reporte${playerReports.length > 1 ? 's' : ''}`, level: 1 }, style: { x: 3, y: nextY, w: 94, h: 7 } },
-      { id: id(), type: 'stats_table', content: { reportIds: [], categories: ['tecnico', 'fisico', 'mental'] }, style: { x: 3, y: nextY + 9, w: 94, h: 40 } },
-    ];
-
-    // Text block: if enough space on current page, add here; otherwise new page
-    const textStartY = nextY + 51;
-    if (textStartY < 55) {
-      radarBlocks.push({ id: id(), type: 'text', content: { text: textHtml }, style: { x: 3, y: textStartY, w: 94, h: Math.min(45, 97 - textStartY) } });
-      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...radarBlocks] } : p));
-    } else {
-      setPages(prev => {
-        const updated = prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...radarBlocks] } : p);
-        const newPage: ReportPage = { id: crypto.randomUUID(), blocks: [
-          { id: id(), type: 'text', content: { text: textHtml }, style: { x: 3, y: 3, w: 94, h: 90 } },
-        ]};
-        return [...updated, newPage];
-      });
-    }
+    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, textBlock] } : p));
+    setSelectedBlock(blockId);
   };
 
   // ─── Import player profile as image ───
