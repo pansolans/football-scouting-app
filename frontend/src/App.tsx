@@ -37,6 +37,7 @@ const MainApp: React.FC = () => {
   const userClub = user?.organization || 'Club Atlético Banfield';
   const currentClub = getClubConfig(userClub);
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -844,7 +845,7 @@ const clearAllFilters = () => {
   return (
     <div className="min-h-screen bg-surface flex">
       {/* Sidebar */}
-      <aside className="w-[240px] sidebar-bg border-r border-border-strong fixed top-0 left-0 h-screen flex flex-col z-50">
+      <aside className={`w-[240px] sidebar-bg border-r border-border-strong fixed top-0 left-0 h-screen flex flex-col z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         {/* Logo area */}
         <div className="px-5 py-6 border-b border-border relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-accent/5 to-transparent" />
@@ -872,7 +873,7 @@ const clearAllFilters = () => {
             {navItems.map(item => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as any)}
+                onClick={() => { setActiveTab(item.id as any); setSidebarOpen(false); }}
                 className={`w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 border-none cursor-pointer ${
                   activeTab === item.id
                     ? 'sidebar-nav-active text-accent-light'
@@ -923,10 +924,18 @@ const clearAllFilters = () => {
         </div>
       </aside>
 
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main content area */}
-      <div className="ml-[240px] flex-1 min-h-screen relative">
+      <div className="ml-0 md:ml-[240px] flex-1 min-h-screen relative">
         {/* Background image layer - persistent across all tabs */}
-        <div className="fixed inset-0 ml-[240px] pointer-events-none z-0">
+        <div className="fixed inset-0 ml-0 md:ml-[240px] pointer-events-none z-0">
           <div
             className="absolute inset-0"
             style={{
@@ -941,8 +950,18 @@ const clearAllFilters = () => {
         </div>
 
         {/* Top bar */}
-        <header className="h-16 border-b border-border header-gradient sticky top-0 z-40 flex items-center justify-between px-8">
+        <header className="h-16 border-b border-border header-gradient sticky top-0 z-40 flex items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-3">
+            <button
+              className="md:hidden text-text p-2 -ml-2 mr-1 bg-transparent border-none cursor-pointer"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
             <div className="w-1 h-6 rounded-full bg-gradient-to-b from-accent to-accent-dark" />
             <h2 className="text-base font-bold text-text tracking-wide uppercase">
               {navItems.find(n => n.id === activeTab)?.label || 'Dashboard'}
@@ -956,7 +975,7 @@ const clearAllFilters = () => {
         </header>
 
         {/* Page content */}
-        <main className="px-10 py-8 animate-fade-in relative z-10 min-h-[calc(100vh-64px)] max-w-[1200px] mx-auto">
+        <main className="px-4 md:px-10 py-4 md:py-8 animate-fade-in relative z-10 min-h-[calc(100vh-64px)] max-w-[1200px] mx-auto">
           {activeTab === 'dashboard' && (
             <DashboardTab
               totalReports={totalReports}
