@@ -12,6 +12,17 @@ interface Props {
 
 const COLORS = ['#ffffff', '#d1d5db', '#9ca3af', '#00bf63', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280'];
 
+const FONTS = [
+  { label: 'Sans', value: 'system-ui, -apple-system, sans-serif' },
+  { label: 'Serif', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Mono', value: '"Courier New", Courier, monospace' },
+  { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Verdana', value: 'Verdana, Geneva, sans-serif' },
+  { label: 'Roboto', value: 'Roboto, sans-serif' },
+  { label: 'Oswald', value: 'Oswald, sans-serif' },
+  { label: 'Playfair', value: '"Playfair Display", serif' },
+];
+
 const RichTextEditor: React.FC<Props> = ({
   html, onChange, placeholder, style, singleLine, align = 'left', onAlignChange,
 }) => {
@@ -95,6 +106,12 @@ const RichTextEditor: React.FC<Props> = ({
     sync();
   };
 
+  const applyFontFamily = (fontFamily: string) => {
+    restoreSelection();
+    document.execCommand('fontName', false, fontFamily);
+    sync();
+  };
+
   // Prevent default on mouseDown to keep editor focused
   const pd = (e: React.MouseEvent) => e.preventDefault();
 
@@ -136,6 +153,19 @@ const RichTextEditor: React.FC<Props> = ({
           title="Tamaño"
         />
         <span className="text-[8px] text-white/30">px</span>
+        <span className="w-px h-4 bg-white/10" />
+        {/* Font family */}
+        <select
+          onChange={e => { restoreSelection(); applyFontFamily(e.target.value); }}
+          onMouseDown={e => e.stopPropagation()}
+          className="px-1 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] text-white outline-none cursor-pointer"
+          defaultValue=""
+        >
+          <option value="" disabled>Fuente</option>
+          {FONTS.map(f => (
+            <option key={f.label} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
+          ))}
+        </select>
         <span className="w-px h-4 bg-white/10" />
         {/* Colors */}
         {COLORS.map(c => (

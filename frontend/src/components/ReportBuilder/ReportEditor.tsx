@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BuilderReport, ReportBlock, ReportPage, BlockType, BlockStyle, DEFAULT_BLOCK_STYLE, createBlock, createPage, BLOCK_LABELS } from './types';
+import { BuilderReport, ReportBlock, ReportPage, BlockType, BlockStyle, DEFAULT_BLOCK_STYLE, createBlock, createPage, BLOCK_LABELS, PageTheme, DEFAULT_THEME } from './types';
 import { reportBuilderService } from '../../services/reportBuilderService';
 import { scoutingService, playerService, ScoutReport } from '../../services/api';
 import BlockPalette from './BlockPalette';
@@ -59,6 +59,9 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   const [saved, setSaved] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const theme: PageTheme = { ...DEFAULT_THEME, ...report.page_theme };
+  const setTheme = (partial: Partial<PageTheme>) => setReport(prev => ({ ...prev, page_theme: { ...theme, ...partial } }));
 
   const pages = report.pages || [{ id: crypto.randomUUID(), blocks: report.blocks }];
   const coverBlocks = report.cover_data.blocks || [];
@@ -342,7 +345,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       container.innerHTML = html;
 
       const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+      const canvas = await html2canvas(container, { scale: 2, backgroundColor: theme.pageBg, useCORS: true, allowTaint: true });
       const dataUrl = canvas.toDataURL('image/png');
       document.body.removeChild(container);
 
@@ -695,7 +698,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       return `<div style="${pos}">${inner}</div>`;
     };
 
-    return `<div style="width:1588px;height:2246px;background:#0d0d10;position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
+    return `<div style="width:1588px;height:2246px;background:${theme.pageBg};position:relative;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
       ${c.backgroundImage ? `<div style="position:absolute;inset:0;background-image:url(${c.backgroundImage});background-size:${c.bgZoom ?? 100}%;background-position:${c.bgPositionX ?? 50}% ${c.bgPositionY ?? 50}%;background-repeat:no-repeat;"></div>` : ''}
       <div style="position:absolute;inset:0;background:rgba(0,0,0,${overlay});"></div>
       ${cb.map(blockToHtml).join('')}
@@ -760,7 +763,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       return `<div style="${pos}">${inner}</div>`;
     };
 
-    return `<div style="width:1588px;height:2246px;background:#0d0d10;font-family:'Segoe UI',Arial,sans-serif;color:#fff;position:relative;box-sizing:border-box;">
+    return `<div style="width:1588px;height:2246px;background:${theme.pageBg};font-family:'Segoe UI',Arial,sans-serif;color:${theme.defaultTextColor};position:relative;box-sizing:border-box;">
       ${page.blocks.map(blockToHtml).join('')}
       <div style="position:absolute;bottom:${px(12)};right:${px(24)};font-size:${px(10)};color:#4b5563;">Pagina ${pageIdx + 1} de ${totalPages}</div>
     </div>`;
@@ -870,7 +873,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         container.innerHTML = buildCoverHtml();
         const el = container.firstElementChild as HTMLElement;
         await preloadImages(el);
-        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: theme.pageBg, useCORS: true, allowTaint: true });
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
         // Overlay cover image blocks at full quality
         await overlayImages(report.cover_data.blocks || []);
@@ -882,7 +885,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         container.innerHTML = buildPageHtml(pages[i], i, totalPages);
         const el = container.firstElementChild as HTMLElement;
         await preloadImages(el);
-        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: theme.pageBg, useCORS: true, allowTaint: true });
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
         // Overlay page image blocks at full quality
         await overlayImages(pages[i].blocks);
@@ -901,8 +904,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   // ─── Render block content ───
   const renderBlock = (block: ReportBlock) => {
     switch (block.type) {
-      case 'header': return <HeaderBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
-      case 'text': return <TextBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
+      case 'header': return <HeaderBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.headerColor} />;
+      case 'text': return <TextBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.defaultTextColor} />;
       case 'image': return <ImageBlock content={block.content} onChange={c => updateBlock(block.id, c)} onImageLoad={(w, h) => fitBlockToImage(block.id, w, h)} readOnly={false} />;
       case 'video': return <VideoBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;
@@ -1163,6 +1166,44 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
             );
           })()}
 
+          {/* Theme editor */}
+          <div className="card-elevated rounded-xl p-3 space-y-3">
+            <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium">Tema del Informe</h4>
+            {([
+              { key: 'pageBg' as const, label: 'Fondo de Página' },
+              { key: 'headerColor' as const, label: 'Color Títulos' },
+              { key: 'defaultTextColor' as const, label: 'Color Texto' },
+              { key: 'accentColor' as const, label: 'Color Acento' },
+            ]).map(({ key, label }) => (
+              <div key={key}>
+                <label className="text-[10px] uppercase tracking-widest text-white/50 font-medium block mb-1">{label}</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap gap-1">
+                    {['#0d0d10','#111827','#1e1b2e','#0f172a','#1a1a2e','#ffffff','#f8f9fa','#f0f0f0','#0a2540','#1b1b1b'].map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setTheme({ [key]: c })}
+                        className="w-5 h-5 rounded cursor-pointer border-none transition-transform hover:scale-110"
+                        style={{
+                          backgroundColor: c,
+                          outline: theme[key] === c ? '2px solid #00bf63' : '1px solid rgba(255,255,255,0.2)',
+                          outlineOffset: '1px',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <input type="color" value={theme[key]} onChange={e => setTheme({ [key]: e.target.value })} className="w-7 h-6 rounded cursor-pointer border border-white/10 flex-shrink-0" />
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={() => setReport(prev => ({ ...prev, page_theme: undefined }))}
+              className="w-full py-1.5 px-3 bg-white/5 border border-white/10 text-text-muted rounded-md cursor-pointer text-[10px] hover:bg-white/10 hover:text-white transition-colors"
+            >
+              Restablecer tema por defecto
+            </button>
+          </div>
+
           {/* Info */}
           <div className="card-elevated rounded-xl p-3">
             <p className="text-[11px] text-text-secondary">{activePage >= 0 ? `${currentPage.blocks.length} objetos en pag. ${activePage + 1}` : 'Portada seleccionada'}</p>
@@ -1175,8 +1216,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         <div className="flex-1 min-w-0">
           <div
             ref={canvasRef}
-            className="relative bg-[#0d0d10] rounded-xl border-2 border-border-strong overflow-hidden"
-            style={{ aspectRatio: '210/297' }}
+            className="relative rounded-xl border-2 border-border-strong overflow-hidden"
+            style={{ aspectRatio: '210/297', backgroundColor: theme.pageBg }}
             onClick={() => setSelectedBlock(null)}
           >
             {/* ─── Cover background (only on cover page) ─── */}

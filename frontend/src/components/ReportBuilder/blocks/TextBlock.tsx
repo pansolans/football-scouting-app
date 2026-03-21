@@ -6,9 +6,10 @@ interface Props {
   content: TextContent;
   onChange: (content: TextContent) => void;
   readOnly?: boolean;
+  defaultColor?: string;
 }
 
-const TextBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
+const TextBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColor = '#d1d5db' }) => {
   const ts = content.textStyle || {};
   const align = ts.align || 'left';
 
@@ -16,7 +17,7 @@ const TextBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
     return (
       <div
         className="whitespace-pre-wrap"
-        style={{ color: '#d1d5db', fontSize: '14px', lineHeight: 1.6, textAlign: align }}
+        style={{ color: defaultColor, fontSize: '14px', lineHeight: 1.6, textAlign: align }}
         dangerouslySetInnerHTML={{ __html: content.text }}
       />
     );
@@ -27,7 +28,7 @@ const TextBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
       html={content.text}
       onChange={text => onChange({ ...content, text })}
       placeholder="Escribe aqui..."
-      style={{ fontSize: '14px', color: '#d1d5db', lineHeight: 1.6 }}
+      style={{ fontSize: '14px', color: defaultColor, lineHeight: 1.6 }}
       align={align}
       onAlignChange={a => onChange({ ...content, textStyle: { ...ts, align: a } })}
     />

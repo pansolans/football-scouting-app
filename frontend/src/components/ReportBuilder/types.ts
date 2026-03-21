@@ -68,6 +68,20 @@ export interface CoverData {
   titleAlign?: 'left' | 'center' | 'right';
 }
 
+export interface PageTheme {
+  pageBg: string;         // page background color
+  defaultTextColor: string;  // default text color
+  headerColor: string;       // header text color
+  accentColor: string;       // accent/highlight color
+}
+
+export const DEFAULT_THEME: PageTheme = {
+  pageBg: '#0d0d10',
+  defaultTextColor: '#d1d5db',
+  headerColor: '#ffffff',
+  accentColor: '#00bf63',
+};
+
 export interface BuilderReport {
   id?: string;
   title: string;
@@ -77,6 +91,7 @@ export interface BuilderReport {
   cover_data: CoverData;
   blocks: ReportBlock[];       // kept for backwards compat
   pages?: ReportPage[];        // new page-based layout
+  page_theme?: PageTheme;
   is_template: boolean;
   template_name?: string;
   created_by?: string;

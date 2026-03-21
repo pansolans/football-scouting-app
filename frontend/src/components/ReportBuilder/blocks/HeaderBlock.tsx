@@ -6,11 +6,12 @@ interface Props {
   content: HeaderContent;
   onChange: (content: HeaderContent) => void;
   readOnly?: boolean;
+  defaultColor?: string;
 }
 
 const DEFAULT_SIZES: Record<number, number> = { 1: 30, 2: 24, 3: 18 };
 
-const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
+const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly, defaultColor = '#ffffff' }) => {
   const ts = content.textStyle || {};
   const fontSize = DEFAULT_SIZES[content.level] || 24;
   const align = ts.align || 'left';
@@ -18,7 +19,7 @@ const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
   if (readOnly) {
     return (
       <div
-        style={{ fontSize: `${fontSize}px`, fontWeight: 'bold', color: '#ffffff', textAlign: align }}
+        style={{ fontSize: `${fontSize}px`, fontWeight: 'bold', color: defaultColor, textAlign: align }}
         dangerouslySetInnerHTML={{ __html: content.text }}
       />
     );
@@ -45,7 +46,7 @@ const HeaderBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
         onChange={text => onChange({ ...content, text })}
         placeholder="Escribe el titulo..."
         singleLine
-        style={{ fontSize: `${fontSize}px`, color: '#ffffff', fontWeight: 'bold' }}
+        style={{ fontSize: `${fontSize}px`, color: defaultColor, fontWeight: 'bold' }}
         align={align}
         onAlignChange={a => onChange({ ...content, textStyle: { ...ts, align: a } })}
       />
