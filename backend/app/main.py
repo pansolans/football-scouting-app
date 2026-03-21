@@ -700,7 +700,13 @@ class ScoutReportCreate(BaseModel):
     agente: Optional[str] = ""
     tags: Optional[List[str]] = []  # ["Promesa", "Listo para primer equipo", etc]
     precio_estimado: Optional[float] = None
-    
+
+    # Préstamo
+    a_prestamo: Optional[bool] = False
+    prestamo_equipo: Optional[str] = ""
+    prestamo_inicio: Optional[str] = ""
+    prestamo_fin: Optional[str] = ""
+
     # Metadata
     fecha_observacion: Optional[str] = ""
     tipo_visionado: Optional[str] = "" 
@@ -751,7 +757,12 @@ class ScoutReportResponse(BaseModel):
     agente: Optional[str] = None
     tags: Optional[List[str]] = []
     precio_estimado: Optional[float] = None
-    
+
+    a_prestamo: Optional[bool] = False
+    prestamo_equipo: Optional[str] = None
+    prestamo_inicio: Optional[str] = None
+    prestamo_fin: Optional[str] = None
+
     fecha_observacion: Optional[str] = None
     tipo_visionado: Optional[str] = None
     competicion: Optional[str] = None

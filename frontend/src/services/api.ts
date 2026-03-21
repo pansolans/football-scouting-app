@@ -83,7 +83,11 @@ export interface ScoutReport {
   agente?: string;
   tags?: string[];
   precio_estimado?: number;
-  
+  a_prestamo?: boolean;
+  prestamo_equipo?: string;
+  prestamo_inicio?: string;
+  prestamo_fin?: string;
+
   fecha_observacion?: string;
   tipo_visionado?: string;
   competicion?: string;
@@ -91,7 +95,7 @@ export interface ScoutReport {
   resultado?: string;
   minutos_observados?: number;
   video_url?: string;
-  
+
   // AGREGAR ESTOS A ScoutReport:
 created_by?: string;
 created_by_name?: string;
@@ -142,9 +146,13 @@ export interface ScoutReportCreate {
   agente?: string;
   tags?: string[];
   precio_estimado?: number;
-  
+  a_prestamo?: boolean;
+  prestamo_equipo?: string;
+  prestamo_inicio?: string;
+  prestamo_fin?: string;
+
   fecha_observacion?: string;
-  tipo_visionado?: string; 
+  tipo_visionado?: string;
   competicion?: string;
   rival?: string;
   resultado?: string;

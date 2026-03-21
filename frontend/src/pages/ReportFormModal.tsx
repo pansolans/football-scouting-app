@@ -444,6 +444,57 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                   </select>
                 </div>
 
+                <div className="col-span-1 md:col-span-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={reportForm.a_prestamo || false}
+                      onChange={(e) => setReportForm({ ...reportForm, a_prestamo: e.target.checked, ...(!e.target.checked && { prestamo_equipo: '', prestamo_inicio: '', prestamo_fin: '' }) })}
+                      className="w-4 h-4 accent-accent cursor-pointer"
+                    />
+                    <span className="text-[11px] uppercase tracking-widest text-text-muted font-medium">A Préstamo</span>
+                  </label>
+                </div>
+
+                {reportForm.a_prestamo && (
+                  <>
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                        Equipo Destino
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Nombre del equipo..."
+                        value={reportForm.prestamo_equipo || ''}
+                        onChange={(e) => setReportForm({ ...reportForm, prestamo_equipo: e.target.value })}
+                        className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                        Inicio Préstamo
+                      </label>
+                      <input
+                        type="date"
+                        value={reportForm.prestamo_inicio || ''}
+                        onChange={(e) => setReportForm({ ...reportForm, prestamo_inicio: e.target.value })}
+                        className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                        Fin Préstamo
+                      </label>
+                      <input
+                        type="date"
+                        value={reportForm.prestamo_fin || ''}
+                        onChange={(e) => setReportForm({ ...reportForm, prestamo_fin: e.target.value })}
+                        className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                      />
+                    </div>
+                  </>
+                )}
+
                 <div>
                   <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
                     Precio Estimado (EUR M)
