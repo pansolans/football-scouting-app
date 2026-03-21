@@ -5,9 +5,14 @@ interface Props {
   content: BannerContent;
   onChange: (content: BannerContent) => void;
   readOnly?: boolean;
+  theme?: { pageBg: string; headerColor: string; defaultTextColor: string; accentColor: string };
 }
 
-const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
+const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly, theme }) => {
+  const ac = theme?.accentColor || '#00bf63';
+  const hc = theme?.headerColor || '#ffffff';
+  const tc = theme?.defaultTextColor || 'rgba(255,255,255,0.5)';
+  const bg = theme?.pageBg || '#0d0d10';
   const logoRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
 
@@ -23,8 +28,8 @@ const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
     <div
       className="w-full h-full rounded-lg flex items-center gap-3 px-4"
       style={{
-        background: 'linear-gradient(135deg, rgba(0,191,99,0.2), #0d0d10, rgba(59,130,246,0.1))',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: `linear-gradient(135deg, ${ac}33, ${bg}, ${ac}1a)`,
+        border: `1px solid ${ac}33`,
       }}
     >
       {/* Logo */}
@@ -49,9 +54,9 @@ const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
       <div className="flex-1 min-w-0">
         {readOnly ? (
           <>
-            <div className="text-white font-bold text-xs truncate">{content.title}</div>
-            {content.subtitle && <div className="text-white/50 text-[9px] truncate">{content.subtitle}</div>}
-            {content.date && <div className="text-white/30 text-[8px]">{content.date}</div>}
+            <div className="font-bold text-xs truncate" style={{ color: hc }}>{content.title}</div>
+            {content.subtitle && <div className="text-[9px] truncate" style={{ color: tc }}>{content.subtitle}</div>}
+            {content.date && <div className="text-[8px]" style={{ color: tc, opacity: 0.6 }}>{content.date}</div>}
           </>
         ) : (
           <>
@@ -60,21 +65,24 @@ const BannerBlock: React.FC<Props> = ({ content, onChange, readOnly }) => {
               value={content.title}
               onChange={e => onChange({ ...content, title: e.target.value })}
               placeholder="Titulo"
-              className="w-full bg-transparent border-none outline-none text-white font-bold text-xs placeholder:text-white/30"
+              className="w-full bg-transparent border-none outline-none font-bold text-xs"
+              style={{ color: hc }}
             />
             <input
               type="text"
               value={content.subtitle || ''}
               onChange={e => onChange({ ...content, subtitle: e.target.value })}
               placeholder="Subtitulo (opcional)"
-              className="w-full bg-transparent border-none outline-none text-white/50 text-[9px] placeholder:text-white/20 mt-0.5"
+              className="w-full bg-transparent border-none outline-none text-[9px] mt-0.5"
+              style={{ color: tc }}
             />
             <input
               type="text"
               value={content.date || ''}
               onChange={e => onChange({ ...content, date: e.target.value })}
               placeholder="Fecha u otro texto (opcional)"
-              className="w-full bg-transparent border-none outline-none text-white/30 text-[8px] placeholder:text-white/15 mt-0.5"
+              className="w-full bg-transparent border-none outline-none text-[8px] mt-0.5"
+              style={{ color: tc, opacity: 0.6 }}
             />
           </>
         )}

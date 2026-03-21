@@ -917,7 +917,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;
       case 'divider': return <div style={{ borderTop: `3px solid ${theme.accentColor}`, width: '100%', position: 'absolute', top: '50%' }} />;
       case 'shape': return <ShapeBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
-      case 'banner': return <BannerBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
+      case 'banner': return <BannerBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} theme={theme} />;
       default: return null;
     }
   };
