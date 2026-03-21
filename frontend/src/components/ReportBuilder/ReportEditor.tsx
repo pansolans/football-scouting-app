@@ -298,45 +298,51 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
 
       // Build HTML for profile card
       const container = document.createElement('div');
-      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;background:#0d0d10;color:#e5e5e5;font-family:system-ui,-apple-system,sans-serif;padding:32px;';
+      container.style.cssText = `position:fixed;left:-9999px;top:0;width:800px;background:${theme.pageBg};color:${theme.defaultTextColor};font-family:system-ui,-apple-system,sans-serif;padding:32px;`;
       document.body.appendChild(container);
 
       const foot = info.foot === 'right' ? 'Derecho' : info.foot === 'left' ? 'Izquierdo' : info.foot === 'both' ? 'Ambidiestro' : info.foot || '-';
       const age = info.birthDate ? Math.floor((Date.now() - new Date(info.birthDate).getTime()) / 31557600000) : '-';
       const teamName = typeof info.currentTeam === 'object' ? info.currentTeam?.name : (contract?.team || '-');
 
+      const ac = theme.accentColor;
+      const hc = theme.headerColor;
+      const tc = theme.defaultTextColor;
+      const cardBg = theme.pageBg === '#ffffff' || theme.pageBg === '#f8f9fa' || theme.pageBg === '#f0f0f0' ? '#e5e7eb' : '#1a1a1f';
+      const borderCol = theme.pageBg === '#ffffff' || theme.pageBg === '#f8f9fa' || theme.pageBg === '#f0f0f0' ? '#d1d5db' : '#2a2a2f';
+
       let html = `
         <div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:24px;">
-          ${playerImgDataUrl ? `<img src="${playerImgDataUrl}" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:2px solid #10b981;" />` : ''}
+          ${playerImgDataUrl ? `<img src="${playerImgDataUrl}" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:2px solid ${ac};" />` : ''}
           <div style="flex:1;">
-            <div style="font-size:28px;font-weight:bold;color:#fff;margin-bottom:4px;">${info.shortName || info.firstName + ' ' + info.lastName}</div>
-            <div style="font-size:14px;color:#10b981;margin-bottom:12px;">${info.role?.name || '-'} · ${teamName}</div>
+            <div style="font-size:28px;font-weight:bold;color:${hc};margin-bottom:4px;">${info.shortName || info.firstName + ' ' + info.lastName}</div>
+            <div style="font-size:14px;color:${ac};margin-bottom:12px;">${info.role?.name || '-'} · ${teamName}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">EDAD</span><br/><span style="font-size:16px;font-weight:600;">${age}</span></div>
-              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">ALTURA</span><br/><span style="font-size:16px;font-weight:600;">${info.height || '-'} cm</span></div>
-              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">PIE</span><br/><span style="font-size:16px;font-weight:600;">${foot}</span></div>
-              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">NACIONALIDAD</span><br/><span style="font-size:16px;font-weight:600;">${info.passportArea?.name || info.birthArea?.name || '-'}</span></div>
-              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">VALOR</span><br/><span style="font-size:16px;font-weight:600;">${contract?.market_value ? `EUR ${(contract.market_value / 1000000).toFixed(1)}M` : '-'}</span></div>
-              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">CONTRATO</span><br/><span style="font-size:16px;font-weight:600;">${contract?.contract_expires ? new Date(contract.contract_expires).toLocaleDateString('es-ES') : '-'}</span></div>
+              <div style="background:${cardBg};padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">EDAD</span><br/><span style="font-size:16px;font-weight:600;color:${tc};">${age}</span></div>
+              <div style="background:${cardBg};padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">ALTURA</span><br/><span style="font-size:16px;font-weight:600;color:${tc};">${info.height || '-'} cm</span></div>
+              <div style="background:${cardBg};padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">PIE</span><br/><span style="font-size:16px;font-weight:600;color:${tc};">${foot}</span></div>
+              <div style="background:${cardBg};padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">NACIONALIDAD</span><br/><span style="font-size:16px;font-weight:600;color:${tc};">${info.passportArea?.name || info.birthArea?.name || '-'}</span></div>
+              <div style="background:${cardBg};padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">VALOR</span><br/><span style="font-size:16px;font-weight:600;color:${tc};">${contract?.market_value ? `EUR ${(contract.market_value / 1000000).toFixed(1)}M` : '-'}</span></div>
+              <div style="background:${cardBg};padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">CONTRATO</span><br/><span style="font-size:16px;font-weight:600;color:${tc};">${contract?.contract_expires ? new Date(contract.contract_expires).toLocaleDateString('es-ES') : '-'}</span></div>
             </div>
           </div>
         </div>`;
 
       if (career && career.length > 0) {
-        html += `<div style="margin-bottom:16px;"><div style="font-size:13px;font-weight:600;color:#10b981;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Carrera</div>`;
-        html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <tr style="color:#888;border-bottom:1px solid #2a2a2f;"><td style="padding:6px 8px;">Temporada</td><td style="padding:6px 8px;">Equipo</td><td style="padding:6px 8px;">Competición</td><td style="padding:6px 8px;text-align:center;">PJ</td><td style="padding:6px 8px;text-align:center;">Goles</td><td style="padding:6px 8px;text-align:center;">Asist.</td><td style="padding:6px 8px;text-align:center;">Min</td></tr>`;
+        html += `<div style="margin-bottom:16px;"><div style="font-size:13px;font-weight:600;color:${ac};margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Carrera</div>`;
+        html += `<table style="width:100%;border-collapse:collapse;font-size:13px;color:${tc};">
+          <tr style="color:#888;border-bottom:1px solid ${borderCol};"><td style="padding:6px 8px;">Temporada</td><td style="padding:6px 8px;">Equipo</td><td style="padding:6px 8px;">Competición</td><td style="padding:6px 8px;text-align:center;">PJ</td><td style="padding:6px 8px;text-align:center;">Goles</td><td style="padding:6px 8px;text-align:center;">Asist.</td><td style="padding:6px 8px;text-align:center;">Min</td></tr>`;
         career.forEach((c: any) => {
-          html += `<tr style="border-bottom:1px solid #1a1a1f;"><td style="padding:6px 8px;">${c.period || '-'}</td><td style="padding:6px 8px;">${c.team_name || '-'}</td><td style="padding:6px 8px;">${c.competition || '-'}</td><td style="padding:6px 8px;text-align:center;">${c.appearances ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.goals ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.assists ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.minutes_played ?? '-'}</td></tr>`;
+          html += `<tr style="border-bottom:1px solid ${borderCol};"><td style="padding:6px 8px;">${c.period || '-'}</td><td style="padding:6px 8px;">${c.team_name || '-'}</td><td style="padding:6px 8px;">${c.competition || '-'}</td><td style="padding:6px 8px;text-align:center;">${c.appearances ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.goals ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.assists ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.minutes_played ?? '-'}</td></tr>`;
         });
         html += `</table></div>`;
       }
 
       if (transfers && transfers.length > 0) {
-        html += `<div><div style="font-size:13px;font-weight:600;color:#10b981;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Transferencias</div>`;
+        html += `<div><div style="font-size:13px;font-weight:600;color:${ac};margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Transferencias</div>`;
         transfers.forEach((t: any) => {
-          html += `<div style="display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #1a1a1f;font-size:13px;">
-            <span>${t.date || '-'}</span><span>${t.from_team || '-'} → ${t.to_team || '-'}</span><span style="color:#10b981;">${t.fee || 'Libre'}</span>
+          html += `<div style="display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid ${borderCol};font-size:13px;color:${tc};">
+            <span>${t.date || '-'}</span><span>${t.from_team || '-'} → ${t.to_team || '-'}</span><span style="color:${ac};">${t.fee || 'Libre'}</span>
           </div>`;
         });
         html += `</div>`;
@@ -909,7 +915,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       case 'image': return <ImageBlock content={block.content} onChange={c => updateBlock(block.id, c)} onImageLoad={(w, h) => fitBlockToImage(block.id, w, h)} readOnly={false} />;
       case 'video': return <VideoBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;
-      case 'divider': return <div style={{ borderTop: '2px solid rgba(0,191,99,0.25)', width: '100%', marginTop: '40%' }} />;
+      case 'divider': return <div style={{ borderTop: `3px solid ${theme.accentColor}`, width: '100%', position: 'absolute', top: '50%' }} />;
       case 'shape': return <ShapeBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       case 'banner': return <BannerBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
       default: return null;
