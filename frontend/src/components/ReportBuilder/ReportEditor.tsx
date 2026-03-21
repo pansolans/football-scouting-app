@@ -102,6 +102,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         ...prev,
         player_id: playerId,
         player_name: playerName,
+        player_wyscout_id: parseInt(playerId) || undefined,
         cover_data: { ...prev.cover_data, title: `Informe: ${playerName}` },
       }));
       loadPlayerData(playerId);
@@ -241,17 +242,39 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       if (r.fortalezas) lines.push(`\nFORTALEZAS: ${r.fortalezas}`);
       if (r.debilidades) lines.push(`DEBILIDADES: ${r.debilidades}`);
       if (r.notes) lines.push(`\nNOTAS: ${r.notes}`);
-      if (r.recomendacion) lines.push(`RECOMENDACION: ${r.recomendacion}${r.condicion_mercado ? ` | MERCADO: ${r.condicion_mercado}` : ''}`);
+      if (r.recomendacion) lines.push(`RECOMENDACION: ${r.recomendacion}`);
+      if (r.condicion_mercado) lines.push(`CONDICION DE MERCADO: ${r.condicion_mercado}`);
+      if (r.condicion_mercado === 'A prestamo') {
+        if (r.prestamo_club_dueno) lines.push(`CLUB DUEÑO DEL PASE: ${r.prestamo_club_dueno}`);
+        if (r.prestamo_inicio) lines.push(`PRESTAMO: ${r.prestamo_inicio} a ${r.prestamo_fin || '?'}`);
+        if (r.contrato_dueno_inicio) lines.push(`CONTRATO DUEÑO: ${r.contrato_dueno_inicio} a ${r.contrato_dueno_fin || '?'}`);
+      }
+      if (r.precio_estimado) lines.push(`PRECIO ESTIMADO: EUR ${r.precio_estimado}M`);
+      if (r.agente) lines.push(`AGENTE: ${r.agente}`);
     });
 
-    // Insert: one header + one radar + one text block with everything
-    const newBlocks: ReportBlock[] = [
+    // Page 1: header + radar on current page
+    const radarBlocks: ReportBlock[] = [
       { id: id(), type: 'header', content: { text: `Datos de ${playerReports.length} Reporte${playerReports.length > 1 ? 's' : ''}`, level: 1 }, style: { x: 3, y: nextY, w: 94, h: 7 } },
       { id: id(), type: 'stats_table', content: { reportIds: [], categories: ['tecnico', 'fisico', 'mental'] }, style: { x: 3, y: nextY + 9, w: 94, h: 40 } },
-      { id: id(), type: 'text', content: { text: lines.join('\n') }, style: { x: 3, y: nextY + 51, w: 94, h: 45 } },
     ];
 
-    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...newBlocks] } : p));
+    // Text block: if enough space on current page, add here; otherwise new page
+    const textStartY = nextY + 51;
+    if (textStartY < 55) {
+      // Fits on current page
+      radarBlocks.push({ id: id(), type: 'text', content: { text: lines.join('\n') }, style: { x: 3, y: textStartY, w: 94, h: Math.min(45, 97 - textStartY) } });
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...radarBlocks] } : p));
+    } else {
+      // Radar on current page, text on new page
+      setPages(prev => {
+        const updated = prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...radarBlocks] } : p);
+        const newPage: ReportPage = { id: crypto.randomUUID(), blocks: [
+          { id: id(), type: 'text', content: { text: lines.join('\n') }, style: { x: 3, y: 3, w: 94, h: 90 } },
+        ]};
+        return [...updated, newPage];
+      });
+    }
   };
 
   // ─── Import player profile as image ───
