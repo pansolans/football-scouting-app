@@ -253,6 +253,9 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       if (r.agente) lines.push(`AGENTE: ${r.agente}`);
     });
 
+    // Convert plain text to HTML (RichTextEditor expects HTML)
+    const textHtml = lines.join('\n').replace(/\n/g, '<br>');
+
     // Page 1: header + radar on current page
     const radarBlocks: ReportBlock[] = [
       { id: id(), type: 'header', content: { text: `Datos de ${playerReports.length} Reporte${playerReports.length > 1 ? 's' : ''}`, level: 1 }, style: { x: 3, y: nextY, w: 94, h: 7 } },
@@ -262,15 +265,13 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     // Text block: if enough space on current page, add here; otherwise new page
     const textStartY = nextY + 51;
     if (textStartY < 55) {
-      // Fits on current page
-      radarBlocks.push({ id: id(), type: 'text', content: { text: lines.join('\n') }, style: { x: 3, y: textStartY, w: 94, h: Math.min(45, 97 - textStartY) } });
+      radarBlocks.push({ id: id(), type: 'text', content: { text: textHtml }, style: { x: 3, y: textStartY, w: 94, h: Math.min(45, 97 - textStartY) } });
       setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...radarBlocks] } : p));
     } else {
-      // Radar on current page, text on new page
       setPages(prev => {
         const updated = prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...radarBlocks] } : p);
         const newPage: ReportPage = { id: crypto.randomUUID(), blocks: [
-          { id: id(), type: 'text', content: { text: lines.join('\n') }, style: { x: 3, y: 3, w: 94, h: 90 } },
+          { id: id(), type: 'text', content: { text: textHtml }, style: { x: 3, y: 3, w: 94, h: 90 } },
         ]};
         return [...updated, newPage];
       });
@@ -292,6 +293,21 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
       const career = profile.career;
       const transfers = profile.transfers;
 
+      // Pre-load player image as data URL for html2canvas
+      let playerImgDataUrl = '';
+      const imgUrl = info.imageDataURL || playerPhoto;
+      if (imgUrl) {
+        try {
+          const imgResp = await fetch(imgUrl);
+          const blob = await imgResp.blob();
+          playerImgDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        } catch { /* ignore, will show without photo */ }
+      }
+
       // Build HTML for profile card
       const container = document.createElement('div');
       container.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;background:#0d0d10;color:#e5e5e5;font-family:system-ui,-apple-system,sans-serif;padding:32px;';
@@ -299,11 +315,11 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
 
       const foot = info.foot === 'right' ? 'Derecho' : info.foot === 'left' ? 'Izquierdo' : info.foot === 'both' ? 'Ambidiestro' : info.foot || '-';
       const age = info.birthDate ? Math.floor((Date.now() - new Date(info.birthDate).getTime()) / 31557600000) : '-';
-      const teamName = typeof info.currentTeam === 'object' ? info.currentTeam?.name : '-';
+      const teamName = typeof info.currentTeam === 'object' ? info.currentTeam?.name : (contract?.team || '-');
 
       let html = `
         <div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:24px;">
-          ${info.imageDataURL ? `<img src="${info.imageDataURL}" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:2px solid #10b981;" />` : ''}
+          ${playerImgDataUrl ? `<img src="${playerImgDataUrl}" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:2px solid #10b981;" />` : ''}
           <div style="flex:1;">
             <div style="font-size:28px;font-weight:bold;color:#fff;margin-bottom:4px;">${info.shortName || info.firstName + ' ' + info.lastName}</div>
             <div style="font-size:14px;color:#10b981;margin-bottom:12px;">${info.role?.name || '-'} · ${teamName}</div>
@@ -323,7 +339,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
         html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tr style="color:#888;border-bottom:1px solid #2a2a2f;"><td style="padding:6px 8px;">Temporada</td><td style="padding:6px 8px;">Equipo</td><td style="padding:6px 8px;">Competición</td><td style="padding:6px 8px;text-align:center;">PJ</td><td style="padding:6px 8px;text-align:center;">Goles</td><td style="padding:6px 8px;text-align:center;">Asist.</td><td style="padding:6px 8px;text-align:center;">Min</td></tr>`;
         career.forEach((c: any) => {
-          html += `<tr style="border-bottom:1px solid #1a1a1f;"><td style="padding:6px 8px;">${c.season || '-'}</td><td style="padding:6px 8px;">${c.team || '-'}</td><td style="padding:6px 8px;">${c.competition || '-'}</td><td style="padding:6px 8px;text-align:center;">${c.appearances ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.goals ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.assists ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.minutesPlayed ?? '-'}</td></tr>`;
+          html += `<tr style="border-bottom:1px solid #1a1a1f;"><td style="padding:6px 8px;">${c.period || '-'}</td><td style="padding:6px 8px;">${c.team_name || '-'}</td><td style="padding:6px 8px;">${c.competition || '-'}</td><td style="padding:6px 8px;text-align:center;">${c.appearances ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.goals ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.assists ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.minutes_played ?? '-'}</td></tr>`;
         });
         html += `</table></div>`;
       }
