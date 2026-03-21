@@ -57,6 +57,7 @@ const MainApp: React.FC = () => {
   const [filterPosition, setFilterPosition] = useState('');
   const [filterPlayerName, setFilterPlayerName] = useState('');
   const [filterTeam, setFilterTeam] = useState('');
+  const [filterCondicionMercado, setFilterCondicionMercado] = useState('');
   const [allPlayersData, setAllPlayersData] = useState<any[]>([]);
   const [browseExtraInfo, setBrowseExtraInfo] = useState<Record<string, any>>({});
   const [preselectedPlayer, setPreselectedPlayer] = useState<any>(null);
@@ -335,6 +336,7 @@ const openMarketModal = async (player: any) => {
       if (filterLeague && player.competicion !== filterLeague) return false;
       if (filterRecommendation && player.recomendacion !== filterRecommendation) return false;
       if (filterPosition && player.position_played !== filterPosition) return false;
+      if (filterCondicionMercado && player.condicion_mercado !== filterCondicionMercado) return false;
       return true;
     });
   };
@@ -354,6 +356,11 @@ const openMarketModal = async (player: any) => {
 
       // Filtro por liga/competición
       if (filterLeague && report.competicion !== filterLeague) {
+        return false;
+      }
+
+      // Filtro por condición de mercado
+      if (filterCondicionMercado && report.condicion_mercado !== filterCondicionMercado) {
         return false;
       }
 
@@ -1053,6 +1060,8 @@ const clearAllFilters = () => {
               setFilterTeam={setFilterTeam}
               filterLeague={filterLeague}
               setFilterLeague={setFilterLeague}
+              filterCondicionMercado={filterCondicionMercado}
+              setFilterCondicionMercado={setFilterCondicionMercado}
               getFilteredReports={getFilteredReports}
               getUniqueLeagues={getUniqueLeagues}
               openPlayerDetail={openPlayerDetail}
@@ -1081,6 +1090,8 @@ const clearAllFilters = () => {
               setFilterRecommendation={setFilterRecommendation}
               filterPosition={filterPosition}
               setFilterPosition={setFilterPosition}
+              filterCondicionMercado={filterCondicionMercado}
+              setFilterCondicionMercado={setFilterCondicionMercado}
               getUniqueLeagues={getUniqueLeagues}
               getUniquePositions={getUniquePositions}
               getFilteredPlayers={getFilteredPlayers}

@@ -9,6 +9,8 @@ interface ReportsTabProps {
   setFilterTeam: (team: string) => void;
   filterLeague: string;
   setFilterLeague: (league: string) => void;
+  filterCondicionMercado: string;
+  setFilterCondicionMercado: (cond: string) => void;
   getFilteredReports: () => ScoutReport[];
   getUniqueLeagues: () => (string | undefined)[];
   openPlayerDetail: (playerName: string) => void;
@@ -59,6 +61,8 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
   editReport,
   onDeleteReport,
   onCreateInforme,
+  filterCondicionMercado,
+  setFilterCondicionMercado,
 }) => {
   const [playerInfoCache, setPlayerInfoCache] = useState<Record<string, any>>({});
   const [loadingInfo, setLoadingInfo] = useState(false);
@@ -148,7 +152,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
       </div>
 
       {/* FILTROS */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-5 bg-card border border-border-strong rounded-lg mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-5 bg-card border border-border-strong rounded-lg mb-6">
         <div>
           <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
             Buscar Jugador
@@ -190,6 +194,23 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
         </div>
         <div>
           <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
+            Condición de Mercado
+          </label>
+          <select
+            value={filterCondicionMercado}
+            onChange={(e) => setFilterCondicionMercado(e.target.value)}
+            className="w-full py-2.5 px-3 bg-surface border border-border-strong rounded-md text-sm text-text cursor-pointer focus:border-accent/50 focus:outline-none transition-colors"
+          >
+            <option value="">Todas</option>
+            <option value="Libre">Agente Libre</option>
+            <option value="Ultimo año">Ultimo Año de Contrato</option>
+            <option value="Contrato largo">Contrato Largo</option>
+            <option value="Clausula">Con Clausula de Rescision</option>
+            <option value="A prestamo">A Préstamo</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
             Mostrar
           </label>
           <select
@@ -204,7 +225,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
         </div>
         <div className="flex items-end">
           <button
-            onClick={() => { setFilterPlayerName(''); setFilterTeam(''); setFilterLeague(''); }}
+            onClick={() => { setFilterPlayerName(''); setFilterTeam(''); setFilterLeague(''); setFilterCondicionMercado(''); }}
             className="w-full py-2.5 px-6 bg-white/8 border border-border-strong text-text-secondary rounded-md text-xs font-medium cursor-pointer transition-colors hover:text-text"
           >
             Limpiar Filtros

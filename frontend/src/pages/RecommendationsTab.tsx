@@ -9,6 +9,8 @@ interface RecommendationsTabProps {
   setFilterRecommendation: (rec: string) => void;
   filterPosition: string;
   setFilterPosition: (pos: string) => void;
+  filterCondicionMercado: string;
+  setFilterCondicionMercado: (cond: string) => void;
   getUniqueLeagues: () => (string | undefined)[];
   getUniquePositions: () => (string | undefined)[];
   getFilteredPlayers: () => any[];
@@ -50,6 +52,8 @@ const RecommendationsTab: React.FC<RecommendationsTabProps> = ({
   setFilterRecommendation,
   filterPosition,
   setFilterPosition,
+  filterCondicionMercado,
+  setFilterCondicionMercado,
   getUniqueLeagues,
   getUniquePositions,
   getFilteredPlayers,
@@ -172,7 +176,7 @@ const RecommendationsTab: React.FC<RecommendationsTabProps> = ({
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-card border border-border-strong rounded-lg mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-card border border-border-strong rounded-lg mb-6">
         <div>
           <label className="block text-[11px] uppercase tracking-widest text-text-muted mb-2">
             Liga / Competicion
@@ -217,6 +221,23 @@ const RecommendationsTab: React.FC<RecommendationsTabProps> = ({
             {getUniquePositions().map(position => (
               <option key={position} value={position}>{position}</option>
             ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-widest text-text-muted mb-2">
+            Condición de Mercado
+          </label>
+          <select
+            value={filterCondicionMercado}
+            onChange={(e) => setFilterCondicionMercado(e.target.value)}
+            className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text cursor-pointer focus:border-accent/50 focus:outline-none"
+          >
+            <option value="">Todas</option>
+            <option value="Libre">Agente Libre</option>
+            <option value="Ultimo año">Ultimo Año de Contrato</option>
+            <option value="Contrato largo">Contrato Largo</option>
+            <option value="Clausula">Con Clausula de Rescision</option>
+            <option value="A prestamo">A Préstamo</option>
           </select>
         </div>
       </div>
