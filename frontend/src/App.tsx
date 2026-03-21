@@ -968,9 +968,15 @@ const clearAllFilters = () => {
             </h2>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-xs text-text-muted">
+            <div className="text-xs text-text-muted hidden md:block">
               {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
+            <button
+              className="md:hidden text-[11px] text-text-muted hover:text-danger bg-transparent border-none cursor-pointer px-2 py-1 rounded hover:bg-danger/10 transition-colors"
+              onClick={logout}
+            >
+              Salir
+            </button>
           </div>
         </header>
 

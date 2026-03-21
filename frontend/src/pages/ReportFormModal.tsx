@@ -42,7 +42,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-card border-b border-border">
+        <div className="flex bg-card border-b border-border overflow-x-auto">
           {[
             { id: 'general', label: 'General' },
             { id: 'tecnico', label: 'Tecnico' },
@@ -53,7 +53,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
             <button
               key={tab.id}
               onClick={() => setFormSection(tab.id as any)}
-              className={`px-5 py-3 border-none text-sm transition-all cursor-pointer ${
+              className={`px-3 md:px-5 py-3 border-none text-sm transition-all cursor-pointer whitespace-nowrap ${
                 formSection === tab.id
                   ? 'text-accent border-b-2 border-b-accent bg-transparent font-medium'
                   : 'text-text-muted hover:text-text-secondary bg-transparent'
@@ -65,11 +65,11 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-4 md:p-6">
           {/* General Section */}
           {formSection === 'general' && (
             <div className="grid gap-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
                     Fecha de Observacion
@@ -372,7 +372,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                 </div>
               ))}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
                     Fortalezas
@@ -409,7 +409,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                 Seguimiento y Mercado
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
                     Recomendacion
@@ -505,7 +505,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border bg-elevated flex justify-between items-center">
+        <div className="px-4 md:px-6 py-4 border-t border-border bg-elevated flex flex-col md:flex-row justify-between items-center gap-3">
           <div className="text-[11px] text-text-muted">
             {formSection === 'general' && 'Complete la informacion general del partido'}
             {formSection === 'tecnico' && 'Evalue las habilidades tecnicas del jugador'}
