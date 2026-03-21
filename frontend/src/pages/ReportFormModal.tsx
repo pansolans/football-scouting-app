@@ -433,7 +433,7 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                   </label>
                   <select
                     value={reportForm.condicion_mercado}
-                    onChange={(e) => setReportForm({ ...reportForm, condicion_mercado: e.target.value })}
+                    onChange={(e) => setReportForm({ ...reportForm, condicion_mercado: e.target.value, ...(e.target.value !== 'A prestamo' && { prestamo_club_dueno: '', prestamo_inicio: '', prestamo_fin: '', contrato_dueno_inicio: '', contrato_dueno_fin: '' }) })}
                     className="w-full py-2.5 px-3 border border-border-strong bg-elevated text-text rounded-md text-sm cursor-pointer focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
                   >
                     <option value="">Seleccionar...</option>
@@ -441,22 +441,11 @@ const ReportFormModal: React.FC<ReportFormModalProps> = ({
                     <option value="Ultimo año">Ultimo Ano de Contrato</option>
                     <option value="Contrato largo">Contrato Largo</option>
                     <option value="Clausula">Con Clausula de Rescision</option>
+                    <option value="A prestamo">A Préstamo</option>
                   </select>
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={reportForm.a_prestamo || false}
-                      onChange={(e) => setReportForm({ ...reportForm, a_prestamo: e.target.checked, ...(!e.target.checked && { prestamo_club_dueno: '', prestamo_inicio: '', prestamo_fin: '', contrato_dueno_inicio: '', contrato_dueno_fin: '' }) })}
-                      className="w-4 h-4 accent-accent cursor-pointer"
-                    />
-                    <span className="text-[11px] uppercase tracking-widest text-text-muted font-medium">A Préstamo</span>
-                  </label>
-                </div>
-
-                {reportForm.a_prestamo && (
+                {reportForm.condicion_mercado === 'A prestamo' && (
                   <>
                     <div className="col-span-1 md:col-span-2">
                       <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
