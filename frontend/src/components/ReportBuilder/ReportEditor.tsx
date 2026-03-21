@@ -254,6 +254,92 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
     setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, ...newBlocks] } : p));
   };
 
+  // ─── Import player profile as image ───
+  const [importingProfile, setImportingProfile] = useState(false);
+
+  const importProfileAsImage = async () => {
+    if (!report.player_wyscout_id) return;
+    setImportingProfile(true);
+    try {
+      const profile = await playerService.getPlayerProfile(report.player_wyscout_id);
+      if (!profile?.basic_info) { alert('No se pudo cargar el perfil'); return; }
+
+      const info = profile.basic_info;
+      const contract = profile.contract_info;
+      const career = profile.career;
+      const transfers = profile.transfers;
+
+      // Build HTML for profile card
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;background:#0d0d10;color:#e5e5e5;font-family:system-ui,-apple-system,sans-serif;padding:32px;';
+      document.body.appendChild(container);
+
+      const foot = info.foot === 'right' ? 'Derecho' : info.foot === 'left' ? 'Izquierdo' : info.foot === 'both' ? 'Ambidiestro' : info.foot || '-';
+      const age = info.birthDate ? Math.floor((Date.now() - new Date(info.birthDate).getTime()) / 31557600000) : '-';
+      const teamName = typeof info.currentTeam === 'object' ? info.currentTeam?.name : '-';
+
+      let html = `
+        <div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:24px;">
+          ${info.imageDataURL ? `<img src="${info.imageDataURL}" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:2px solid #10b981;" />` : ''}
+          <div style="flex:1;">
+            <div style="font-size:28px;font-weight:bold;color:#fff;margin-bottom:4px;">${info.shortName || info.firstName + ' ' + info.lastName}</div>
+            <div style="font-size:14px;color:#10b981;margin-bottom:12px;">${info.role?.name || '-'} · ${teamName}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">EDAD</span><br/><span style="font-size:16px;font-weight:600;">${age}</span></div>
+              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">ALTURA</span><br/><span style="font-size:16px;font-weight:600;">${info.height || '-'} cm</span></div>
+              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">PIE</span><br/><span style="font-size:16px;font-weight:600;">${foot}</span></div>
+              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">NACIONALIDAD</span><br/><span style="font-size:16px;font-weight:600;">${info.passportArea?.name || info.birthArea?.name || '-'}</span></div>
+              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">VALOR</span><br/><span style="font-size:16px;font-weight:600;">${contract?.market_value ? `EUR ${(contract.market_value / 1000000).toFixed(1)}M` : '-'}</span></div>
+              <div style="background:#1a1a1f;padding:8px 12px;border-radius:8px;"><span style="color:#888;font-size:11px;">CONTRATO</span><br/><span style="font-size:16px;font-weight:600;">${contract?.contract_expires ? new Date(contract.contract_expires).toLocaleDateString('es-ES') : '-'}</span></div>
+            </div>
+          </div>
+        </div>`;
+
+      if (career && career.length > 0) {
+        html += `<div style="margin-bottom:16px;"><div style="font-size:13px;font-weight:600;color:#10b981;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Carrera</div>`;
+        html += `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr style="color:#888;border-bottom:1px solid #2a2a2f;"><td style="padding:6px 8px;">Temporada</td><td style="padding:6px 8px;">Equipo</td><td style="padding:6px 8px;">Competición</td><td style="padding:6px 8px;text-align:center;">PJ</td><td style="padding:6px 8px;text-align:center;">Goles</td><td style="padding:6px 8px;text-align:center;">Asist.</td><td style="padding:6px 8px;text-align:center;">Min</td></tr>`;
+        career.forEach((c: any) => {
+          html += `<tr style="border-bottom:1px solid #1a1a1f;"><td style="padding:6px 8px;">${c.season || '-'}</td><td style="padding:6px 8px;">${c.team || '-'}</td><td style="padding:6px 8px;">${c.competition || '-'}</td><td style="padding:6px 8px;text-align:center;">${c.appearances ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.goals ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.assists ?? '-'}</td><td style="padding:6px 8px;text-align:center;">${c.minutesPlayed ?? '-'}</td></tr>`;
+        });
+        html += `</table></div>`;
+      }
+
+      if (transfers && transfers.length > 0) {
+        html += `<div><div style="font-size:13px;font-weight:600;color:#10b981;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Transferencias</div>`;
+        transfers.forEach((t: any) => {
+          html += `<div style="display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #1a1a1f;font-size:13px;">
+            <span>${t.date || '-'}</span><span>${t.from_team || '-'} → ${t.to_team || '-'}</span><span style="color:#10b981;">${t.fee || 'Libre'}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      container.innerHTML = html;
+
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#0d0d10', useCORS: true, allowTaint: true });
+      const dataUrl = canvas.toDataURL('image/png');
+      document.body.removeChild(container);
+
+      // Insert as image block on current page
+      const id = crypto.randomUUID();
+      const nextY = getNextY();
+      const newBlock: ReportBlock = {
+        id, type: 'image',
+        content: { url: dataUrl, caption: `Perfil: ${info.shortName || report.player_name}` },
+        style: { x: 3, y: nextY, w: 94, h: 60 },
+      };
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, newBlock] } : p));
+      setSelectedBlock(id);
+    } catch (e) {
+      console.error('Error importing profile:', e);
+      alert('Error al importar el perfil');
+    } finally {
+      setImportingProfile(false);
+    }
+  };
+
   // ─── Search ───
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -947,6 +1033,21 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
                 <span>📋</span> Traer Info de Reportes
               </button>
               <p className="text-[9px] text-text-muted mt-1.5">Inserta ratings, notas y radar en la pagina actual. Podes editar y mover todo.</p>
+            </div>
+          )}
+
+          {/* Import profile as image */}
+          {report.player_wyscout_id && (
+            <div className="card-elevated rounded-xl p-3">
+              <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Perfil del Jugador</h4>
+              <button
+                onClick={importProfileAsImage}
+                disabled={importingProfile}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 hover:border-violet-500/50 transition-all cursor-pointer text-violet-400 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {importingProfile ? 'Cargando perfil...' : <><span>👤</span> Traer Perfil</>}
+              </button>
+              <p className="text-[9px] text-text-muted mt-1.5">Genera una imagen con datos, carrera y transferencias del jugador. Podes achicar o agrandar el bloque.</p>
             </div>
           )}
 

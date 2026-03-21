@@ -1407,53 +1407,67 @@ async def get_player_profile(player_id: int):
     """Get complete player profile with all data from Wyscout"""
     try:
         async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
-            # Get basic player info with image
-            player = None
-            try:
-                player = await wyscout.get_player(player_id, details="currentTeam")
-                # Also get image
-                try:
-                    player_with_img = await wyscout.get(f"/v3/players/{player_id}", params={"imageDataURL": "true", "details": "currentTeam"})
-                    if player_with_img.get("imageDataURL"):
-                        player["imageDataURL"] = player_with_img["imageDataURL"]
-                except:
-                    pass
-                logger.info(f"Player loaded: {player.get('shortName')}")
-            except Exception as e:
-                logger.error(f"Error getting player {player_id}: {e}")
-                player = {"wyId": player_id, "shortName": f"Player {player_id}"}
 
-            # Get career data
-            career_data = None
-            try:
-                async with httpx.AsyncClient() as client:
+            # --- Funciones auxiliares para paralelizar ---
+            async def fetch_player():
+                try:
+                    p = await wyscout.get(f"/v3/players/{player_id}", params={"imageDataURL": "true", "details": "currentTeam"})
+                    logger.info(f"Player loaded: {p.get('shortName')}")
+                    return p
+                except Exception as e:
+                    logger.error(f"Error getting player {player_id}: {e}")
+                    return {"wyId": player_id, "shortName": f"Player {player_id}"}
+
+            async def fetch_career():
+                try:
                     credentials = f"{settings.wyscout_user}:{settings.wyscout_pass}"
                     encoded = base64.b64encode(credentials.encode()).decode()
                     headers = {"Authorization": f"Basic {encoded}"}
-
-                    response = await client.get(
-                        f"https://apirest.wyscout.com/v3/players/{player_id}/career",
-                        headers=headers,
-                        timeout=15.0
-                    )
-
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(
+                            f"https://apirest.wyscout.com/v3/players/{player_id}/career",
+                            headers=headers,
+                            timeout=15.0
+                        )
                     if response.status_code == 200:
-                        career_raw = response.json()
-                        career_data = await process_career_data_enhanced(career_raw, wyscout)
-                        logger.info(f"Career loaded: {len(career_data)} entries")
+                        return response.json()
                     else:
                         logger.warning(f"Career API error: {response.status_code}")
+                        return None
+                except Exception as e:
+                    logger.error(f"Error getting career: {e}")
+                    return None
 
-            except Exception as e:
-                logger.error(f"Error getting career: {e}")
+            async def fetch_contract():
+                try:
+                    return await wyscout.get_player_contract_info(player_id)
+                except Exception as e:
+                    logger.warning(f"Contract info not available: {e}")
+                    return None
 
-            # Get real contract info from Wyscout
-            contract_info = None
-            try:
-                contract_raw = await wyscout.get_player_contract_info(player_id)
-                logger.info(f"Contract raw data: {contract_raw}")
+            async def fetch_transfers():
+                try:
+                    return await wyscout.get_player_transfers(player_id)
+                except Exception as e:
+                    logger.warning(f"Error getting transfers: {e}")
+                    return None
 
-                # Process contract data
+            # --- Ejecutar todas las llamadas en paralelo ---
+            player, career_raw, contract_raw, transfers_raw = await asyncio.gather(
+                fetch_player(), fetch_career(), fetch_contract(), fetch_transfers()
+            )
+
+            # Procesar career (necesita wyscout client para team names)
+            career_data = None
+            if career_raw:
+                try:
+                    career_data = await process_career_data_enhanced(career_raw, wyscout)
+                    logger.info(f"Career loaded: {len(career_data)} entries")
+                except Exception as e:
+                    logger.error(f"Error processing career: {e}")
+
+            # Procesar contract
+            if contract_raw:
                 contract_info = {
                     "team": player.get("currentTeam", {}).get("name", "Unknown") if isinstance(player.get("currentTeam"), dict) else "Unknown",
                     "team_id": player.get("currentTeam", {}).get("wyId") if isinstance(player.get("currentTeam"), dict) else None,
@@ -1467,11 +1481,7 @@ async def get_player_profile(player_id: int):
                     "loan_from": contract_raw.get("loanFromTeamName"),
                     "wage": contract_raw.get("wage"),
                 }
-                logger.info(f"Contract info: {contract_info}")
-
-            except Exception as e:
-                logger.warning(f"Contract info not available: {e}")
-                # Fallback to basic info from player object
+            else:
                 current_team = player.get("currentTeam", {}) if isinstance(player.get("currentTeam"), dict) else {}
                 contract_info = {
                     "team": current_team.get("name", "Unknown"),
@@ -1487,14 +1497,10 @@ async def get_player_profile(player_id: int):
                     "wage": None,
                 }
 
-            # Get transfers and process them
-            transfers = None
-            try:
-                transfers_raw = await wyscout.get_player_transfers(player_id)
-                transfers = process_transfers(transfers_raw)
+            # Procesar transfers
+            transfers = process_transfers(transfers_raw) if transfers_raw else None
+            if transfers:
                 logger.info(f"Transfers loaded: {len(transfers)} entries")
-            except Exception as e:
-                logger.warning(f"Error getting transfers: {e}")
 
             # Build complete profile
             profile = {
