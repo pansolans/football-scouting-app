@@ -903,7 +903,28 @@ async def update_scout_report(
         logger.error(f"Error updating scout report: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to update scout report: {str(e)}")
 
-# AGREGAR AQUÍ EL NUEVO ENDPOINT 👇
+@app.delete("/api/scout-reports/{report_id}")
+async def delete_scout_report(
+    report_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a scout report"""
+    try:
+        if supabase_service:
+            result = supabase.table('scout_reports').delete().eq('id', report_id).execute()
+            if result.data:
+                logger.info(f"Reporte eliminado: {report_id}")
+                return {"message": "Report deleted successfully"}
+            else:
+                raise HTTPException(status_code=404, detail="Report not found")
+
+        raise HTTPException(status_code=500, detail="Supabase not configured")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting scout report: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete scout report: {str(e)}")
 
 @app.get("/api/scout-reports/player/{player_id}/all")
 async def get_all_player_reports(player_id: str):

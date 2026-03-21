@@ -1057,6 +1057,14 @@ const clearAllFilters = () => {
               getUniqueLeagues={getUniqueLeagues}
               openPlayerDetail={openPlayerDetail}
               editReport={editReport}
+              onDeleteReport={async (reportId: string) => {
+                try {
+                  await scoutingService.deleteReport(reportId);
+                  setScoutReports(scoutReports.filter(r => r.id !== reportId));
+                } catch (error) {
+                  alert('Error al eliminar el reporte');
+                }
+              }}
               onCreateInforme={(playerId, playerName) => {
                 setInformePlayerData({ playerId, playerName });
                 setActiveTab('informes' as TabId);

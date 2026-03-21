@@ -246,7 +246,10 @@ export const scoutingService = {
     return response.data;
   },
   
-  // NUEVO MÉTODO
+  deleteReport: async (reportId: string): Promise<void> => {
+    await api.delete(`/api/scout-reports/${reportId}`);
+  },
+
   getAllPlayerReports: async (playerId: string): Promise<any> => {
     const response = await api.get(`/api/scout-reports/player/${playerId}/all`);
     return response.data;

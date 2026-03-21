@@ -13,6 +13,7 @@ interface ReportsTabProps {
   getUniqueLeagues: () => (string | undefined)[];
   openPlayerDetail: (playerName: string) => void;
   editReport: (report: ScoutReport) => void;
+  onDeleteReport?: (reportId: string) => void;
   onCreateInforme?: (playerId: string, playerName: string) => void;
 }
 
@@ -56,6 +57,7 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
   getUniqueLeagues,
   openPlayerDetail,
   editReport,
+  onDeleteReport,
   onCreateInforme,
 }) => {
   const [playerInfoCache, setPlayerInfoCache] = useState<Record<string, any>>({});
@@ -333,6 +335,18 @@ const ReportsTab: React.FC<ReportsTabProps> = ({
                         >
                           Editar
                         </button>
+                        {onDeleteReport && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`¿Estás seguro de que querés eliminar el reporte de ${report.player_name}?`)) {
+                                onDeleteReport(report.id);
+                              }
+                            }}
+                            className="py-1.5 px-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-md cursor-pointer text-[11px] font-medium transition-colors hover:bg-red-500/20"
+                          >
+                            Eliminar
+                          </button>
+                        )}
                         {onCreateInforme && (
                           <button
                             onClick={() => onCreateInforme(report.player_id, report.player_name)}
