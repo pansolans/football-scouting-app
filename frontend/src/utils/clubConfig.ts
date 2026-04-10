@@ -19,11 +19,11 @@ export const clubConfigs: Record<string, ClubConfig> = {
     logo: 'https://santafefc.do/wp-content/uploads/2021/08/logo_sf_footer_300x300-16.png',
     name: 'Santa Fe FC'
   },
-  'Scouting FC': {
-    primaryColor: '#00668c',
-    secondaryColor: '#b6ccd8',
-    logo: 'https://image.jimcdn.com/app/cms/image/transf/none/path/sbdcfbaae4f22b55a/image/id41c93cbdf9f68a5/version/1621237465/image.png',
-    name: 'FC'
+  'Millonarios FC': {
+    primaryColor: '#1a3a7a',
+    secondaryColor: '#ffffff',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/4/40/Escudo_de_Millonarios_temporada_2003-2006.png',
+    name: 'MFC'
   },
   'UAI Urquiza': {
     primaryColor: '#00668c',

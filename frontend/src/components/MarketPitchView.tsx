@@ -216,7 +216,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   const handleDrop = (position: string) => {
     if (draggedPlayer) {
       const currentPositionPlayers = formation[position] || [];
-      const maxPlayers = position === 'GK' ? 1 : 3;
+      const maxPlayers = 3;
 
       if (currentPositionPlayers.length < maxPlayers) {
         const newFormation = { ...formation };
