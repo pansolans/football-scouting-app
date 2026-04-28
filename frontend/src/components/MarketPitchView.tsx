@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { playerService } from '../services/api';
 
 import { API_URL } from '../config';
@@ -37,6 +37,50 @@ const EMPTY_FORMATION: {[key: string]: any[]} = {
   LW: [], ST: [], RW: []
 };
 
+// Categorias de posicion (mismas que el formulario de reportes)
+const POSITION_CATEGORIES: { key: string; label: string; match: string[] }[] = [
+  { key: 'gk',     label: 'Arqueros',             match: ['arquero', 'goalkeeper', 'portero'] },
+  { key: 'lat_r',  label: 'Laterales Derechos',   match: ['lateral derecho', 'right back'] },
+  { key: 'lat_l',  label: 'Laterales Izquierdos', match: ['lateral izquierdo', 'left back'] },
+  { key: 'cb_r',   label: 'Centrales Derechos',   match: ['central derecho', 'right centre back', 'right center back'] },
+  { key: 'cb_l',   label: 'Centrales Izquierdos', match: ['central izquierdo', 'left centre back', 'left center back'] },
+  { key: 'cb',     label: 'Centrales',            match: ['central', 'centre back', 'center back'] },
+  { key: 'vol_c',  label: 'Volantes Centrales',   match: ['volante central', 'defensive midfielder'] },
+  { key: 'vol_i',  label: 'Volantes Internos',    match: ['volante interno', 'central midfielder'] },
+  { key: 'vol_a',  label: 'Volantes por Afuera',  match: ['volante por afuera', 'wide midfielder', 'right midfielder', 'left midfielder'] },
+  { key: 'ext_r',  label: 'Extremos Derechos',    match: ['extremo derecho', 'right winger'] },
+  { key: 'ext_l',  label: 'Extremos Izquierdos',  match: ['extremo izquierdo', 'left winger'] },
+  { key: 'fwd',    label: 'Delanteros',           match: ['delantero', 'striker', 'centre forward', 'center forward', 'forward'] },
+];
+
+const getPositionCategory = (position: string | undefined): string => {
+  const p = (position || '').toLowerCase();
+  if (!p) return 'other';
+  for (const cat of POSITION_CATEGORIES) {
+    if (cat.match.some(m => p.includes(m))) return cat.key;
+  }
+  return 'other';
+};
+
+const positionOrderIndex = (position: string | undefined): number => {
+  const cat = getPositionCategory(position);
+  const idx = POSITION_CATEGORIES.findIndex(c => c.key === cat);
+  return idx === -1 ? 99 : idx;
+};
+
+const PRIORITY_ORDER: Record<string, number> = { alta: 0, media: 1, baja: 2 };
+
+const STATUS_OPTIONS = [
+  { value: 'seguimiento', label: 'Seguimiento', color: '#3b82f6' },
+  { value: 'negociando',  label: 'Negociando',  color: '#f59e0b' },
+  { value: 'descartado',  label: 'Descartado',  color: '#6b7280' },
+  { value: 'fichado',     label: 'Fichado',     color: '#10b981' },
+];
+
+const getStatusInfo = (status: string | undefined) => {
+  return STATUS_OPTIONS.find(s => s.value === status) || { value: status || '', label: status || 'Sin estado', color: '#6b7280' };
+};
+
 const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, market, onUpdateFormation, onPlayerDeleted, onPlayerUpdated, onMarketUpdated }) => {
   const [formation, setFormation] = useState<{[key: string]: any[]}>(
     () => ({ ...EMPTY_FORMATION, ...(market?.formation_data || {}) })
@@ -50,6 +94,42 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   const [playerDetails, setPlayerDetails] = useState<{[key: string]: any}>({});
   const [hoveredPlayer, setHoveredPlayer] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const hoverHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showHover = (player: any) => {
+    if (hoverHideTimerRef.current) {
+      clearTimeout(hoverHideTimerRef.current);
+      hoverHideTimerRef.current = null;
+    }
+    setHoveredPlayer(player);
+  };
+
+  const scheduleHideHover = () => {
+    if (hoverHideTimerRef.current) clearTimeout(hoverHideTimerRef.current);
+    hoverHideTimerRef.current = setTimeout(() => {
+      setHoveredPlayer(null);
+      hoverHideTimerRef.current = null;
+    }, 140);
+  };
+
+  const cancelHideHover = () => {
+    if (hoverHideTimerRef.current) {
+      clearTimeout(hoverHideTimerRef.current);
+      hoverHideTimerRef.current = null;
+    }
+  };
+
+  const computeHoverPopupStyle = (mouseX: number, mouseY: number) => {
+    const margin = 12;
+    const popupWidth = 360;
+    const minHeight = 220;
+    const idealTop = Math.max(mouseY - 60, margin);
+    const maxAllowedTop = window.innerHeight - minHeight - margin;
+    const top = Math.min(idealTop, Math.max(maxAllowedTop, margin));
+    const maxHeight = window.innerHeight - top - margin;
+    const left = Math.min(mouseX + 16, window.innerWidth - popupWidth - margin);
+    return { left, top, maxHeight: `${maxHeight}px` };
+  };
   const [editMode, setEditMode] = useState(false);
   const [draggingPosition, setDraggingPosition] = useState<string | null>(null);
   const pitchRef = useRef<HTMLDivElement>(null);
@@ -60,10 +140,86 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   const [notesEditing, setNotesEditing] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
 
+  // Detalles editables (status / precios / agente)
+  const [detailsDraft, setDetailsDraft] = useState({
+    status: 'seguimiento',
+    estimated_price: '',
+    max_price: '',
+    agent: '',
+  });
+  const [savingDetails, setSavingDetails] = useState(false);
+
+  // Orden del listado
+  const [listSort, setListSort] = useState<'date' | 'position' | 'priority'>('date');
+
+  // Filtros del listado
+  const [filters, setFilters] = useState({
+    priority: 'all',
+    positionCategory: 'all',
+    status: 'all',
+    ageMin: '',
+    ageMax: '',
+  });
+  const resetFilters = () => setFilters({ priority: 'all', positionCategory: 'all', status: 'all', ageMin: '', ageMax: '' });
+  const activeFilterCount = (
+    (filters.priority !== 'all' ? 1 : 0) +
+    (filters.positionCategory !== 'all' ? 1 : 0) +
+    (filters.status !== 'all' ? 1 : 0) +
+    (filters.ageMin ? 1 : 0) +
+    (filters.ageMax ? 1 : 0)
+  );
+
+  const filteredPlayers = useMemo(() => {
+    return marketPlayers.filter(p => {
+      if (filters.priority !== 'all' && p.priority !== filters.priority) return false;
+      if (filters.status !== 'all' && p.status !== filters.status) return false;
+      if (filters.positionCategory !== 'all' && getPositionCategory(p.position) !== filters.positionCategory) return false;
+      const age = Number(p.age);
+      if (filters.ageMin && (!age || age < Number(filters.ageMin))) return false;
+      if (filters.ageMax && (!age || age > Number(filters.ageMax))) return false;
+      return true;
+    });
+  }, [marketPlayers, filters]);
+
+  const sortedPlayers = useMemo(() => {
+    const arr = [...filteredPlayers];
+    if (listSort === 'position') {
+      arr.sort((a, b) => {
+        const ca = positionOrderIndex(a.position);
+        const cb = positionOrderIndex(b.position);
+        if (ca !== cb) return ca - cb;
+        return (a.position || '').localeCompare(b.position || '');
+      });
+    } else if (listSort === 'priority') {
+      arr.sort((a, b) => {
+        const pa = PRIORITY_ORDER[a.priority] ?? 99;
+        const pb = PRIORITY_ORDER[b.priority] ?? 99;
+        return pa - pb;
+      });
+    }
+    return arr;
+  }, [filteredPlayers, listSort]);
+
+  const groupedByPosition = useMemo(() => {
+    if (listSort !== 'position') return null;
+    const groups: Record<string, any[]> = {};
+    sortedPlayers.forEach(p => {
+      const cat = getPositionCategory(p.position);
+      (groups[cat] = groups[cat] || []).push(p);
+    });
+    return groups;
+  }, [sortedPlayers, listSort]);
+
   const openNotesModal = (player: any) => {
     setNotesModalPlayer(player);
     setNotesDraft(player.notes || '');
     setNotesEditing(!player.notes);
+    setDetailsDraft({
+      status: player.status || 'seguimiento',
+      estimated_price: player.estimated_price != null ? String(player.estimated_price) : '',
+      max_price: player.max_price != null ? String(player.max_price) : '',
+      agent: player.agent || '',
+    });
   };
 
   const closeNotesModal = () => {
@@ -71,6 +227,41 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     setNotesDraft('');
     setNotesEditing(false);
     setSavingNotes(false);
+    setDetailsDraft({ status: 'seguimiento', estimated_price: '', max_price: '', agent: '' });
+    setSavingDetails(false);
+  };
+
+  const saveDetails = async () => {
+    if (!notesModalPlayer) return;
+    setSavingDetails(true);
+    try {
+      const payload: any = {
+        status: detailsDraft.status,
+        agent: detailsDraft.agent || null,
+        estimated_price: detailsDraft.estimated_price ? parseFloat(detailsDraft.estimated_price) : null,
+        max_price: detailsDraft.max_price ? parseFloat(detailsDraft.max_price) : null,
+      };
+      const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        Object.assign(notesModalPlayer, payload);
+        if (onPlayerUpdated) onPlayerUpdated();
+      } else {
+        const err = await response.json().catch(() => null);
+        alert(err?.detail || 'Error al guardar los detalles');
+      }
+    } catch (error) {
+      console.error('Error saving details:', error);
+      alert('Error al guardar los detalles');
+    } finally {
+      setSavingDetails(false);
+    }
   };
 
   const saveNotes = async () => {
@@ -97,6 +288,44 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
       alert('Error al guardar la informacion');
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const updatePlayerPosition = async (newPosition: string) => {
+    if (!notesModalPlayer) return;
+    const previous = notesModalPlayer.position;
+    if (previous === newPosition) return;
+
+    notesModalPlayer.position = newPosition;
+    setFormation(prev => {
+      const next: {[key: string]: any[]} = {};
+      for (const [pos, players] of Object.entries(prev)) {
+        next[pos] = players.map((p: any) =>
+          p.id === notesModalPlayer.id ? { ...p, position: newPosition } : p
+        );
+      }
+      return next;
+    });
+
+    try {
+      const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ position: newPosition })
+      });
+      if (response.ok) {
+        if (onPlayerUpdated) onPlayerUpdated();
+      } else {
+        notesModalPlayer.position = previous;
+        alert('Error al actualizar posicion');
+      }
+    } catch (error) {
+      console.error('Error updating position:', error);
+      notesModalPlayer.position = previous;
+      alert('Error al actualizar posicion');
     }
   };
 
@@ -358,9 +587,9 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
 
   const getPriorityColor = (priority: string) => {
     switch(priority) {
-      case 'alta': return '#ef4444';
+      case 'alta': return '#10b981';
       case 'media': return '#f59e0b';
-      case 'baja': return '#10b981';
+      case 'baja': return '#ef4444';
       default: return '#6b7280';
     }
   };
@@ -479,31 +708,21 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   };
 
   if (viewMode === 'list') {
-    return (
-      <div>
-        <button
-          onClick={() => setViewMode('pitch')}
-          className="px-6 py-3 bg-accent text-white border-none rounded-lg cursor-pointer font-semibold mb-4 hover:opacity-90 transition-opacity"
-        >
-          Ver en Cancha
-        </button>
-
-        <div className="grid gap-4">
-          {marketPlayers.map(player => (
+    const renderPlayerCard = (player: any) => (
             <div
               key={player.id}
-              className="bg-card rounded-xl p-6 border-2 border-border-strong flex justify-between items-start"
+              className="bg-card rounded-xl p-6 border-2 border-border-strong grid grid-cols-[1fr_auto_1fr] items-start gap-4"
             >
-              <div className="flex-1 flex items-start gap-4">
+              <div className="flex items-start gap-4 min-w-0">
                 {/* Mini cuadro con foto del jugador y logo del equipo */}
                 <div
                   className="relative shrink-0 w-[56px] h-[56px] rounded-lg bg-surface border border-border-strong overflow-hidden flex items-center justify-center cursor-pointer"
                   onMouseEnter={(e) => {
-                    setHoveredPlayer(player);
+                    showHover(player);
                     setMousePosition({ x: e.clientX, y: e.clientY });
                   }}
                   onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
-                  onMouseLeave={() => setHoveredPlayer(null)}
+                  onMouseLeave={scheduleHideHover}
                 >
                   {getPlayerImage(player) ? (
                     <img
@@ -535,11 +754,11 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                   <h3
                     className="text-xl font-semibold m-0 text-text inline-block cursor-pointer hover:text-accent transition-colors"
                     onMouseEnter={(e) => {
-                      setHoveredPlayer(player);
+                      showHover(player);
                       setMousePosition({ x: e.clientX, y: e.clientY });
                     }}
                     onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
-                    onMouseLeave={() => setHoveredPlayer(null)}
+                    onMouseLeave={scheduleHideHover}
                     onClick={() => openNotesModal(player)}
                   >
                     {player.player_name}
@@ -554,42 +773,207 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                   )}
                 </div>
               </div>
-              <div className="flex gap-2 items-center">
-                <span
-                  className="px-3 py-1 rounded-xl text-xs font-semibold"
-                  style={{
-                    background: `${getPriorityColor(player.priority)}20`,
-                    color: getPriorityColor(player.priority),
-                  }}
-                >
-                  Prioridad {player.priority}
-                </span>
+              <div className="flex gap-2 items-center justify-self-center mt-2">
+                {(() => {
+                  const s = getStatusInfo(player.status);
+                  return (
+                    <span
+                      className="px-2 py-0.5 rounded text-[10px] font-medium"
+                      style={{ background: `${s.color}15`, color: s.color }}
+                    >
+                      <span className="opacity-60">Estado</span>
+                      <span className="mx-1 opacity-50">·</span>
+                      {s.label}
+                    </span>
+                  );
+                })()}
+                {(() => {
+                  const c = getPriorityColor(player.priority);
+                  const label = player.priority ? player.priority.charAt(0).toUpperCase() + player.priority.slice(1) : '-';
+                  return (
+                    <span
+                      className="px-2 py-0.5 rounded text-[10px] font-medium"
+                      style={{ background: `${c}15`, color: c }}
+                    >
+                      <span className="opacity-60">Prioridad</span>
+                      <span className="mx-1 opacity-50">·</span>
+                      {label}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              <div className="flex gap-1.5 items-center justify-self-end mt-2">
                 <button
                   onClick={() => openNotesModal(player)}
-                  className="px-4 py-2 bg-blue-500 text-white border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-blue-600 transition-colors flex items-center gap-1"
+                  className="px-2.5 py-1 bg-white/8 text-text-secondary border border-border rounded-md cursor-pointer text-xs font-medium hover:bg-white/12 transition-colors"
                   title={player.notes ? 'Ver/editar informacion' : 'Agregar informacion'}
                 >
-                  {player.notes ? 'Ver Info' : '+ Info'}
+                  {player.notes ? 'Info' : '+ Info'}
                 </button>
                 <button
                   onClick={() => handleDeletePlayer(player.id, player.player_name)}
-                  className="px-4 py-2 bg-red-500 text-white border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-red-600 transition-colors"
+                  className="px-2.5 py-1 bg-white/8 text-text-secondary border border-border rounded-md cursor-pointer text-xs font-medium hover:bg-white/12 transition-colors"
+                  title="Eliminar del mercado"
                 >
                   Eliminar
                 </button>
               </div>
             </div>
-          ))}
+    );
+
+    return (
+      <div>
+        <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+          <button
+            onClick={() => setViewMode('pitch')}
+            className="px-6 py-3 bg-accent text-white border-none rounded-lg cursor-pointer font-semibold hover:opacity-90 transition-opacity"
+          >
+            Ver en Cancha
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-widest text-text-muted font-medium">Ordenar por</span>
+            <select
+              value={listSort}
+              onChange={(e) => setListSort(e.target.value as 'date' | 'position' | 'priority')}
+              className="px-4 py-2.5 bg-surface border border-border-strong rounded-lg text-sm text-text font-semibold cursor-pointer focus:border-accent/50 focus:outline-none"
+            >
+              <option value="date">Orden de carga</option>
+              <option value="position">Posicion</option>
+              <option value="priority">Prioridad</option>
+            </select>
+          </div>
         </div>
+
+        {/* Barra de filtros */}
+        <div className="bg-surface/50 border border-border-strong rounded-lg p-3 mb-4 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-text-muted font-medium">Filtros</span>
+            {activeFilterCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-accent text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </div>
+
+          <select
+            value={filters.priority}
+            onChange={(e) => setFilters(f => ({ ...f, priority: e.target.value }))}
+            className="px-2.5 py-1.5 bg-surface border border-border-strong rounded-md text-xs text-text cursor-pointer focus:border-accent/50 focus:outline-none"
+          >
+            <option value="all">Prioridad: Todas</option>
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+          </select>
+
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}
+            className="px-2.5 py-1.5 bg-surface border border-border-strong rounded-md text-xs text-text cursor-pointer focus:border-accent/50 focus:outline-none"
+          >
+            <option value="all">Estado: Todos</option>
+            {STATUS_OPTIONS.map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.positionCategory}
+            onChange={(e) => setFilters(f => ({ ...f, positionCategory: e.target.value }))}
+            className="px-2.5 py-1.5 bg-surface border border-border-strong rounded-md text-xs text-text cursor-pointer focus:border-accent/50 focus:outline-none"
+          >
+            <option value="all">Posicion: Todas</option>
+            {POSITION_CATEGORIES.map(c => (
+              <option key={c.key} value={c.key}>{c.label}</option>
+            ))}
+            <option value="other">Sin posicion</option>
+          </select>
+
+          <div className="flex items-center gap-1 px-2 py-1.5 bg-surface border border-border-strong rounded-md">
+            <span className="text-[10px] text-text-muted">Edad</span>
+            <input
+              type="number"
+              min={14}
+              max={50}
+              placeholder="min"
+              value={filters.ageMin}
+              onChange={(e) => setFilters(f => ({ ...f, ageMin: e.target.value }))}
+              className="w-12 bg-transparent text-xs text-text focus:outline-none placeholder:text-text-muted"
+            />
+            <span className="text-[10px] text-text-muted">-</span>
+            <input
+              type="number"
+              min={14}
+              max={50}
+              placeholder="max"
+              value={filters.ageMax}
+              onChange={(e) => setFilters(f => ({ ...f, ageMax: e.target.value }))}
+              className="w-12 bg-transparent text-xs text-text focus:outline-none placeholder:text-text-muted"
+            />
+          </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              onClick={resetFilters}
+              className="ml-auto px-2.5 py-1.5 bg-white/8 text-text-secondary border border-border rounded-md text-xs cursor-pointer hover:bg-white/12 transition-colors"
+            >
+              Limpiar filtros
+            </button>
+          )}
+
+          <span className="text-xs text-text-muted ml-2">
+            Mostrando {filteredPlayers.length} / {marketPlayers.length}
+          </span>
+        </div>
+
+        {listSort === 'position' && groupedByPosition ? (
+          <div className="grid gap-6">
+            {POSITION_CATEGORIES.map(cat => (
+              groupedByPosition[cat.key]?.length ? (
+                <div key={cat.key}>
+                  <h3 className="text-xs uppercase tracking-widest text-accent font-semibold mb-3 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                    {cat.label}
+                    <span className="text-text-muted font-normal normal-case tracking-normal">
+                      ({groupedByPosition[cat.key].length})
+                    </span>
+                  </h3>
+                  <div className="grid gap-4">
+                    {groupedByPosition[cat.key].map(renderPlayerCard)}
+                  </div>
+                </div>
+              ) : null
+            ))}
+            {groupedByPosition.other?.length ? (
+              <div>
+                <h3 className="text-xs uppercase tracking-widest text-text-muted font-semibold mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
+                  Sin posicion
+                  <span className="text-text-muted font-normal normal-case tracking-normal">
+                    ({groupedByPosition.other.length})
+                  </span>
+                </h3>
+                <div className="grid gap-4">
+                  {groupedByPosition.other.map(renderPlayerCard)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {sortedPlayers.map(renderPlayerCard)}
+          </div>
+        )}
 
         {/* Popup hover en lista */}
         {hoveredPlayer && !notesModalPlayer && (
           <div
-            className="fixed bg-card rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-[1500] min-w-[280px] max-w-[340px] border-2 border-border-strong pointer-events-none"
-            style={{
-              left: Math.min(mousePosition.x + 16, window.innerWidth - 360),
-              top: Math.max(mousePosition.y - 60, 12),
-            }}
+            className="fixed bg-card rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-[1500] min-w-[280px] max-w-[360px] border-2 border-border-strong flex flex-col"
+            style={computeHoverPopupStyle(mousePosition.x, mousePosition.y)}
+            onMouseEnter={cancelHideHover}
+            onMouseLeave={scheduleHideHover}
           >
             <div className="flex items-center gap-3 mb-2">
               {getPlayerImage(hoveredPlayer) ? (
@@ -643,11 +1027,11 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
             </div>
 
             {hoveredPlayer.notes && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1">
+              <div className="mt-3 pt-3 border-t border-border flex-1 min-h-0 flex flex-col">
+                <p className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1 shrink-0">
                   Informacion
                 </p>
-                <p className="text-xs text-text whitespace-pre-wrap line-clamp-4">
+                <p className="text-xs text-text whitespace-pre-wrap break-words overflow-y-auto flex-1">
                   {hoveredPlayer.notes}
                 </p>
               </div>
@@ -657,14 +1041,14 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
 
         {notesModalPlayer && (
           <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[2000]"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[2000] p-4"
             onClick={closeNotesModal}
           >
             <div
-              className="bg-card border-2 border-border-strong rounded-xl p-6 w-[90%] max-w-[600px] max-h-[80vh] flex flex-col"
+              className="bg-card border-2 border-border-strong rounded-xl w-[90%] max-w-[600px] max-h-[90vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-start mb-4">
+              <div className="px-6 pt-6 pb-4 shrink-0 flex justify-between items-start border-b border-border-strong">
                 <div>
                   <h3 className="text-lg font-semibold text-text m-0">
                     {notesModalPlayer.player_name}
@@ -679,6 +1063,71 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                 >
                   x
                 </button>
+              </div>
+
+              <div className="px-6 py-4 flex-1 overflow-y-auto">
+
+              <div className="mb-4">
+                <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
+                  Posicion
+                </label>
+                <select
+                  value={notesModalPlayer.position || ''}
+                  onChange={(e) => updatePlayerPosition(e.target.value)}
+                  className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none cursor-pointer"
+                >
+                  <option value="">Sin posicion asignada</option>
+                  <optgroup label="Arqueros">
+                    <option value="Arquero - Clasico">Arquero - Clasico</option>
+                    <option value="Arquero - De juego">Arquero - De juego</option>
+                  </optgroup>
+                  <optgroup label="Laterales Derechos">
+                    <option value="Lateral Derecho - Equilibrado">Lateral Derecho - Equilibrado</option>
+                    <option value="Lateral Derecho - Ofensivo">Lateral Derecho - Ofensivo</option>
+                    <option value="Lateral Derecho - Defensivo">Lateral Derecho - Defensivo</option>
+                  </optgroup>
+                  <optgroup label="Laterales Izquierdos">
+                    <option value="Lateral Izquierdo - Equilibrado">Lateral Izquierdo - Equilibrado</option>
+                    <option value="Lateral Izquierdo - Ofensivo">Lateral Izquierdo - Ofensivo</option>
+                    <option value="Lateral Izquierdo - Defensivo">Lateral Izquierdo - Defensivo</option>
+                  </optgroup>
+                  <optgroup label="Centrales Derechos">
+                    <option value="Central Derecho - Equilibrado">Central Derecho - Equilibrado</option>
+                    <option value="Central Derecho - Duelista">Central Derecho - Duelista</option>
+                    <option value="Central Derecho - Asociativo">Central Derecho - Asociativo</option>
+                  </optgroup>
+                  <optgroup label="Centrales Izquierdos">
+                    <option value="Central Izquierdo - Equilibrado">Central Izquierdo - Equilibrado</option>
+                    <option value="Central Izquierdo - Duelista">Central Izquierdo - Duelista</option>
+                    <option value="Central Izquierdo - Asociativo">Central Izquierdo - Asociativo</option>
+                  </optgroup>
+                  <optgroup label="Volantes Centrales">
+                    <option value="Volante Central - De construccion">Volante Central - De construccion</option>
+                    <option value="Volante Central - Defensivo">Volante Central - Defensivo</option>
+                  </optgroup>
+                  <optgroup label="Volantes Internos">
+                    <option value="Volante Interno - Box to box">Volante Interno - Box to box</option>
+                    <option value="Volante Interno - Ofensivo">Volante Interno - Ofensivo</option>
+                  </optgroup>
+                  <optgroup label="Volantes por Afuera">
+                    <option value="Volante por Afuera - Carrilero">Volante por Afuera - Carrilero</option>
+                    <option value="Volante por Afuera - Ofensivo">Volante por Afuera - Ofensivo</option>
+                  </optgroup>
+                  <optgroup label="Extremos Derechos">
+                    <option value="Extremo Derecho - Finalizador">Extremo Derecho - Finalizador</option>
+                    <option value="Extremo Derecho - Asociativo">Extremo Derecho - Asociativo</option>
+                    <option value="Extremo Derecho - Desequilibrante">Extremo Derecho - Desequilibrante</option>
+                  </optgroup>
+                  <optgroup label="Extremos Izquierdos">
+                    <option value="Extremo Izquierdo - Finalizador">Extremo Izquierdo - Finalizador</option>
+                    <option value="Extremo Izquierdo - Asociativo">Extremo Izquierdo - Asociativo</option>
+                    <option value="Extremo Izquierdo - Desequilibrante">Extremo Izquierdo - Desequilibrante</option>
+                  </optgroup>
+                  <optgroup label="Delanteros">
+                    <option value="Delantero - De area">Delantero - De area</option>
+                    <option value="Delantero - Mediapunta">Delantero - Mediapunta</option>
+                  </optgroup>
+                </select>
               </div>
 
               <div className="mb-4">
@@ -707,6 +1156,78 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                 </div>
               </div>
 
+              <div className="mb-5 p-4 bg-surface/50 rounded-lg border border-border-strong">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium">
+                    Detalles
+                  </label>
+                  <button
+                    onClick={saveDetails}
+                    disabled={savingDetails}
+                    className="px-3 py-1.5 bg-accent hover:bg-accent-dark text-white rounded-md text-xs cursor-pointer font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {savingDetails ? 'Guardando...' : 'Guardar Detalles'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                      Estado
+                    </label>
+                    <select
+                      value={detailsDraft.status}
+                      onChange={(e) => setDetailsDraft(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full p-2 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none cursor-pointer"
+                    >
+                      <option value="seguimiento">Seguimiento</option>
+                      <option value="negociando">Negociando</option>
+                      <option value="descartado">Descartado</option>
+                      <option value="fichado">Fichado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                      Agente
+                    </label>
+                    <input
+                      type="text"
+                      value={detailsDraft.agent}
+                      onChange={(e) => setDetailsDraft(prev => ({ ...prev, agent: e.target.value }))}
+                      placeholder="Nombre / contacto del agente"
+                      className="w-full p-2 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                      Valor estimado (EUR)
+                    </label>
+                    <input
+                      type="number"
+                      value={detailsDraft.estimated_price}
+                      onChange={(e) => setDetailsDraft(prev => ({ ...prev, estimated_price: e.target.value }))}
+                      placeholder="Ej: 5000000"
+                      className="w-full p-2 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                      Valor maximo (EUR)
+                    </label>
+                    <input
+                      type="number"
+                      value={detailsDraft.max_price}
+                      onChange={(e) => setDetailsDraft(prev => ({ ...prev, max_price: e.target.value }))}
+                      placeholder="Ej: 7000000"
+                      className="w-full p-2 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
                 Informacion del jugador
               </label>
@@ -716,19 +1237,21 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                   value={notesDraft}
                   onChange={(e) => setNotesDraft(e.target.value)}
                   placeholder="Escribi informacion sobre el jugador (caracteristicas, contacto, condiciones, etc.)..."
-                  rows={10}
+                  rows={8}
                   autoFocus
-                  className="flex-1 w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none resize-none"
+                  className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none resize-y min-h-[200px]"
                 />
               ) : (
-                <div className="flex-1 overflow-auto p-3 bg-surface border border-border-strong rounded-md text-sm text-text whitespace-pre-wrap min-h-[200px]">
+                <div className="p-3 bg-surface border border-border-strong rounded-md text-sm text-text whitespace-pre-wrap min-h-[200px]">
                   {notesModalPlayer.notes || (
                     <span className="text-text-muted italic">Sin informacion cargada todavia.</span>
                   )}
                 </div>
               )}
 
-              <div className="flex gap-3 mt-5 justify-end">
+              </div>
+
+              <div className="flex gap-3 px-6 py-4 justify-end shrink-0 border-t border-border-strong bg-card rounded-b-xl">
                 <button
                   onClick={closeNotesModal}
                   className="px-4 py-2.5 bg-white/8 text-text-secondary border border-border rounded-lg text-sm cursor-pointer hover:bg-white/12 transition-colors"
@@ -937,13 +1460,13 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                     <div
                       key={player.id}
                       onMouseEnter={(e) => {
-                        setHoveredPlayer(player);
+                        showHover(player);
                         setMousePosition({ x: e.clientX, y: e.clientY });
                       }}
                       onMouseMove={(e) => {
                         setMousePosition({ x: e.clientX, y: e.clientY });
                       }}
-                      onMouseLeave={() => setHoveredPlayer(null)}
+                      onMouseLeave={scheduleHideHover}
                       className="flex flex-col items-center relative"
                       style={{
                         marginBottom: index < formation[pos].length - 1 ? '0.75rem' : 0,
@@ -1002,11 +1525,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
       {/* Popup de informacion del jugador (cancha) */}
       {hoveredPlayer && !notesModalPlayer && (
         <div
-          className="fixed bg-card rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-[2000] min-w-[280px] max-w-[340px] border-2 border-border-strong pointer-events-none"
-          style={{
-            left: Math.min(mousePosition.x + 16, window.innerWidth - 360),
-            top: Math.max(mousePosition.y - 60, 12),
-          }}
+          className="fixed bg-card rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-[2000] min-w-[280px] max-w-[360px] border-2 border-border-strong flex flex-col"
+          style={computeHoverPopupStyle(mousePosition.x, mousePosition.y)}
+          onMouseEnter={cancelHideHover}
+          onMouseLeave={scheduleHideHover}
         >
           <div className="flex items-center gap-3 mb-2">
             {getPlayerImage(hoveredPlayer) ? (
@@ -1060,11 +1582,11 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
           </div>
 
           {hoveredPlayer.notes && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <p className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1">
+            <div className="mt-3 pt-3 border-t border-border flex-1 min-h-0 flex flex-col">
+              <p className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1 shrink-0">
                 Informacion
               </p>
-              <p className="text-xs text-text whitespace-pre-wrap line-clamp-4">
+              <p className="text-xs text-text whitespace-pre-wrap break-words overflow-y-auto flex-1">
                 {hoveredPlayer.notes}
               </p>
             </div>

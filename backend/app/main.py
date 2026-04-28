@@ -592,21 +592,47 @@ async def search_players(
     try:
         async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
             wyscout_results = await wyscout.search_players(query)
-            
+            sliced = wyscout_results[:limit]
+
+            # Wyscout /v3/search returns minimal data without team info.
+            # Enriquecemos en paralelo cada jugador con /v3/players/{id}?details=currentTeam.
+            async def enrich(player: dict):
+                wy_id = player.get("wyId")
+                if not wy_id:
+                    return player
+                try:
+                    full = await wyscout.get_player(wy_id, details="currentTeam")
+                    if isinstance(full, dict):
+                        return {**player, **full}
+                except Exception as e:
+                    logger.warning(f"No se pudo enriquecer wyId={wy_id}: {e}")
+                return player
+
+            enriched = await asyncio.gather(*[enrich(p) for p in sliced], return_exceptions=False)
+
             players = []
-            for player in wyscout_results[:limit]:
+            for player in enriched:
+                first = (player.get("firstName") or "").strip()
+                last = (player.get("lastName") or "").strip()
+                full_name = f"{first} {last}".strip() or player.get("shortName") or "Unknown"
+
+                team_obj = player.get("currentTeam") or {}
+                team_name = team_obj.get("name") if isinstance(team_obj, dict) else None
+                if not team_name:
+                    team_name = "Sin equipo"
+
                 players.append(PlayerSearchResponse(
                     id=str(player.get("wyId", "")),
-                    name=player.get("shortName", "Unknown"),
-                    position=player.get("role", {}).get("name", "Unknown"),
-                    team=player.get("currentTeam", {}).get("name", "Unknown") if player.get("currentTeam") else "Unknown",
+                    name=full_name,
+                    position=(player.get("role") or {}).get("name", "Unknown"),
+                    team=team_name,
                     wyscout_id=player.get("wyId"),
                     age=calculate_age(player.get("birthDate")) if player.get("birthDate") else None,
-                    nationality=player.get("passportArea", {}).get("name", "Unknown") if player.get("passportArea") else "Unknown"
+                    nationality=(player.get("passportArea") or {}).get("name", "Unknown")
                 ))
-            
+
             return players
-            
+
     except Exception as e:
         logger.error(f"Error searching players: {e}")
         return []
