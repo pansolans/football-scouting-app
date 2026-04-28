@@ -1916,6 +1916,33 @@ async def delete_market_player(player_id: str, current_user: dict = Depends(get_
     except Exception as e:
         logger.error(f"Error deleting market player: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/markets/{market_id}")
+async def delete_market(market_id: str, current_user: dict = Depends(get_current_user)):
+    """Eliminar un mercado y todos sus jugadores asociados.
+    Solo admin/head_scout pueden eliminar mercados del club; scout/viewer solo los suyos."""
+    try:
+        existing = supabase.table('markets').select('*').eq('id', market_id).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Mercado no encontrado")
+        market = existing.data[0]
+
+        role = current_user.get("role")
+        if role in ("admin", "head_scout"):
+            if market.get("club_id") != current_user.get("club_id"):
+                raise HTTPException(status_code=403, detail="No tenes permiso sobre este mercado")
+        else:
+            if market.get("created_by") != current_user.get("id"):
+                raise HTTPException(status_code=403, detail="No tenes permiso sobre este mercado")
+
+        supabase.table('market_players').delete().eq('market_id', market_id).execute()
+        supabase.table('markets').delete().eq('id', market_id).execute()
+        return {"message": "Mercado eliminado"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting market: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     
 
 

@@ -6,22 +6,47 @@ import { API_URL } from '../config';
 interface MarketPitchViewProps {
   marketPlayers: any[];
   marketId: string;
+  market?: any;
   onUpdateFormation: (formation: any) => void;
   onPlayerDeleted?: () => void;
+  onPlayerUpdated?: () => void;
+  onMarketUpdated?: (updated: any) => void;
 }
 
-const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, onUpdateFormation, onPlayerDeleted }) => {
-  const [formation, setFormation] = useState<{[key: string]: any[]}>({
-    GK: [],
-    LB: [], CB1: [], CB2: [], RB: [],
-    CDM1: [], CDM2: [],
-    CM: [], LM: [], RM: [],
-    LW: [], ST: [], RW: []
-  });
+const DEFAULT_POSITIONS = {
+  GK: { top: '90%', left: '50%' },
+  LB: { top: '75%', left: '15%' },
+  CB1: { top: '75%', left: '35%' },
+  CB2: { top: '75%', left: '65%' },
+  RB: { top: '75%', left: '85%' },
+  CDM1: { top: '55%', left: '35%' },
+  CDM2: { top: '55%', left: '65%' },
+  CM: { top: '45%', left: '50%' },
+  LM: { top: '45%', left: '15%' },
+  RM: { top: '45%', left: '85%' },
+  LW: { top: '20%', left: '20%' },
+  ST: { top: '15%', left: '50%' },
+  RW: { top: '20%', left: '80%' }
+};
+
+const EMPTY_FORMATION: {[key: string]: any[]} = {
+  GK: [],
+  LB: [], CB1: [], CB2: [], RB: [],
+  CDM1: [], CDM2: [],
+  CM: [], LM: [], RM: [],
+  LW: [], ST: [], RW: []
+};
+
+const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, market, onUpdateFormation, onPlayerDeleted, onPlayerUpdated, onMarketUpdated }) => {
+  const [formation, setFormation] = useState<{[key: string]: any[]}>(
+    () => ({ ...EMPTY_FORMATION, ...(market?.formation_data || {}) })
+  );
 
   const [draggedPlayer, setDraggedPlayer] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'list' | 'pitch'>('list');
-  const [selectedFormation, setSelectedFormation] = useState('custom');
+  const [selectedFormation, setSelectedFormation] = useState(
+    () => market?.formation_layout?.formation_name || 'custom'
+  );
   const [playerDetails, setPlayerDetails] = useState<{[key: string]: any}>({});
   const [hoveredPlayer, setHoveredPlayer] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -29,32 +54,95 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   const [draggingPosition, setDraggingPosition] = useState<string | null>(null);
   const pitchRef = useRef<HTMLDivElement>(null);
 
-  // Posiciones personalizables - se cargan de localStorage o usan valores por defecto
-  const [customPositions, setCustomPositions] = useState<{[key: string]: {top: string, left: string}}>(() => {
-    const saved = localStorage.getItem(`customPositions_${marketId}`);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error loading custom positions:', e);
+  // Notas / info por jugador
+  const [notesModalPlayer, setNotesModalPlayer] = useState<any | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [notesEditing, setNotesEditing] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  const openNotesModal = (player: any) => {
+    setNotesModalPlayer(player);
+    setNotesDraft(player.notes || '');
+    setNotesEditing(!player.notes);
+  };
+
+  const closeNotesModal = () => {
+    setNotesModalPlayer(null);
+    setNotesDraft('');
+    setNotesEditing(false);
+    setSavingNotes(false);
+  };
+
+  const saveNotes = async () => {
+    if (!notesModalPlayer) return;
+    setSavingNotes(true);
+    try {
+      const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ notes: notesDraft })
+      });
+      if (response.ok) {
+        notesModalPlayer.notes = notesDraft;
+        if (onPlayerUpdated) onPlayerUpdated();
+        setNotesEditing(false);
+      } else {
+        alert('Error al guardar la informacion');
       }
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      alert('Error al guardar la informacion');
+    } finally {
+      setSavingNotes(false);
     }
-    return {
-      GK: { top: '90%', left: '50%' },
-      LB: { top: '75%', left: '15%' },
-      CB1: { top: '75%', left: '35%' },
-      CB2: { top: '75%', left: '65%' },
-      RB: { top: '75%', left: '85%' },
-      CDM1: { top: '55%', left: '35%' },
-      CDM2: { top: '55%', left: '65%' },
-      CM: { top: '45%', left: '50%' },
-      LM: { top: '45%', left: '15%' },
-      RM: { top: '45%', left: '85%' },
-      LW: { top: '20%', left: '20%' },
-      ST: { top: '15%', left: '50%' },
-      RW: { top: '20%', left: '80%' }
-    };
-  });
+  };
+
+  const updatePriority = async (newPriority: 'alta' | 'media' | 'baja') => {
+    if (!notesModalPlayer) return;
+    const previous = notesModalPlayer.priority;
+    if (previous === newPriority) return;
+
+    // Update local state optimistically (mutate prop & also propagate to formation copies)
+    notesModalPlayer.priority = newPriority;
+    setFormation(prev => {
+      const next: {[key: string]: any[]} = {};
+      for (const [pos, players] of Object.entries(prev)) {
+        next[pos] = players.map((p: any) =>
+          p.id === notesModalPlayer.id ? { ...p, priority: newPriority } : p
+        );
+      }
+      return next;
+    });
+
+    try {
+      const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ priority: newPriority })
+      });
+      if (response.ok) {
+        if (onPlayerUpdated) onPlayerUpdated();
+      } else {
+        notesModalPlayer.priority = previous;
+        alert('Error al actualizar prioridad');
+      }
+    } catch (error) {
+      console.error('Error updating priority:', error);
+      notesModalPlayer.priority = previous;
+      alert('Error al actualizar prioridad');
+    }
+  };
+
+  // Posiciones personalizables — se cargan desde el market (Supabase) o usan valores por defecto
+  const [customPositions, setCustomPositions] = useState<{[key: string]: {top: string, left: string}}>(
+    () => ({ ...DEFAULT_POSITIONS, ...(market?.formation_layout?.positions || {}) })
+  );
 
   // Formaciones predefinidas
   const formations: {[key: string]: {[key: string]: {top: string, left: string}}} = {
@@ -99,35 +187,60 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     }
   };
 
-  // Guardar posiciones personalizadas cuando cambien
-  useEffect(() => {
-    if (selectedFormation === 'custom' && marketId) {
-      localStorage.setItem(`customPositions_${marketId}`, JSON.stringify(customPositions));
-    }
-  }, [customPositions, selectedFormation, marketId]);
+  // Guardado debounced al backend cuando cambian formation / positions / formation_name.
+  // Usamos un snapshot del estado inicial para no PATCH'ear si nada cambio realmente
+  // (evita loops cuando Supabase devuelve nuevas referencias JSON con mismo contenido).
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedSnapshotRef = useRef<string>('');
+  if (lastSavedSnapshotRef.current === '') {
+    lastSavedSnapshotRef.current = JSON.stringify({
+      formation_data: formation,
+      formation_layout: { positions: customPositions, formation_name: selectedFormation },
+    });
+  }
 
-  // Cargar formacion guardada de localStorage al montar
   useEffect(() => {
     if (!marketId) return;
 
-    const savedFormation = localStorage.getItem(`marketFormation_${marketId}`);
-    if (savedFormation && marketPlayers.length > 0) {
-      try {
-        const parsed = JSON.parse(savedFormation);
-        setFormation(parsed);
-      } catch (e) {
-        console.error('Error loading saved formation:', e);
-      }
-    }
-  }, [marketId, marketPlayers]);
+    const snapshot = JSON.stringify({
+      formation_data: formation,
+      formation_layout: { positions: customPositions, formation_name: selectedFormation },
+    });
+    if (snapshot === lastSavedSnapshotRef.current) return;
 
-  // Guardar formacion cuando cambie
-  useEffect(() => {
-    if (marketId && Object.values(formation).some(pos => pos.length > 0)) {
-      localStorage.setItem(`marketFormation_${marketId}`, JSON.stringify(formation));
-      onUpdateFormation(formation);
-    }
-  }, [formation, marketId]);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        const payload = {
+          formation_data: formation,
+          formation_layout: {
+            positions: customPositions,
+            formation_name: selectedFormation,
+          },
+        };
+        const response = await fetch(`${API_URL}/api/markets/${marketId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          const updated = await response.json();
+          lastSavedSnapshotRef.current = snapshot;
+          if (updated && onMarketUpdated) onMarketUpdated(updated);
+          onUpdateFormation(formation);
+        }
+      } catch (error) {
+        console.error('Error saving formation:', error);
+      }
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [formation, customPositions, selectedFormation, marketId]);
 
   // Cargar detalles de todos los jugadores Wyscout en una sola llamada batch
   const fetchedIdsRef = useRef<Set<string>>(new Set());
@@ -276,6 +389,11 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     const details = playerDetails[player.player_id];
     return details?.team_name || player.current_team || 'Sin equipo';
   };
+
+  const getPlayerTeamImage = (player: any): string | undefined => {
+    const details = playerDetails[player.player_id];
+    return details?.team_image;
+  };
   const getCountryCode = (nationality: string): string => {
     const countryMap: {[key: string]: string} = {
       'Argentina': 'ar',
@@ -376,13 +494,65 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
               key={player.id}
               className="bg-card rounded-xl p-6 border-2 border-border-strong flex justify-between items-start"
             >
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold m-0 text-text">
-                  {player.player_name}
-                </h3>
-                <p className="text-sm text-text-muted mt-1">
-                  {player.position} - {getPlayerAge(player)} anos - {getPlayerCurrentTeam(player)}
-                </p>
+              <div className="flex-1 flex items-start gap-4">
+                {/* Mini cuadro con foto del jugador y logo del equipo */}
+                <div
+                  className="relative shrink-0 w-[56px] h-[56px] rounded-lg bg-surface border border-border-strong overflow-hidden flex items-center justify-center cursor-pointer"
+                  onMouseEnter={(e) => {
+                    setHoveredPlayer(player);
+                    setMousePosition({ x: e.clientX, y: e.clientY });
+                  }}
+                  onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHoveredPlayer(null)}
+                >
+                  {getPlayerImage(player) ? (
+                    <img
+                      src={getPlayerImage(player)}
+                      alt={player.player_name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-text-muted">
+                      {player.player_name.split(' ').map((s: string) => s[0]).slice(0, 2).join('')}
+                    </span>
+                  )}
+                  {getPlayerTeamImage(player) && (
+                    <img
+                      src={getPlayerTeamImage(player)}
+                      alt=""
+                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white object-contain border border-border-strong p-[1px]"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <h3
+                    className="text-xl font-semibold m-0 text-text inline-block cursor-pointer hover:text-accent transition-colors"
+                    onMouseEnter={(e) => {
+                      setHoveredPlayer(player);
+                      setMousePosition({ x: e.clientX, y: e.clientY });
+                    }}
+                    onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
+                    onMouseLeave={() => setHoveredPlayer(null)}
+                    onClick={() => openNotesModal(player)}
+                  >
+                    {player.player_name}
+                  </h3>
+                  <p className="text-sm text-text-muted mt-1">
+                    {player.position} - {getPlayerAge(player)} anos - {getPlayerCurrentTeam(player)}
+                  </p>
+                  {player.notes && (
+                    <p className="text-sm text-text-muted mt-2 line-clamp-2 italic">
+                      {player.notes}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2 items-center">
                 <span
@@ -395,6 +565,13 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                   Prioridad {player.priority}
                 </span>
                 <button
+                  onClick={() => openNotesModal(player)}
+                  className="px-4 py-2 bg-blue-500 text-white border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-blue-600 transition-colors flex items-center gap-1"
+                  title={player.notes ? 'Ver/editar informacion' : 'Agregar informacion'}
+                >
+                  {player.notes ? 'Ver Info' : '+ Info'}
+                </button>
+                <button
                   onClick={() => handleDeletePlayer(player.id, player.player_name)}
                   className="px-4 py-2 bg-red-500 text-white border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-red-600 transition-colors"
                 >
@@ -404,6 +581,192 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
             </div>
           ))}
         </div>
+
+        {/* Popup hover en lista */}
+        {hoveredPlayer && !notesModalPlayer && (
+          <div
+            className="fixed bg-card rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-[1500] min-w-[280px] max-w-[340px] border-2 border-border-strong pointer-events-none"
+            style={{
+              left: Math.min(mousePosition.x + 16, window.innerWidth - 360),
+              top: Math.max(mousePosition.y - 60, 12),
+            }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              {getPlayerImage(hoveredPlayer) ? (
+                <img
+                  src={getPlayerImage(hoveredPlayer)}
+                  alt={hoveredPlayer.player_name}
+                  className="w-[60px] h-[60px] rounded-full object-cover border-2 border-border-strong"
+                />
+              ) : (
+                <div className="w-[60px] h-[60px] rounded-full bg-surface border-2 border-border-strong flex items-center justify-center text-sm font-bold text-text-muted">
+                  {hoveredPlayer.player_name.split(' ').map((s: string) => s[0]).slice(0, 2).join('')}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h4 className="m-0 text-base font-bold text-text truncate">
+                  {hoveredPlayer.player_name}
+                </h4>
+                <p className="my-1 text-xs text-text-muted">
+                  {hoveredPlayer.position} - {getPlayerAge(hoveredPlayer)} anos
+                </p>
+                <div className="flex items-center gap-2">
+                  {getPlayerTeamImage(hoveredPlayer) && (
+                    <img
+                      src={getPlayerTeamImage(hoveredPlayer)}
+                      alt=""
+                      className="w-5 h-5 object-contain bg-white rounded-full p-[2px]"
+                    />
+                  )}
+                  <span className="text-xs text-text-muted truncate">
+                    {getPlayerCurrentTeam(hoveredPlayer)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-2">
+              <span
+                className="px-2 py-0.5 rounded-lg text-[0.625rem] font-semibold"
+                style={{
+                  background: `${getPriorityColor(hoveredPlayer.priority)}20`,
+                  color: getPriorityColor(hoveredPlayer.priority),
+                }}
+              >
+                Prioridad {hoveredPlayer.priority}
+              </span>
+              {hoveredPlayer.estimated_price && (
+                <span className="text-xs font-bold text-emerald-500">
+                  EUR {Number(hoveredPlayer.estimated_price).toLocaleString()}
+                </span>
+              )}
+            </div>
+
+            {hoveredPlayer.notes && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1">
+                  Informacion
+                </p>
+                <p className="text-xs text-text whitespace-pre-wrap line-clamp-4">
+                  {hoveredPlayer.notes}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {notesModalPlayer && (
+          <div
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[2000]"
+            onClick={closeNotesModal}
+          >
+            <div
+              className="bg-card border-2 border-border-strong rounded-xl p-6 w-[90%] max-w-[600px] max-h-[80vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-text m-0">
+                    {notesModalPlayer.player_name}
+                  </h3>
+                  <p className="text-sm text-text-muted mt-1">
+                    {notesModalPlayer.position} - {getPlayerAge(notesModalPlayer)} anos - {getPlayerCurrentTeam(notesModalPlayer)}
+                  </p>
+                </div>
+                <button
+                  onClick={closeNotesModal}
+                  className="text-text-muted hover:text-text text-xl cursor-pointer bg-transparent border-none"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
+                  Prioridad
+                </label>
+                <div className="flex gap-2">
+                  {(['alta', 'media', 'baja'] as const).map(level => {
+                    const active = notesModalPlayer.priority === level;
+                    const color = getPriorityColor(level);
+                    return (
+                      <button
+                        key={level}
+                        onClick={() => updatePriority(level)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all border-2"
+                        style={{
+                          background: active ? color : `${color}20`,
+                          color: active ? '#ffffff' : color,
+                          borderColor: active ? color : 'transparent',
+                        }}
+                      >
+                        {level.charAt(0).toUpperCase() + level.slice(1)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
+                Informacion del jugador
+              </label>
+
+              {notesEditing ? (
+                <textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  placeholder="Escribi informacion sobre el jugador (caracteristicas, contacto, condiciones, etc.)..."
+                  rows={10}
+                  autoFocus
+                  className="flex-1 w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none resize-none"
+                />
+              ) : (
+                <div className="flex-1 overflow-auto p-3 bg-surface border border-border-strong rounded-md text-sm text-text whitespace-pre-wrap min-h-[200px]">
+                  {notesModalPlayer.notes || (
+                    <span className="text-text-muted italic">Sin informacion cargada todavia.</span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-5 justify-end">
+                <button
+                  onClick={closeNotesModal}
+                  className="px-4 py-2.5 bg-white/8 text-text-secondary border border-border rounded-lg text-sm cursor-pointer hover:bg-white/12 transition-colors"
+                >
+                  Cerrar
+                </button>
+                {notesEditing ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setNotesDraft(notesModalPlayer.notes || '');
+                        setNotesEditing(false);
+                      }}
+                      disabled={savingNotes}
+                      className="px-4 py-2.5 bg-white/8 text-text-secondary border border-border rounded-lg text-sm cursor-pointer hover:bg-white/12 transition-colors disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={saveNotes}
+                      disabled={savingNotes}
+                      className="px-4 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm cursor-pointer font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {savingNotes ? 'Guardando...' : 'Guardar'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setNotesEditing(true)}
+                    className="px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm cursor-pointer font-semibold transition-colors"
+                  >
+                    Editar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -636,40 +999,76 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
         </div>
       </div>
 
-      {/* Popup de informacion del jugador */}
-      {hoveredPlayer && (
+      {/* Popup de informacion del jugador (cancha) */}
+      {hoveredPlayer && !notesModalPlayer && (
         <div
-          className="fixed bg-card rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-[2000] min-w-[250px] border-2 border-border-strong"
+          className="fixed bg-card rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-[2000] min-w-[280px] max-w-[340px] border-2 border-border-strong pointer-events-none"
           style={{
-            left: mousePosition.x + 10,
-            top: mousePosition.y - 100,
+            left: Math.min(mousePosition.x + 16, window.innerWidth - 360),
+            top: Math.max(mousePosition.y - 60, 12),
           }}
         >
-          <div className="flex items-center gap-4">
-            {getPlayerImage(hoveredPlayer) && (
+          <div className="flex items-center gap-3 mb-2">
+            {getPlayerImage(hoveredPlayer) ? (
               <img
                 src={getPlayerImage(hoveredPlayer)}
                 alt={hoveredPlayer.player_name}
-                className="w-[60px] h-[60px] rounded-full object-cover"
+                className="w-[60px] h-[60px] rounded-full object-cover border-2 border-border-strong"
               />
+            ) : (
+              <div className="w-[60px] h-[60px] rounded-full bg-surface border-2 border-border-strong flex items-center justify-center text-sm font-bold text-text-muted">
+                {hoveredPlayer.player_name.split(' ').map((s: string) => s[0]).slice(0, 2).join('')}
+              </div>
             )}
-            <div>
-              <h4 className="m-0 text-base font-bold text-text">
+            <div className="flex-1 min-w-0">
+              <h4 className="m-0 text-base font-bold text-text truncate">
                 {hoveredPlayer.player_name}
               </h4>
-              <p className="my-1 text-sm text-text-muted">
+              <p className="my-1 text-xs text-text-muted">
                 {hoveredPlayer.position} - {getPlayerAge(hoveredPlayer)} anos
               </p>
-              <p className="m-0 text-sm text-text-muted">
-                {getPlayerCurrentTeam(hoveredPlayer)}
-              </p>
-              {hoveredPlayer.estimated_price && (
-                <p className="my-1 text-sm font-bold text-emerald-500">
-                  EUR {hoveredPlayer.estimated_price.toLocaleString()}
-                </p>
-              )}
+              <div className="flex items-center gap-2">
+                {getPlayerTeamImage(hoveredPlayer) && (
+                  <img
+                    src={getPlayerTeamImage(hoveredPlayer)}
+                    alt=""
+                    className="w-5 h-5 object-contain bg-white rounded-full p-[2px]"
+                  />
+                )}
+                <span className="text-xs text-text-muted truncate">
+                  {getPlayerCurrentTeam(hoveredPlayer)}
+                </span>
+              </div>
             </div>
           </div>
+
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className="px-2 py-0.5 rounded-lg text-[0.625rem] font-semibold"
+              style={{
+                background: `${getPriorityColor(hoveredPlayer.priority)}20`,
+                color: getPriorityColor(hoveredPlayer.priority),
+              }}
+            >
+              Prioridad {hoveredPlayer.priority}
+            </span>
+            {hoveredPlayer.estimated_price && (
+              <span className="text-xs font-bold text-emerald-500">
+                EUR {Number(hoveredPlayer.estimated_price).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          {hoveredPlayer.notes && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <p className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1">
+                Informacion
+              </p>
+              <p className="text-xs text-text whitespace-pre-wrap line-clamp-4">
+                {hoveredPlayer.notes}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -154,6 +154,34 @@ const MarketSystem: React.FC = () => {
     }
   };
 
+  const deleteMarket = async (market: Market) => {
+    const confirmText = `Eliminar el mercado "${market.name}"?\n\nEsto borrara TAMBIEN todos los jugadores cargados en este mercado. Esta accion no se puede deshacer.`;
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/markets/${market.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        setMarkets(prev => prev.filter(m => m.id !== market.id));
+        if (selectedMarket?.id === market.id) {
+          setSelectedMarket(null);
+          setActiveView('list');
+        }
+      } else {
+        const err = await response.json().catch(() => null);
+        alert(err?.detail || 'Error al eliminar el mercado');
+      }
+    } catch (error) {
+      console.error('Error deleting market:', error);
+      alert('Error al eliminar el mercado');
+    }
+  };
+
   const updatePlayerStatus = async (playerId: string, newStatus: string) => {
     try {
       const response = await fetch(`${API_URL}/api/markets/players/${playerId}`, {
@@ -247,6 +275,16 @@ const MarketSystem: React.FC = () => {
                   >
                     Editar
                   </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteMarket(market);
+                    }}
+                    className="px-3 py-1.5 bg-red-500/15 text-red-400 rounded-md text-xs font-medium cursor-pointer hover:bg-red-500/25 transition-colors"
+                    title="Eliminar mercado"
+                  >
+                    Eliminar
+                  </button>
                   <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
                     market.status === 'active'
                       ? 'bg-accent/15 text-accent'
@@ -289,10 +327,20 @@ const MarketSystem: React.FC = () => {
       <MarketPitchView
         marketPlayers={marketPlayers}
         marketId={selectedMarket?.id || ''}
+        market={selectedMarket}
+        onMarketUpdated={(updated) => {
+          setSelectedMarket(prev => prev ? { ...prev, ...updated } : prev);
+          setMarkets(ms => ms.map(m => (m.id === updated.id ? { ...m, ...updated } : m)));
+        }}
         onUpdateFormation={(formation) => {
           console.log('Formacion actualizada:', formation);
         }}
         onPlayerDeleted={() => {
+          if (selectedMarket) {
+            loadMarketPlayers(selectedMarket.id);
+          }
+        }}
+        onPlayerUpdated={() => {
           if (selectedMarket) {
             loadMarketPlayers(selectedMarket.id);
           }
