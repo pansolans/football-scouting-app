@@ -202,7 +202,7 @@ const MarketSystem: React.FC = () => {
     }
   };
 
-  const MarketListView = () => (
+  const marketListView = (
     <div className="animate-fade-in">
       {/* Market Header */}
       <div className="relative overflow-hidden rounded-2xl border border-border-strong mb-6">
@@ -301,7 +301,7 @@ const MarketSystem: React.FC = () => {
     </div>
   );
 
-  const MarketDetailView = () => (
+  const marketDetailView = (
     <div>
       <div className="mb-6">
         <button
@@ -351,7 +351,7 @@ const MarketSystem: React.FC = () => {
 
   return (
     <div>
-      {activeView === 'list' ? <MarketListView /> : <MarketDetailView />}
+      {activeView === 'list' ? marketListView : marketDetailView}
 
       {/* Modal Crear Mercado */}
       {showCreateMarket && (
