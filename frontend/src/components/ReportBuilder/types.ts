@@ -95,6 +95,9 @@ export interface BuilderReport {
   is_template: boolean;
   template_name?: string;
   created_by?: string;
+  created_by_name?: string;
+  created_by_email?: string;
+  club_name?: string;
   created_at?: string;
   updated_at?: string;
 }

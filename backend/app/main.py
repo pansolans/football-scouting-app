@@ -213,6 +213,19 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     current_user.pop('password_hash', None)
     return current_user
 
+@app.get("/api/scouts")
+async def list_scouts_in_club(current_user: dict = Depends(get_current_user)):
+    """Listar scouts del club del usuario actual (para asignar tareas, etc.)."""
+    club_id = current_user.get('club_id')
+    if not club_id:
+        return []
+    try:
+        result = supabase.table('scouts').select("id,name,email,role,is_active").eq('club_id', club_id).order('name').execute()
+        return [s for s in (result.data or []) if s.get('is_active', True)]
+    except Exception as e:
+        logger.error(f"Error listing scouts: {e}")
+        return []
+
 # ============= FIN ENDPOINTS AUTH =============
 
 @app.get("/api/test-wyscout")
@@ -1917,8 +1930,26 @@ async def add_player_to_market(market_id: str, player_data: dict, current_user: 
 async def update_market_player_status(player_id: str, update_data: dict, current_user: dict = Depends(get_current_user)):
     """Actualizar estado de jugador en mercado"""
     try:
+        # Si viene assigned_to, resolver nombre/email del scout y validar club
+        if "assigned_to" in update_data:
+            assigned_to = update_data.get("assigned_to")
+            if assigned_to:
+                scout_resp = supabase.table("scouts").select("id,name,email,club_id").eq("id", assigned_to).execute()
+                scout = scout_resp.data[0] if scout_resp.data else None
+                if not scout:
+                    raise HTTPException(status_code=400, detail="Scout asignado no existe")
+                if scout.get("club_id") and current_user.get("club_id") and scout["club_id"] != current_user["club_id"]:
+                    raise HTTPException(status_code=403, detail="No podes asignar a un scout de otro club")
+                update_data["assigned_to_name"] = scout.get("name")
+                update_data["assigned_to_email"] = scout.get("email")
+            else:
+                update_data["assigned_to_name"] = None
+                update_data["assigned_to_email"] = None
+
         result = supabase.table('market_players').update(update_data).eq('id', player_id).execute()
         return result.data[0] if result.data else None
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating market player: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1942,6 +1973,42 @@ async def delete_market_player(player_id: str, current_user: dict = Depends(get_
     except Exception as e:
         logger.error(f"Error deleting market player: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/market-players/pending-reports")
+async def get_pending_report_requests(
+    scope: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Listar market_players con report_status='requested' del club del usuario.
+    scope=mine -> solo asignados al usuario o sin asignar
+    scope=all  -> todos los del club (default para admin/head_scout)
+    Por defecto, scout/viewer ven solo los suyos + sin asignar; admin/head_scout ven todos."""
+    try:
+        club_id = current_user.get('club_id')
+        if not club_id:
+            return []
+        # Una sola query con JOIN: traer market_players + datos del market embebidos
+        result = supabase.table('market_players') \
+            .select('*, markets!inner(id, name, club_id)') \
+            .eq('report_status', 'requested') \
+            .eq('markets.club_id', club_id) \
+            .execute()
+        players = result.data or []
+
+        role = current_user.get("role")
+        effective_scope = scope or ("all" if role in ("admin", "head_scout") else "mine")
+        if effective_scope == "mine":
+            uid = current_user.get("id")
+            players = [p for p in players if (p.get("assigned_to") in (None, uid))]
+
+        # Aplanar market_name desde el embed
+        for p in players:
+            market = p.pop('markets', None) or {}
+            p['market_name'] = market.get('name', '')
+        return players
+    except Exception as e:
+        logger.error(f"Error getting pending report requests: {e}")
+        return []
 
 @app.delete("/api/markets/{market_id}")
 async def delete_market(market_id: str, current_user: dict = Depends(get_current_user)):
@@ -2166,6 +2233,18 @@ class BuilderReportCreate(BaseModel):
     pages: Optional[list] = None
     is_template: bool = False
     template_name: Optional[str] = None
+    market_player_id: Optional[str] = None
+
+
+def _can_access_builder_report(report: dict, current_user: dict) -> bool:
+    """Admin/head_scout ven todos los del club; scout/viewer solo los que crearon ellos."""
+    role = current_user.get("role")
+    if report.get("club_id") != current_user.get("club_id"):
+        return False
+    if role in ("admin", "head_scout"):
+        return True
+    return report.get("user_id") == current_user.get("id")
+
 
 @app.get("/api/report-builder")
 async def list_builder_reports(
@@ -2173,14 +2252,46 @@ async def list_builder_reports(
     player_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
+    """Listar informes del club. Admin/head_scout ven todos los del club; scout/viewer solo los suyos."""
     try:
-        query = supabase.table("report_builder_reports").select("*").order("updated_at", desc=True)
+        club_id = current_user.get("club_id")
+        if not club_id:
+            return []
+        query = supabase.table("report_builder_reports").select("*").eq("club_id", club_id).order("updated_at", desc=True)
+        if current_user.get("role") not in ("admin", "head_scout"):
+            query = query.eq("user_id", current_user.get("id"))
         if is_template is not None:
             query = query.eq("is_template", is_template)
         if player_id:
             query = query.eq("player_id", player_id)
         result = query.execute()
-        return result.data or []
+        rows = result.data or []
+
+        # Enriquecer registros antiguos que no tengan created_by_name / club_name
+        missing_user_ids = list({
+            r.get("user_id") for r in rows
+            if r.get("user_id") and (not r.get("created_by_name") or not r.get("created_by_email"))
+        })
+        scouts_by_id: dict = {}
+        if missing_user_ids:
+            try:
+                scouts_resp = supabase.table("scouts").select("id,name,email,organization").in_("id", missing_user_ids).execute()
+                for s in scouts_resp.data or []:
+                    scouts_by_id[s["id"]] = s
+            except Exception as _e:
+                logger.warning(f"Could not enrich builder reports with scout info: {_e}")
+
+        for r in rows:
+            uid = r.get("user_id")
+            scout = scouts_by_id.get(uid) if uid else None
+            if scout:
+                if not r.get("created_by_name"):
+                    r["created_by_name"] = scout.get("name")
+                if not r.get("created_by_email"):
+                    r["created_by_email"] = scout.get("email")
+                if not r.get("club_name"):
+                    r["club_name"] = scout.get("organization")
+        return rows
     except Exception as e:
         logger.error(f"Error listing builder reports: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2191,7 +2302,10 @@ async def get_builder_report(report_id: str, current_user: dict = Depends(get_cu
         result = supabase.table("report_builder_reports").select("*").eq("id", report_id).execute()
         if not result.data:
             raise HTTPException(status_code=404, detail="Report not found")
-        return result.data[0]
+        report = result.data[0]
+        if not _can_access_builder_report(report, current_user):
+            raise HTTPException(status_code=403, detail="No tenes permiso sobre este informe")
+        return report
     except HTTPException:
         raise
     except Exception as e:
@@ -2200,7 +2314,6 @@ async def get_builder_report(report_id: str, current_user: dict = Depends(get_cu
 @app.post("/api/report-builder")
 async def create_builder_report(report: BuilderReportCreate, current_user: dict = Depends(get_current_user)):
     try:
-        # Store template_name inside cover_data to avoid missing column
         cover = report.cover_data or {}
         if report.template_name:
             cover["template_name"] = report.template_name
@@ -2213,10 +2326,15 @@ async def create_builder_report(report: BuilderReportCreate, current_user: dict 
             "blocks": report.blocks,
             "pages": report.pages,
             "is_template": report.is_template,
+            "market_player_id": report.market_player_id,
+            "club_id": current_user.get("club_id"),
+            "user_id": current_user.get("id"),
+            "created_by_name": current_user.get("name"),
+            "created_by_email": current_user.get("email"),
+            "club_name": current_user.get("organization"),
         }
-        # Remove None values so DB defaults apply
         data = {k: v for k, v in data.items() if v is not None}
-        logger.info(f"Creating builder report: is_template={report.is_template}, title={report.title}")
+        logger.info(f"Creating builder report: club={data.get('club_id')}, user={data.get('user_id')}, title={report.title}")
         result = supabase.table("report_builder_reports").insert(data).execute()
         if result.data:
             return result.data[0]
@@ -2230,6 +2348,12 @@ async def create_builder_report(report: BuilderReportCreate, current_user: dict 
 @app.put("/api/report-builder/{report_id}")
 async def update_builder_report(report_id: str, report: BuilderReportCreate, current_user: dict = Depends(get_current_user)):
     try:
+        existing = supabase.table("report_builder_reports").select("*").eq("id", report_id).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Report not found")
+        if not _can_access_builder_report(existing.data[0], current_user):
+            raise HTTPException(status_code=403, detail="No tenes permiso sobre este informe")
+
         cover = report.cover_data or {}
         if report.template_name:
             cover["template_name"] = report.template_name
@@ -2242,6 +2366,7 @@ async def update_builder_report(report_id: str, report: BuilderReportCreate, cur
             "blocks": report.blocks,
             "pages": report.pages,
             "is_template": report.is_template,
+            "market_player_id": report.market_player_id,
             "updated_at": datetime.utcnow().isoformat(),
         }
         data = {k: v for k, v in data.items() if v is not None}
@@ -2257,8 +2382,15 @@ async def update_builder_report(report_id: str, report: BuilderReportCreate, cur
 @app.delete("/api/report-builder/{report_id}")
 async def delete_builder_report(report_id: str, current_user: dict = Depends(get_current_user)):
     try:
-        result = supabase.table("report_builder_reports").delete().eq("id", report_id).execute()
+        existing = supabase.table("report_builder_reports").select("*").eq("id", report_id).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Report not found")
+        if not _can_access_builder_report(existing.data[0], current_user):
+            raise HTTPException(status_code=403, detail="No tenes permiso sobre este informe")
+        supabase.table("report_builder_reports").delete().eq("id", report_id).execute()
         return {"message": "Report deleted"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

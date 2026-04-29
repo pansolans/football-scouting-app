@@ -11,6 +11,7 @@ interface MarketPitchViewProps {
   onPlayerDeleted?: () => void;
   onPlayerUpdated?: () => void;
   onMarketUpdated?: (updated: any) => void;
+  onOpenInforme?: (reportId: string) => void;
 }
 
 const DEFAULT_POSITIONS = {
@@ -81,7 +82,7 @@ const getStatusInfo = (status: string | undefined) => {
   return STATUS_OPTIONS.find(s => s.value === status) || { value: status || '', label: status || 'Sin estado', color: '#6b7280' };
 };
 
-const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, market, onUpdateFormation, onPlayerDeleted, onPlayerUpdated, onMarketUpdated }) => {
+const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, market, onUpdateFormation, onPlayerDeleted, onPlayerUpdated, onMarketUpdated, onOpenInforme }) => {
   const [formation, setFormation] = useState<{[key: string]: any[]}>(
     () => ({ ...EMPTY_FORMATION, ...(market?.formation_data || {}) })
   );
@@ -151,6 +152,25 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
 
   // Orden del listado
   const [listSort, setListSort] = useState<'date' | 'position' | 'priority'>('date');
+
+  // Scouts del club (para asignar solicitudes de informe)
+  const [clubScouts, setClubScouts] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  // Popover de asignacion: { playerId, anchorRect }
+  const [assignTarget, setAssignTarget] = useState<{ player: any; rect: DOMRect } | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API_URL}/api/scouts`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setClubScouts(Array.isArray(data) ? data : []))
+      .catch(() => setClubScouts([]));
+    fetch(`${API_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(u => u && setCurrentUserId(u.id))
+      .catch(() => {});
+  }, []);
 
   // Filtros del listado
   const [filters, setFilters] = useState({
@@ -678,6 +698,162 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   };
 
 
+  // Solicitar / cancelar / abrir informe asociado a un market_player
+  const requestReport = async (player: any, assignedTo: string | null) => {
+    try {
+      const response = await fetch(`${API_URL}/api/markets/players/${player.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ report_status: 'requested', assigned_to: assignedTo })
+      });
+      if (response.ok) {
+        const updated = await response.json().catch(() => null);
+        player.report_status = 'requested';
+        player.assigned_to = updated?.assigned_to ?? assignedTo;
+        player.assigned_to_name = updated?.assigned_to_name ?? null;
+        player.assigned_to_email = updated?.assigned_to_email ?? null;
+        if (onPlayerUpdated) onPlayerUpdated();
+      } else {
+        alert('Error al solicitar informe');
+      }
+    } catch (error) {
+      console.error('Error requesting report:', error);
+      alert('Error al solicitar informe');
+    }
+  };
+
+  const openAssignPopover = (player: any, btn: HTMLElement) => {
+    setAssignTarget({ player, rect: btn.getBoundingClientRect() });
+  };
+  const closeAssignPopover = () => setAssignTarget(null);
+  const confirmAssignAndRequest = async (assignedTo: string | null) => {
+    if (!assignTarget) return;
+    const target = assignTarget.player;
+    closeAssignPopover();
+    await requestReport(target, assignedTo);
+  };
+
+  const renderAssignPopover = () => {
+    if (!assignTarget) return null;
+    const isReassigning = assignTarget.player.report_status === 'requested';
+    const currentAssigneeId = assignTarget.player.assigned_to || null;
+    return (
+      <>
+        <div
+          onClick={closeAssignPopover}
+          className="fixed inset-0 z-[1000]"
+          style={{ background: 'transparent' }}
+        />
+        <div
+          className="fixed z-[1001] bg-card border border-border-strong rounded-lg shadow-xl overflow-hidden"
+          style={{
+            top: Math.min(assignTarget.rect.bottom + 6, window.innerHeight - 360),
+            left: Math.min(assignTarget.rect.left, window.innerWidth - 260),
+            width: 240,
+            maxHeight: 360,
+          }}
+        >
+          <div className="px-3 py-2 border-b border-border bg-surface">
+            <div className="text-[11px] uppercase tracking-widest text-text-muted font-medium">
+              {isReassigning ? 'Reasignar a' : 'Asignar a'}
+            </div>
+            <div className="text-xs text-text-secondary truncate">{assignTarget.player.player_name}</div>
+            {isReassigning && assignTarget.player.assigned_to_name && (
+              <div className="text-[10px] text-amber-400 mt-1">Actual: {assignTarget.player.assigned_to_name}</div>
+            )}
+          </div>
+          <div className="overflow-y-auto" style={{ maxHeight: 240 }}>
+            {currentUserId && (
+              <button
+                onClick={() => confirmAssignAndRequest(currentUserId)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-accent/10 cursor-pointer border-none bg-transparent font-semibold ${
+                  currentAssigneeId === currentUserId ? 'text-accent bg-accent/5' : 'text-accent'
+                }`}
+              >
+                {currentAssigneeId === currentUserId ? '✓ Asignado a mi' : '+ Asignarme a mi'}
+              </button>
+            )}
+            <button
+              onClick={() => confirmAssignAndRequest(null)}
+              className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 cursor-pointer border-none bg-transparent ${
+                currentAssigneeId === null ? 'text-text bg-white/5' : 'text-text-muted'
+              }`}
+            >
+              {currentAssigneeId === null ? '✓ Sin asignar' : 'Sin asignar (visible para todos)'}
+            </button>
+            <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-text-muted border-t border-border">Otros scouts</div>
+            {clubScouts
+              .filter(s => s.id !== currentUserId)
+              .map(s => {
+                const isCurrent = currentAssigneeId === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => confirmAssignAndRequest(s.id)}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-white/5 cursor-pointer border-none bg-transparent ${
+                      isCurrent ? 'text-accent bg-accent/5' : 'text-text'
+                    }`}
+                  >
+                    {isCurrent ? '✓ ' : ''}{s.name}
+                    <span className="block text-[10px] text-text-muted">{s.email}</span>
+                  </button>
+                );
+              })}
+            {clubScouts.filter(s => s.id !== currentUserId).length === 0 && (
+              <div className="px-3 py-2 text-[11px] text-text-muted">Sin otros scouts en el club.</div>
+            )}
+          </div>
+          <div className="border-t border-border px-3 py-2 bg-surface flex items-center justify-between gap-2">
+            {isReassigning ? (
+              <button
+                onClick={() => {
+                  const target = assignTarget.player;
+                  closeAssignPopover();
+                  cancelReportRequest(target);
+                }}
+                className="text-xs text-danger hover:text-danger cursor-pointer border-none bg-transparent p-0 font-medium"
+              >
+                Cancelar solicitud
+              </button>
+            ) : <span />}
+            <button
+              onClick={closeAssignPopover}
+              className="text-xs text-text-muted hover:text-text cursor-pointer border-none bg-transparent p-0"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const cancelReportRequest = async (player: any) => {
+    if (!window.confirm(`Cancelar la solicitud de informe para ${player.player_name}?`)) return;
+    try {
+      const response = await fetch(`${API_URL}/api/markets/players/${player.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ report_status: null, assigned_to: null })
+      });
+      if (response.ok) {
+        player.report_status = null;
+        player.assigned_to = null;
+        player.assigned_to_name = null;
+        player.assigned_to_email = null;
+        if (onPlayerUpdated) onPlayerUpdated();
+      }
+    } catch (error) {
+      console.error('Error cancelling report request:', error);
+    }
+  };
+
   // Funcion para eliminar jugador del mercado
   const handleDeletePlayer = async (playerId: string, playerName: string) => {
     if (!window.confirm(`Eliminar a ${playerName} del mercado?`)) {
@@ -803,21 +979,60 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                 })()}
               </div>
 
-              <div className="flex gap-1.5 items-center justify-self-end mt-2">
-                <button
-                  onClick={() => openNotesModal(player)}
-                  className="px-2.5 py-1 bg-white/8 text-text-secondary border border-border rounded-md cursor-pointer text-xs font-medium hover:bg-white/12 transition-colors"
-                  title={player.notes ? 'Ver/editar informacion' : 'Agregar informacion'}
-                >
-                  {player.notes ? 'Info' : '+ Info'}
-                </button>
-                <button
-                  onClick={() => handleDeletePlayer(player.id, player.player_name)}
-                  className="px-2.5 py-1 bg-white/8 text-text-secondary border border-border rounded-md cursor-pointer text-xs font-medium hover:bg-white/12 transition-colors"
-                  title="Eliminar del mercado"
-                >
-                  Eliminar
-                </button>
+              <div className="flex flex-col gap-1.5 items-end justify-self-end mt-2">
+                <div className="flex gap-1.5 items-center">
+                  <button
+                    onClick={() => openNotesModal(player)}
+                    className="px-2.5 py-1 bg-white/8 text-text-secondary border border-border rounded-md cursor-pointer text-xs font-medium hover:bg-white/12 transition-colors"
+                    title={player.notes ? 'Ver/editar informacion' : 'Agregar informacion'}
+                  >
+                    {player.notes ? 'Info' : '+ Info'}
+                  </button>
+                  <button
+                    onClick={() => handleDeletePlayer(player.id, player.player_name)}
+                    className="px-2.5 py-1 bg-white/8 text-text-secondary border border-border rounded-md cursor-pointer text-xs font-medium hover:bg-white/12 transition-colors"
+                    title="Eliminar del mercado"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+                {(() => {
+                  const status = player.report_status;
+                  if (status === 'done' && player.report_id) {
+                    return (
+                      <button
+                        onClick={() => onOpenInforme && onOpenInforme(player.report_id)}
+                        className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-md cursor-pointer text-xs font-medium hover:bg-emerald-500/25 transition-colors"
+                        title="Abrir el informe asociado"
+                      >
+                        Ver Informe
+                      </button>
+                    );
+                  }
+                  if (status === 'requested') {
+                    const assignedLabel = player.assigned_to_name
+                      ? `Solicitado a: ${player.assigned_to_name.split(' ')[0]}`
+                      : 'Informe Solicitado';
+                    return (
+                      <button
+                        onClick={(e) => openAssignPopover(player, e.currentTarget)}
+                        className="px-2.5 py-1 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-md cursor-pointer text-xs font-medium hover:bg-amber-500/25 transition-colors"
+                        title={player.assigned_to_name ? `Asignado a ${player.assigned_to_name}. Click para reasignar o cancelar.` : 'Click para asignar o cancelar la solicitud'}
+                      >
+                        {assignedLabel}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      onClick={(e) => openAssignPopover(player, e.currentTarget)}
+                      className="px-2.5 py-1 bg-white/8 text-text-secondary border border-border rounded-md cursor-pointer text-xs font-medium hover:bg-white/12 transition-colors"
+                      title="Marcar para que se haga un informe"
+                    >
+                      Solicitar Informe
+                    </button>
+                  );
+                })()}
               </div>
             </div>
     );
@@ -1290,6 +1505,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
             </div>
           </div>
         )}
+        {renderAssignPopover()}
       </div>
     );
   }
@@ -1593,6 +1809,8 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
           )}
         </div>
       )}
+
+      {renderAssignPopover()}
     </div>
   );
 };

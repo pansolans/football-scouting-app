@@ -16,6 +16,8 @@ interface Props {
   reportId?: string;
   onBack: () => void;
   preselectedPlayer?: { playerId: string; playerName: string };
+  marketPlayerId?: string;
+  onMarketLinked?: (newReportId: string) => void;
 }
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -32,7 +34,7 @@ const BLOCK_SIZES: Record<BlockType, { w: number; h: number }> = {
   banner: { w: 94, h: 10 },
 };
 
-const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) => {
+const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, marketPlayerId, onMarketLinked }) => {
   const [report, setReport] = useState<BuilderReport>({
     title: 'Nuevo Informe',
     cover_data: { title: 'Informe de Jugador', date: new Date().toISOString().split('T')[0] },
@@ -495,8 +497,18 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer }) 
   const save = async () => {
     setSaving(true);
     try {
-      if (report.id) { setReport(await reportBuilderService.update(report.id, report)); }
-      else { setReport(await reportBuilderService.create(report)); }
+      if (report.id) {
+        setReport(await reportBuilderService.update(report.id, report));
+      } else {
+        const payload: any = { ...report };
+        if (marketPlayerId) payload.market_player_id = marketPlayerId;
+        const created = await reportBuilderService.create(payload);
+        setReport(created);
+        // Si vino de una solicitud de mercado, notificar al padre para vincularlo
+        if (marketPlayerId && created?.id && onMarketLinked) {
+          onMarketLinked(created.id);
+        }
+      }
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch (e) { console.error(e); alert('Error al guardar'); }
     setSaving(false);

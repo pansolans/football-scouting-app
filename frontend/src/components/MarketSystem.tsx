@@ -16,6 +16,10 @@ interface Market {
   created_at: string;
 }
 
+interface MarketSystemProps {
+  onOpenInforme?: (reportId: string) => void;
+}
+
 interface MarketPlayer {
   id: string;
   market_id: string;
@@ -33,7 +37,7 @@ interface MarketPlayer {
   added_date: string;
 }
 
-const MarketSystem: React.FC = () => {
+const MarketSystem: React.FC<MarketSystemProps> = ({ onOpenInforme }) => {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [marketPlayers, setMarketPlayers] = useState<MarketPlayer[]>([]);
@@ -345,6 +349,7 @@ const MarketSystem: React.FC = () => {
             loadMarketPlayers(selectedMarket.id);
           }
         }}
+        onOpenInforme={onOpenInforme}
       />
     </div>
   );

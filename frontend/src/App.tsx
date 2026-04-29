@@ -91,7 +91,10 @@ const MainApp: React.FC = () => {
 
   // Estado para pre-cargar jugador en Informes
   const [informePlayerData, setInformePlayerData] = useState<{ playerId: string; playerName: string } | null>(null);
+  const [editingInformeId, setEditingInformeId] = useState<string | null>(null);
+  const [marketRequestedReports, setMarketRequestedReports] = useState<any[]>([]);
   const [existingInformeNames, setExistingInformeNames] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ id: string; role?: string } | null>(null);
 
   // Estados para el sistema de mercados - AGREGAR ESTOS
   const [selectedMarketPlayer, setSelectedMarketPlayer] = useState<any>(null);
@@ -194,6 +197,23 @@ const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
       .sort((a, b) => b.count - a.count);
   }, [scoutReports, existingInformeNames]);
 
+  const loadMarketRequests = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/market-players/pending-reports`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMarketRequestedReports(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error('Error loading market requests:', e);
+    }
+  };
+
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -215,6 +235,18 @@ const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
 
         const areasData = await playerService.getAreas();
         setAreas(Array.isArray(areasData) ? areasData : []);
+
+        loadMarketRequests();
+
+        try {
+          const meResp = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (meResp.ok) {
+            const me = await meResp.json();
+            setCurrentUser({ id: me.id, role: me.role });
+          }
+        } catch (e) { console.error('Error loading current user:', e); }
       } catch (error) {
         console.error('Failed to load initial data:', error);
       }
@@ -222,6 +254,13 @@ const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
 
     loadInitialData();
   }, []);
+
+  // Refrescar pending-reports cada vez que el usuario entra al tab Informes
+  useEffect(() => {
+    if (activeTab === 'informes') {
+      loadMarketRequests();
+    }
+  }, [activeTab]);
 
   // Smart search
   // Smart search with fallback to regular search
@@ -1134,7 +1173,12 @@ const clearAllFilters = () => {
           )}
 
           {activeTab === 'markets' && (
-            <MarketSystem />
+            <MarketSystem
+              onOpenInforme={(reportId) => {
+                setEditingInformeId(reportId);
+                setActiveTab('informes' as TabId);
+              }}
+            />
           )}
 
           {activeTab === 'informes' && (
@@ -1142,6 +1186,12 @@ const clearAllFilters = () => {
               preselectedPlayer={informePlayerData}
               onClearPreselected={() => setInformePlayerData(null)}
               pendingPlayers={pendingInformePlayers}
+              editingInformeId={editingInformeId}
+              onClearEditingId={() => setEditingInformeId(null)}
+              marketRequestedReports={marketRequestedReports}
+              onRefreshMarketRequests={() => loadMarketRequests()}
+              currentUserId={currentUser?.id}
+              currentUserRole={currentUser?.role}
             />
           )}
 

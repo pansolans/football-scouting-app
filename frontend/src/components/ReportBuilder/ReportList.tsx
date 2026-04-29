@@ -7,9 +7,22 @@ interface Props {
   onNew: () => void;
   pendingPlayers?: { name: string; id: string; count: number }[];
   onCreateInforme?: (playerId: string, playerName: string) => void;
+  marketRequestedReports?: any[];
+  onCreateFromMarketRequest?: (marketPlayer: any) => void;
+  currentUserId?: string;
+  currentUserRole?: string;
 }
 
-const ReportList: React.FC<Props> = ({ onEdit, onNew, pendingPlayers = [], onCreateInforme }) => {
+const ReportList: React.FC<Props> = ({
+  onEdit,
+  onNew,
+  pendingPlayers = [],
+  onCreateInforme,
+  marketRequestedReports = [],
+  onCreateFromMarketRequest,
+  currentUserId,
+  currentUserRole,
+}) => {
   const [reports, setReports] = useState<BuilderReport[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +76,61 @@ const ReportList: React.FC<Props> = ({ onEdit, onNew, pendingPlayers = [], onCre
         </div>
       </div>
 
+      {/* Solicitados desde Mercado */}
+      {!loading && marketRequestedReports.length > 0 && (
+        <div className="bg-card border border-amber-500/30 rounded-xl p-5 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 rounded-full bg-amber-400" />
+            <h4 className="text-sm font-semibold text-text m-0">Solicitados desde Mercado</h4>
+            <span className="text-[11px] bg-amber-500/15 text-amber-400 font-medium px-2 py-0.5 rounded-full ml-auto">
+              {marketRequestedReports.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {marketRequestedReports.map((mp: any) => {
+              const lockedForOther = !!(mp.assigned_to && currentUserId && mp.assigned_to !== currentUserId);
+              return (
+                <div
+                  key={mp.id}
+                  onClick={() => {
+                    if (lockedForOther) return;
+                    onCreateFromMarketRequest?.(mp);
+                  }}
+                  title={lockedForOther ? `Solo ${mp.assigned_to_name || 'el scout asignado'} puede crear este informe. Reasignalo desde Mercado para tomarlo.` : undefined}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                    lockedForOther
+                      ? 'bg-white/[0.02] border-white/5 opacity-60 cursor-not-allowed'
+                      : 'bg-white/[0.03] hover:bg-amber-500/10 cursor-pointer border-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-400 text-[11px] font-bold shrink-0">
+                      {mp.player_name?.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm text-text truncate">{mp.player_name}</div>
+                      <div className="text-[11px] text-text-muted truncate">
+                        {mp.position || 'Sin posicion'} · Mercado: {mp.market_name || '-'}
+                      </div>
+                      {mp.assigned_to_name ? (
+                        <div className={`text-[10px] truncate ${lockedForOther ? 'text-text-muted' : 'text-amber-400'}`}>
+                          Asignado a: {mp.assigned_to_name}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-text-muted truncate italic">Sin asignar</div>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`text-[11px] font-medium shrink-0 ml-2 ${lockedForOther ? 'text-text-muted' : 'text-amber-400'}`}>
+                    {lockedForOther ? 'Bloqueado' : 'Crear'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Pending / Completed informes */}
       {!loading && (pendingPlayers.length > 0 || reports.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -114,13 +182,22 @@ const ReportList: React.FC<Props> = ({ onEdit, onNew, pendingPlayers = [], onCre
                     onClick={() => r.id && onEdit(r.id)}
                     className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center text-accent text-[10px] font-bold">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center text-accent text-[10px] font-bold shrink-0">
                         {(r.player_name || r.title)?.charAt(0)}
                       </div>
-                      <span className="text-sm text-text">{r.player_name || r.title}</span>
+                      <div className="min-w-0">
+                        <div className="text-sm text-text truncate">{r.player_name || r.title}</div>
+                        {(r.created_by_name || r.club_name) && (
+                          <div className="text-[10px] text-text-muted truncate">
+                            {r.created_by_name}
+                            {r.created_by_name && r.club_name && ' · '}
+                            {r.club_name}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-[11px] text-text-muted">
+                    <span className="text-[11px] text-text-muted shrink-0 ml-2">
                       {r.updated_at ? new Date(r.updated_at).toLocaleDateString('es-ES') : ''}
                     </span>
                   </div>
@@ -177,14 +254,23 @@ const ReportList: React.FC<Props> = ({ onEdit, onNew, pendingPlayers = [], onCre
               </div>
 
               {/* Meta */}
-              <div className="p-4 flex items-center justify-between">
-                <div className="text-xs text-text-muted">
-                  {report.blocks?.length || 0} bloques
-                  {report.updated_at && (
-                    <span className="ml-2">{new Date(report.updated_at).toLocaleDateString()}</span>
+              <div className="p-4 flex items-center justify-between gap-3">
+                <div className="text-xs text-text-muted min-w-0 flex-1">
+                  {(report.created_by_name || report.club_name) && (
+                    <div className="text-[11px] text-text-secondary truncate mb-0.5">
+                      {report.created_by_name && <span>Por: {report.created_by_name}</span>}
+                      {report.created_by_name && report.club_name && <span> · </span>}
+                      {report.club_name && <span>{report.club_name}</span>}
+                    </div>
                   )}
+                  <div>
+                    {report.blocks?.length || 0} bloques
+                    {report.updated_at && (
+                      <span className="ml-2">{new Date(report.updated_at).toLocaleDateString()}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); report.id && handleDelete(report.id); }}
                     className="px-2 py-1 bg-danger/15 text-danger rounded text-xs cursor-pointer border-none hover:bg-danger/25 transition-colors"
