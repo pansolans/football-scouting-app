@@ -199,7 +199,7 @@ const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
 
   const loadMarketRequests = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/market-players/pending-reports`, {
+      const response = await fetch(`${API_URL}/api/market-players/pending-reports`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -239,7 +239,7 @@ const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
         loadMarketRequests();
 
         try {
-          const meResp = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/me`, {
+          const meResp = await fetch(`${API_URL}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           });
           if (meResp.ok) {
