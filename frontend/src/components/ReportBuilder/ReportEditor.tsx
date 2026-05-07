@@ -54,9 +54,6 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
   } | null>(null);
   const [playerReports, setPlayerReports] = useState<ScoutReport[]>([]);
   const [playerPhoto, setPlayerPhoto] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -71,6 +68,21 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
   const currentPage = isCoverActive
     ? { id: '__cover__', blocks: coverBlocks }
     : (pages[activePage] || pages[0]);
+
+  // Modo ad-hoc: el informe no tiene jugador principal asignado.
+  // Activado cuando se crea un informe nuevo desde cero (sin venir de un jugador).
+  // En este modo, los botones "Traer Reportes" y "Traer Perfil" tienen su propio buscador
+  // y permiten armar un informe combinando info de varios jugadores.
+  const isAdHocMode = !report.player_id;
+
+  // Estados independientes para los buscadores ad-hoc
+  const [adHocReportsQuery, setAdHocReportsQuery] = useState('');
+  const [adHocReportsResults, setAdHocReportsResults] = useState<any[]>([]);
+  const [adHocReportsSearching, setAdHocReportsSearching] = useState(false);
+  const [adHocReportsImporting, setAdHocReportsImporting] = useState(false);
+  const [adHocProfileQuery, setAdHocProfileQuery] = useState('');
+  const [adHocProfileResults, setAdHocProfileResults] = useState<any[]>([]);
+  const [adHocProfileSearching, setAdHocProfileSearching] = useState(false);
 
   const setPages = (updater: (prev: ReportPage[]) => ReportPage[]) => {
     setReport(prev => {
@@ -229,13 +241,10 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
   };
 
   // ─── Import report data into current page ───
-  const importReportData = () => {
-    if (playerReports.length === 0) return;
-    const nextY = getNextY();
-
-    // Build HTML directly
+  const buildReportsHtml = (reports: ScoutReport[], playerName?: string): string => {
     const parts: string[] = [];
-    playerReports.forEach((r, idx) => {
+    if (playerName) parts.push(`<b style="font-size:18px;">${playerName.toUpperCase()}</b><br><br>`);
+    reports.forEach((r, idx) => {
       if (idx > 0) parts.push('<br>─────────────────────────────────<br>');
       parts.push(`<b>REPORTE ${idx + 1}</b>${r.fecha_observacion ? ` — ${r.fecha_observacion}` : ''}${r.competicion ? ` (${r.competicion})` : ''}<br>`);
       parts.push(`Rating General: <b>${r.overall_rating}/10</b><br><br>`);
@@ -255,27 +264,77 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
       if (r.precio_estimado) parts.push(`<b>PRECIO ESTIMADO:</b> EUR ${r.precio_estimado}M<br>`);
       if (r.agente) parts.push(`<b>AGENTE:</b> ${r.agente}<br>`);
     });
+    return parts.join('');
+  };
 
-    const textHtml = parts.join('');
+  const insertTextBlock = (html: string) => {
+    const nextY = getNextY();
     const blockId = crypto.randomUUID();
     const textBlock: ReportBlock = {
       id: blockId, type: 'text',
-      content: { text: textHtml },
+      content: { text: html },
       style: { x: 3, y: nextY, w: 94, h: Math.min(90, 97 - nextY) },
     };
-
-    setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, textBlock] } : p));
+    if (isCoverActive) {
+      setCoverBlocks(prev => [...prev, textBlock]);
+    } else {
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, textBlock] } : p));
+    }
     setSelectedBlock(blockId);
+  };
+
+  const importReportData = () => {
+    if (playerReports.length === 0) return;
+    insertTextBlock(buildReportsHtml(playerReports));
+  };
+
+  // Versión ad-hoc: busca reportes de un jugador puntual y los inserta SIN asignar al informe
+  const importReportsAdHoc = async (player: any) => {
+    const pid = String(player.wyscout_id || player.id);
+    setAdHocReportsImporting(true);
+    try {
+      const reports = await scoutingService.getPlayerReports(pid);
+      if (!reports || reports.length === 0) {
+        alert(`${player.name} no tiene reportes cargados`);
+        return;
+      }
+      // Sobreescribe playerReports para que stats_table/radar pueda usarlos si se inserta luego
+      setPlayerReports(reports);
+      insertTextBlock(buildReportsHtml(reports, player.name));
+      setAdHocReportsResults([]);
+      setAdHocReportsQuery('');
+    } catch (e) {
+      console.error('Error importing reports ad-hoc:', e);
+      alert('Error al cargar reportes');
+    } finally {
+      setAdHocReportsImporting(false);
+    }
+  };
+
+  const handleAdHocReportsSearch = async () => {
+    if (!adHocReportsQuery.trim()) return;
+    setAdHocReportsSearching(true);
+    try { setAdHocReportsResults(await playerService.searchPlayers(adHocReportsQuery)); } catch (e) { console.error(e); }
+    setAdHocReportsSearching(false);
+  };
+
+  const handleAdHocProfileSearch = async () => {
+    if (!adHocProfileQuery.trim()) return;
+    setAdHocProfileSearching(true);
+    try { setAdHocProfileResults(await playerService.searchPlayers(adHocProfileQuery)); } catch (e) { console.error(e); }
+    setAdHocProfileSearching(false);
   };
 
   // ─── Import player profile as image ───
   const [importingProfile, setImportingProfile] = useState(false);
 
-  const importProfileAsImage = async () => {
-    if (!report.player_wyscout_id) return;
+  const importProfileAsImage = async (overrideWyscoutId?: number, overridePlayerName?: string) => {
+    const wyId = overrideWyscoutId ?? report.player_wyscout_id;
+    const pname = overridePlayerName ?? report.player_name;
+    if (!wyId) return;
     setImportingProfile(true);
     try {
-      const profile = await playerService.getPlayerProfile(report.player_wyscout_id);
+      const profile = await playerService.getPlayerProfile(wyId);
       if (!profile?.basic_info) { alert('No se pudo cargar el perfil'); return; }
 
       const info = profile.basic_info;
@@ -285,7 +344,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
 
       // Pre-load player image as data URL for html2canvas
       let playerImgDataUrl = '';
-      const imgUrl = info.imageDataURL || playerPhoto;
+      // Si vino override, no usar playerPhoto del state (que pertenece a otro jugador)
+      const imgUrl = info.imageDataURL || (overrideWyscoutId ? '' : playerPhoto);
       if (imgUrl) {
         try {
           const imgResp = await fetch(imgUrl);
@@ -362,35 +422,26 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
       const nextY = getNextY();
       const newBlock: ReportBlock = {
         id, type: 'image',
-        content: { url: dataUrl, caption: `Perfil: ${info.shortName || report.player_name}` },
+        content: { url: dataUrl, caption: `Perfil: ${info.shortName || pname}` },
         style: { x: 3, y: nextY, w: 94, h: 60 },
       };
-      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, newBlock] } : p));
+      if (isCoverActive) {
+        setCoverBlocks(prev => [...prev, newBlock]);
+      } else {
+        setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, newBlock] } : p));
+      }
       setSelectedBlock(id);
+      // Limpiar el buscador ad-hoc si fue invocado desde ahí
+      if (overrideWyscoutId) {
+        setAdHocProfileResults([]);
+        setAdHocProfileQuery('');
+      }
     } catch (e) {
       console.error('Error importing profile:', e);
       alert('Error al importar el perfil');
     } finally {
       setImportingProfile(false);
     }
-  };
-
-  // ─── Search ───
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setSearching(true);
-    try { setSearchResults(await playerService.searchPlayers(searchQuery)); } catch (e) { console.error(e); }
-    setSearching(false);
-  };
-
-  const selectPlayer = (player: any) => {
-    const pid = String(player.wyscout_id || player.id);
-    setReport(prev => ({
-      ...prev, player_id: pid, player_name: player.name, player_wyscout_id: player.wyscout_id || player.id,
-      cover_data: { ...prev.cover_data, title: `Informe: ${player.name}` },
-    }));
-    setSearchResults([]); setSearchQuery('');
-    loadPlayerData(pid);
   };
 
   // ─── Page ops ───
@@ -1029,45 +1080,36 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
       <div className="flex gap-5">
         {/* ─── Sidebar ─── */}
         <div className="w-[220px] shrink-0 space-y-3">
-          {/* Player */}
-          <div className="card-elevated rounded-xl p-3">
-            <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Jugador</h4>
-            {report.player_name ? (
+          {/* Player (solo cuando hay jugador principal — modo "informe de un jugador") */}
+          {!isAdHocMode && (
+            <div className="card-elevated rounded-xl p-3">
+              <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Jugador</h4>
               <div className="flex items-center gap-2 p-2 bg-accent/10 rounded-lg">
                 {playerPhoto && <img src={playerPhoto} alt="" className="w-9 h-9 rounded-lg object-cover" />}
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold text-text truncate">{report.player_name}</div>
                   <div className="text-[10px] text-text-muted">{playerReports.length} reportes</div>
                 </div>
-                <button onClick={() => { setReport(prev => ({ ...prev, player_id: undefined, player_name: undefined, player_wyscout_id: undefined })); setPlayerReports([]); setPlayerPhoto(''); }} className="text-[10px] text-text-muted hover:text-danger cursor-pointer border-none bg-transparent">✕</button>
+                <button onClick={() => { setReport(prev => ({ ...prev, player_id: undefined, player_name: undefined, player_wyscout_id: undefined })); setPlayerReports([]); setPlayerPhoto(''); }} className="text-[10px] text-text-muted hover:text-danger cursor-pointer border-none bg-transparent" title="Quitar jugador (entrar en modo libre)">✕</button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-1">
-                  <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="Buscar..." className="flex-1 p-1.5 bg-surface border border-border-strong rounded-md text-[11px] text-text placeholder:text-text-muted outline-none focus:border-accent/50" />
-                  <button onClick={handleSearch} disabled={searching} className="px-2 py-1 bg-accent text-white rounded-md text-[10px] cursor-pointer border-none">{searching ? '...' : 'Ir'}</button>
-                </div>
-                {searchResults.length > 0 && (
-                  <div className="max-h-[160px] overflow-auto rounded-lg border border-border-strong">
-                    {searchResults.map((p: any) => (
-                      <button key={p.id} onClick={() => selectPlayer(p)} className="w-full text-left p-2 hover:bg-white/5 border-none bg-transparent cursor-pointer">
-                        <div className="text-[11px] font-medium text-text">{p.name}</div>
-                        <div className="text-[9px] text-text-muted">{p.position} - {p.team}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Modo ad-hoc: aviso */}
+          {isAdHocMode && (
+            <div className="card-elevated rounded-xl p-3 border border-violet-500/20">
+              <h4 className="text-[10px] uppercase tracking-widest text-violet-400 font-medium mb-1">Modo Libre</h4>
+              <p className="text-[10px] text-text-muted leading-relaxed">Este informe no tiene jugador asignado. Pode&#769;s traer info de varios jugadores distintos usando los buscadores de abajo.</p>
+            </div>
+          )}
 
           {/* Blocks palette */}
           <div className="card-elevated rounded-xl p-3">
             <BlockPalette onAdd={addBlock} />
           </div>
 
-          {/* Import report data button */}
-          {report.player_name && playerReports.length > 0 && (
+          {/* Traer Info de Reportes — modo con jugador principal */}
+          {!isAdHocMode && report.player_name && playerReports.length > 0 && (
             <div className="card-elevated rounded-xl p-3">
               <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Datos de Reportes</h4>
               <p className="text-[10px] text-text-muted mb-2">{playerReports.length} reporte{playerReports.length > 1 ? 's' : ''} disponible{playerReports.length > 1 ? 's' : ''}</p>
@@ -1081,18 +1123,103 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
             </div>
           )}
 
-          {/* Import profile as image */}
-          {report.player_wyscout_id && (
+          {/* Traer Info de Reportes — modo ad-hoc (con buscador) */}
+          {isAdHocMode && (
+            <div className="card-elevated rounded-xl p-3">
+              <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Traer Reportes</h4>
+              <div className="space-y-2">
+                <div className="flex gap-1">
+                  <input
+                    type="text"
+                    value={adHocReportsQuery}
+                    onChange={e => setAdHocReportsQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAdHocReportsSearch()}
+                    placeholder="Buscar jugador..."
+                    className="flex-1 p-1.5 bg-surface border border-border-strong rounded-md text-[11px] text-text placeholder:text-text-muted outline-none focus:border-accent/50"
+                  />
+                  <button
+                    onClick={handleAdHocReportsSearch}
+                    disabled={adHocReportsSearching}
+                    className="px-2 py-1 bg-accent text-white rounded-md text-[10px] cursor-pointer border-none disabled:opacity-50"
+                  >
+                    {adHocReportsSearching ? '...' : 'Ir'}
+                  </button>
+                </div>
+                {adHocReportsResults.length > 0 && (
+                  <div className="max-h-[160px] overflow-auto rounded-lg border border-border-strong">
+                    {adHocReportsResults.map((p: any) => (
+                      <button
+                        key={p.id}
+                        onClick={() => importReportsAdHoc(p)}
+                        disabled={adHocReportsImporting}
+                        className="w-full text-left p-2 hover:bg-accent/10 border-none bg-transparent cursor-pointer disabled:opacity-50"
+                      >
+                        <div className="text-[11px] font-medium text-text">{p.name}</div>
+                        <div className="text-[9px] text-text-muted">{p.position} - {p.team}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[9px] text-text-muted">Busca&#769; un jugador y eleg&#769;ilo: se inserta un bloque con sus reportes en la pa&#769;gina actual.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Traer Perfil — modo con jugador principal */}
+          {!isAdHocMode && report.player_wyscout_id && (
             <div className="card-elevated rounded-xl p-3">
               <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Perfil del Jugador</h4>
               <button
-                onClick={importProfileAsImage}
+                onClick={() => importProfileAsImage()}
                 disabled={importingProfile}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 hover:border-violet-500/50 transition-all cursor-pointer text-violet-400 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {importingProfile ? 'Cargando perfil...' : <><span>👤</span> Traer Perfil</>}
               </button>
               <p className="text-[9px] text-text-muted mt-1.5">Genera una imagen con datos, carrera y transferencias del jugador. Podes achicar o agrandar el bloque.</p>
+            </div>
+          )}
+
+          {/* Traer Perfil — modo ad-hoc (con buscador) */}
+          {isAdHocMode && (
+            <div className="card-elevated rounded-xl p-3">
+              <h4 className="text-[10px] uppercase tracking-widest text-text-muted font-medium mb-2">Traer Perfil</h4>
+              <div className="space-y-2">
+                <div className="flex gap-1">
+                  <input
+                    type="text"
+                    value={adHocProfileQuery}
+                    onChange={e => setAdHocProfileQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAdHocProfileSearch()}
+                    placeholder="Buscar jugador..."
+                    className="flex-1 p-1.5 bg-surface border border-border-strong rounded-md text-[11px] text-text placeholder:text-text-muted outline-none focus:border-violet-400/50"
+                  />
+                  <button
+                    onClick={handleAdHocProfileSearch}
+                    disabled={adHocProfileSearching}
+                    className="px-2 py-1 bg-violet-500 text-white rounded-md text-[10px] cursor-pointer border-none disabled:opacity-50"
+                  >
+                    {adHocProfileSearching ? '...' : 'Ir'}
+                  </button>
+                </div>
+                {adHocProfileResults.length > 0 && (
+                  <div className="max-h-[160px] overflow-auto rounded-lg border border-border-strong">
+                    {adHocProfileResults.map((p: any) => (
+                      <button
+                        key={p.id}
+                        onClick={() => importProfileAsImage(p.wyscout_id || p.id, p.name)}
+                        disabled={importingProfile}
+                        className="w-full text-left p-2 hover:bg-violet-500/10 border-none bg-transparent cursor-pointer disabled:opacity-50"
+                      >
+                        <div className="text-[11px] font-medium text-text">{p.name}</div>
+                        <div className="text-[9px] text-text-muted">{p.position} - {p.team}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {importingProfile && <p className="text-[10px] text-violet-400">Cargando perfil...</p>}
+                <p className="text-[9px] text-text-muted">Busca&#769; un jugador y eleg&#769;ilo: se genera una imagen con su perfil completo.</p>
+              </div>
             </div>
           )}
 
