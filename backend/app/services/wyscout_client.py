@@ -76,11 +76,11 @@ class WyscoutClient:
     # SEARCH
     # ==============================================
     
-    async def search_players(self, query: str, gender: Optional[str] = None) -> List[Dict[str, Any]]:
-        params = {"query": query, "objType": "player"}
+    async def search_players(self, query: str, gender: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        params = {"query": query, "objType": "player", "limit": limit}
         if gender:
             params["gender"] = gender
-        
+
         response = await self.get("/v3/search", params=params)
         
         if isinstance(response, list):

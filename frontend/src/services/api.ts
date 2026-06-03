@@ -167,8 +167,8 @@ export interface ScoutReportCreate {
 
 }
 export const playerService = {
-  searchPlayers: async (query: string): Promise<Player[]> => {
-    const response = await api.get('/api/search/players', { params: { query } });
+  searchPlayers: async (query: string, limit: number = 30): Promise<Player[]> => {
+    const response = await api.get('/api/search/players', { params: { query, limit } });
     return response.data;
   },
 

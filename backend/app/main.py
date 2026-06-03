@@ -604,7 +604,7 @@ async def search_players(
     """Legacy player search endpoint """
     try:
         async with WyscoutClient(settings.wyscout_user, settings.wyscout_pass, settings.WYSCOUT_HOST) as wyscout:
-            wyscout_results = await wyscout.search_players(query)
+            wyscout_results = await wyscout.search_players(query, limit=limit)
             sliced = wyscout_results[:limit]
 
             # Wyscout /v3/search returns minimal data without team info.

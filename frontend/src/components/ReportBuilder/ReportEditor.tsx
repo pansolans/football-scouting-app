@@ -1155,7 +1155,11 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
                         className="w-full text-left p-2 hover:bg-accent/10 border-none bg-transparent cursor-pointer disabled:opacity-50"
                       >
                         <div className="text-[11px] font-medium text-text">{p.name}</div>
-                        <div className="text-[9px] text-text-muted">{p.position} - {p.team}</div>
+                        <div className="text-[9px] text-text-muted">
+                          {p.position} - {p.team}
+                          {p.nationality && p.nationality !== 'Unknown' ? ` · ${p.nationality}` : ''}
+                          {p.age ? ` · ${p.age} años` : ''}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -1212,7 +1216,11 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
                         className="w-full text-left p-2 hover:bg-violet-500/10 border-none bg-transparent cursor-pointer disabled:opacity-50"
                       >
                         <div className="text-[11px] font-medium text-text">{p.name}</div>
-                        <div className="text-[9px] text-text-muted">{p.position} - {p.team}</div>
+                        <div className="text-[9px] text-text-muted">
+                          {p.position} - {p.team}
+                          {p.nationality && p.nationality !== 'Unknown' ? ` · ${p.nationality}` : ''}
+                          {p.age ? ` · ${p.age} años` : ''}
+                        </div>
                       </button>
                     ))}
                   </div>
