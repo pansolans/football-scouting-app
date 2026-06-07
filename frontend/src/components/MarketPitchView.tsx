@@ -88,6 +88,13 @@ const NEGOTIATION_OPTIONS = [
   { value: 'compleja', label: 'Compleja', color: '#ef4444' },
 ];
 
+// Mismos colores que getPriorityColor() — para los desplegables inline de la card
+const PRIORITY_OPTIONS = [
+  { value: 'alta',  label: 'Alta',  color: '#10b981' },
+  { value: 'media', label: 'Media', color: '#f59e0b' },
+  { value: 'baja',  label: 'Baja',  color: '#ef4444' },
+];
+
 // Jugadores sin el campo cargado se tratan como 'sin_info' (default)
 const getNegotiationInfo = (negotiation: string | undefined) => {
   return NEGOTIATION_OPTIONS.find(n => n.value === (negotiation || 'sin_info')) || NEGOTIATION_OPTIONS[0];
@@ -315,6 +322,50 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
       alert('Error al guardar los cambios');
     } finally {
       setSavingDetails(false);
+    }
+  };
+
+  // Propaga un cambio de campo a las copias del jugador en la cancha (formation)
+  const propagateToFormation = (playerId: string, patch: any) => {
+    setFormation(prev => {
+      const next: {[key: string]: any[]} = {};
+      for (const [pos, players] of Object.entries(prev)) {
+        next[pos] = players.map((p: any) => (p.id === playerId ? { ...p, ...patch } : p));
+      }
+      return next;
+    });
+  };
+
+  // Actualizacion inline desde la card (Estado / Prioridad / Negociacion) — guarda al toque
+  const updateFieldInline = async (player: any, field: string, value: string) => {
+    const previous = player[field];
+    if (previous === value) return;
+
+    // Optimista: muta el objeto y fuerza re-render (setFormation) para reflejar el cambio ya
+    player[field] = value;
+    propagateToFormation(player.id, { [field]: value });
+
+    try {
+      const response = await fetch(`${API_URL}/api/markets/players/${player.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ [field]: value })
+      });
+      if (response.ok) {
+        if (onPlayerUpdated) onPlayerUpdated();
+      } else {
+        player[field] = previous;
+        propagateToFormation(player.id, { [field]: previous });
+        alert('Error al actualizar');
+      }
+    } catch (error) {
+      console.error('Error updating field inline:', error);
+      player[field] = previous;
+      propagateToFormation(player.id, { [field]: previous });
+      alert('Error al actualizar');
     }
   };
 
@@ -813,6 +864,39 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     }
   };
 
+  // Desplegable inline tipo badge para Estado / Prioridad / Negociacion en la card
+  const renderBadgeSelect = (
+    player: any,
+    field: 'status' | 'priority' | 'negotiation',
+    label: string,
+    options: { value: string; label: string; color: string }[],
+  ) => {
+    const currentValue = field === 'negotiation' ? (player.negotiation || 'sin_info') : player[field];
+    const current = options.find(o => o.value === currentValue) || options[0];
+    return (
+      <label
+        className="relative inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:brightness-125 transition"
+        style={{ background: `${current.color}15`, color: current.color }}
+        title={`Cambiar ${label.toLowerCase()}`}
+      >
+        <span className="opacity-60">{label}</span>
+        <span className="mx-1 opacity-50">·</span>
+        <span>{current.label}</span>
+        <span className="ml-1 opacity-50">▾</span>
+        <select
+          value={currentValue}
+          onChange={(e) => updateFieldInline(player, field, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        >
+          {options.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </label>
+    );
+  };
+
   if (viewMode === 'list') {
     const renderPlayerCard = (player: any) => (
             <div
@@ -879,47 +963,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                   )}
                 </div>
               </div>
-              <div className="flex gap-2 items-center justify-self-center mt-2">
-                {(() => {
-                  const s = getStatusInfo(player.status);
-                  return (
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px] font-medium"
-                      style={{ background: `${s.color}15`, color: s.color }}
-                    >
-                      <span className="opacity-60">Estado</span>
-                      <span className="mx-1 opacity-50">·</span>
-                      {s.label}
-                    </span>
-                  );
-                })()}
-                {(() => {
-                  const c = getPriorityColor(player.priority);
-                  const label = player.priority ? player.priority.charAt(0).toUpperCase() + player.priority.slice(1) : '-';
-                  return (
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px] font-medium"
-                      style={{ background: `${c}15`, color: c }}
-                    >
-                      <span className="opacity-60">Prioridad</span>
-                      <span className="mx-1 opacity-50">·</span>
-                      {label}
-                    </span>
-                  );
-                })()}
-                {(() => {
-                  const n = getNegotiationInfo(player.negotiation);
-                  return (
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px] font-medium"
-                      style={{ background: `${n.color}15`, color: n.color }}
-                    >
-                      <span className="opacity-60">Negociación</span>
-                      <span className="mx-1 opacity-50">·</span>
-                      {n.label}
-                    </span>
-                  );
-                })()}
+              <div className="flex gap-2 items-center justify-self-center mt-2 flex-wrap">
+                {renderBadgeSelect(player, 'status', 'Estado', STATUS_OPTIONS)}
+                {renderBadgeSelect(player, 'priority', 'Prioridad', PRIORITY_OPTIONS)}
+                {renderBadgeSelect(player, 'negotiation', 'Negociación', NEGOTIATION_OPTIONS)}
               </div>
 
               <div className="flex flex-col gap-1.5 items-end justify-self-end mt-2">
