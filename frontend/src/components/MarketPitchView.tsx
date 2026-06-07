@@ -82,6 +82,17 @@ const getStatusInfo = (status: string | undefined) => {
   return STATUS_OPTIONS.find(s => s.value === status) || { value: status || '', label: status || 'Sin estado', color: '#6b7280' };
 };
 
+const NEGOTIATION_OPTIONS = [
+  { value: 'sin_info', label: 'Sin info', color: '#6b7280' },
+  { value: 'viable',   label: 'Viable',   color: '#10b981' },
+  { value: 'compleja', label: 'Compleja', color: '#ef4444' },
+];
+
+// Jugadores sin el campo cargado se tratan como 'sin_info' (default)
+const getNegotiationInfo = (negotiation: string | undefined) => {
+  return NEGOTIATION_OPTIONS.find(n => n.value === (negotiation || 'sin_info')) || NEGOTIATION_OPTIONS[0];
+};
+
 const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, marketId, market, onUpdateFormation, onPlayerDeleted, onPlayerUpdated, onMarketUpdated, onOpenInforme }) => {
   const [formation, setFormation] = useState<{[key: string]: any[]}>(
     () => ({ ...EMPTY_FORMATION, ...(market?.formation_data || {}) })
@@ -144,6 +155,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   // Detalles editables (status / precios / agente)
   const [detailsDraft, setDetailsDraft] = useState({
     status: 'seguimiento',
+    negotiation: 'sin_info',
     estimated_price: '',
     max_price: '',
     agent: '',
@@ -177,14 +189,16 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     priority: 'all',
     positionCategory: 'all',
     status: 'all',
+    negotiation: 'all',
     ageMin: '',
     ageMax: '',
   });
-  const resetFilters = () => setFilters({ priority: 'all', positionCategory: 'all', status: 'all', ageMin: '', ageMax: '' });
+  const resetFilters = () => setFilters({ priority: 'all', positionCategory: 'all', status: 'all', negotiation: 'all', ageMin: '', ageMax: '' });
   const activeFilterCount = (
     (filters.priority !== 'all' ? 1 : 0) +
     (filters.positionCategory !== 'all' ? 1 : 0) +
     (filters.status !== 'all' ? 1 : 0) +
+    (filters.negotiation !== 'all' ? 1 : 0) +
     (filters.ageMin ? 1 : 0) +
     (filters.ageMax ? 1 : 0)
   );
@@ -193,6 +207,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     return marketPlayers.filter(p => {
       if (filters.priority !== 'all' && p.priority !== filters.priority) return false;
       if (filters.status !== 'all' && p.status !== filters.status) return false;
+      if (filters.negotiation !== 'all' && (p.negotiation || 'sin_info') !== filters.negotiation) return false;
       if (filters.positionCategory !== 'all' && getPositionCategory(p.position) !== filters.positionCategory) return false;
       const age = Number(p.age);
       if (filters.ageMin && (!age || age < Number(filters.ageMin))) return false;
@@ -236,6 +251,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     setNotesEditing(!player.notes);
     setDetailsDraft({
       status: player.status || 'seguimiento',
+      negotiation: player.negotiation || 'sin_info',
       estimated_price: player.estimated_price != null ? String(player.estimated_price) : '',
       max_price: player.max_price != null ? String(player.max_price) : '',
       agent: player.agent || '',
@@ -247,7 +263,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     setNotesDraft('');
     setNotesEditing(false);
     setSavingNotes(false);
-    setDetailsDraft({ status: 'seguimiento', estimated_price: '', max_price: '', agent: '' });
+    setDetailsDraft({ status: 'seguimiento', negotiation: 'sin_info', estimated_price: '', max_price: '', agent: '' });
     setSavingDetails(false);
   };
 
@@ -257,6 +273,7 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
     try {
       const payload: any = {
         status: detailsDraft.status,
+        negotiation: detailsDraft.negotiation,
         agent: detailsDraft.agent || null,
         estimated_price: detailsDraft.estimated_price ? parseFloat(detailsDraft.estimated_price) : null,
         max_price: detailsDraft.max_price ? parseFloat(detailsDraft.max_price) : null,
@@ -977,6 +994,19 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                     </span>
                   );
                 })()}
+                {(() => {
+                  const n = getNegotiationInfo(player.negotiation);
+                  return (
+                    <span
+                      className="px-2 py-0.5 rounded text-[10px] font-medium"
+                      style={{ background: `${n.color}15`, color: n.color }}
+                    >
+                      <span className="opacity-60">Negociación</span>
+                      <span className="mx-1 opacity-50">·</span>
+                      {n.label}
+                    </span>
+                  );
+                })()}
               </div>
 
               <div className="flex flex-col gap-1.5 items-end justify-self-end mt-2">
@@ -1091,6 +1121,17 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
             <option value="all">Estado: Todos</option>
             {STATUS_OPTIONS.map(s => (
               <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.negotiation}
+            onChange={(e) => setFilters(f => ({ ...f, negotiation: e.target.value }))}
+            className="px-2.5 py-1.5 bg-surface border border-border-strong rounded-md text-xs text-text cursor-pointer focus:border-accent/50 focus:outline-none"
+          >
+            <option value="all">Negociación: Todas</option>
+            {NEGOTIATION_OPTIONS.map(n => (
+              <option key={n.value} value={n.value}>{n.label}</option>
             ))}
           </select>
 
@@ -1412,6 +1453,31 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                       placeholder="Nombre / contacto del agente"
                       className="w-full p-2 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none placeholder:text-text-muted"
                     />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-[10px] uppercase tracking-widest text-text-muted font-medium mb-1.5">
+                    Negociación
+                  </label>
+                  <div className="flex gap-2">
+                    {NEGOTIATION_OPTIONS.map(opt => {
+                      const active = detailsDraft.negotiation === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          onClick={() => setDetailsDraft(prev => ({ ...prev, negotiation: opt.value }))}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all border-2"
+                          style={{
+                            background: active ? opt.color : `${opt.color}20`,
+                            color: active ? '#ffffff' : opt.color,
+                            borderColor: active ? opt.color : 'transparent',
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
