@@ -1916,12 +1916,25 @@ async def get_market_players(market_id: str, current_user: dict = Depends(get_cu
 
 @app.post("/api/markets/{market_id}/players")
 async def add_player_to_market(market_id: str, player_data: dict, current_user: dict = Depends(get_current_user)):
-    """Agregar jugador a mercado"""
+    """Agregar jugador a mercado (rechaza duplicados: mismo player_id en el mismo mercado)"""
     try:
+        player_id = player_data.get('player_id')
+        if player_id is not None:
+            existing = supabase.table('market_players') \
+                .select('id,player_name') \
+                .eq('market_id', market_id) \
+                .eq('player_id', str(player_id)) \
+                .execute()
+            if existing.data:
+                name = existing.data[0].get('player_name') or 'El jugador'
+                raise HTTPException(status_code=409, detail=f"{name} ya esta agregado a este mercado")
+
         player_data['market_id'] = market_id
         player_data['added_by'] = current_user['id']
         result = supabase.table('market_players').insert(player_data).execute()
         return result.data[0] if result.data else None
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error adding player to market: {e}")
         raise HTTPException(status_code=500, detail=str(e))

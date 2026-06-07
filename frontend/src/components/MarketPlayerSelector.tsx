@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { API_URL } from '../config';
 
 interface MarketPlayerSelectorProps {
   show: boolean;
   marketId: string;
+  existingPlayers?: any[];
   onClose: () => void;
   onPlayerAdded: () => void;
 }
@@ -12,9 +13,23 @@ interface MarketPlayerSelectorProps {
 const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
   show,
   marketId,
+  existingPlayers = [],
   onClose,
   onPlayerAdded
 }) => {
+  // Set de player_id ya cargados en este mercado (para evitar duplicados)
+  const existingIds = useMemo(() => {
+    const s = new Set<string>();
+    existingPlayers.forEach((p: any) => {
+      if (p?.player_id != null) s.add(String(p.player_id));
+    });
+    return s;
+  }, [existingPlayers]);
+
+  const isAlreadyInMarket = (player: any, source: 'wyscout' | 'manual') => {
+    const pid = source === 'wyscout' ? (player.wyscout_id ?? player.id) : player.id;
+    return existingIds.has(String(pid));
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [manualPlayers, setManualPlayers] = useState<any[]>([]);
@@ -93,6 +108,12 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
     }
 
     const isWyscout = selectedPlayer.source === 'wyscout';
+
+    if (isAlreadyInMarket(selectedPlayer, isWyscout ? 'wyscout' : 'manual')) {
+      alert(`${selectedPlayer.name || selectedPlayer.player_name} ya esta agregado a este mercado.`);
+      return;
+    }
+
     const body = {
       player_id: String(
         isWyscout
@@ -222,15 +243,25 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
                   const selectedId = selectedPlayer?.source === 'wyscout'
                     ? (selectedPlayer.wyscout_id ?? selectedPlayer.id)
                     : null;
+                  const already = isAlreadyInMarket(player, 'wyscout');
                   return (
                     <div
                       key={pid}
-                      onClick={() => setSelectedPlayer({ ...player, source: 'wyscout' })}
-                      className={`p-3 border-b border-border cursor-pointer transition-colors ${
-                        selectedId === pid ? 'bg-accent/15' : 'hover:bg-white/5'
+                      onClick={() => { if (!already) setSelectedPlayer({ ...player, source: 'wyscout' }); }}
+                      className={`p-3 border-b border-border transition-colors ${
+                        already
+                          ? 'opacity-50 cursor-not-allowed'
+                          : selectedId === pid ? 'bg-accent/15 cursor-pointer' : 'cursor-pointer hover:bg-white/5'
                       }`}
                     >
-                      <div className="font-semibold text-sm text-text">{player.name}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold text-sm text-text">{player.name}</div>
+                        {already && (
+                          <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-400">
+                            Ya en el mercado
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-text-muted mt-0.5">
                         {player.position || '-'} - {player.age ?? '?'} anos - {player.team || '-'}
                       </div>
@@ -257,15 +288,25 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
             ) : (
               manualPlayers.map((player) => {
                 const selectedId = selectedPlayer?.source === 'manual' ? selectedPlayer.id : null;
+                const already = isAlreadyInMarket(player, 'manual');
                 return (
                   <div
                     key={player.id}
-                    onClick={() => setSelectedPlayer({ ...player, source: 'manual' })}
-                    className={`p-3 border-b border-border cursor-pointer transition-colors ${
-                      selectedId === player.id ? 'bg-accent/15' : 'hover:bg-white/5'
+                    onClick={() => { if (!already) setSelectedPlayer({ ...player, source: 'manual' }); }}
+                    className={`p-3 border-b border-border transition-colors ${
+                      already
+                        ? 'opacity-50 cursor-not-allowed'
+                        : selectedId === player.id ? 'bg-accent/15 cursor-pointer' : 'cursor-pointer hover:bg-white/5'
                     }`}
                   >
-                    <div className="font-semibold text-sm text-text">{player.player_name}</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-semibold text-sm text-text">{player.player_name}</div>
+                      {already && (
+                        <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-400">
+                          Ya en el mercado
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-text-muted mt-0.5">
                       {player.position || '-'} - {player.age ?? '?'} anos - {player.team || player.current_team || '-'}
                     </div>

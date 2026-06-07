@@ -442,6 +442,7 @@ const MarketSystem: React.FC<MarketSystemProps> = ({ onOpenInforme }) => {
         <MarketPlayerSelector
           show={showAddPlayer}
           marketId={selectedMarket.id}
+          existingPlayers={marketPlayers}
           onClose={() => setShowAddPlayer(false)}
           onPlayerAdded={() => {
             loadMarketPlayers(selectedMarket.id);
