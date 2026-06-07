@@ -154,7 +154,9 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
 
   // Detalles editables (status / precios / agente)
   const [detailsDraft, setDetailsDraft] = useState({
+    position: '',
     status: 'seguimiento',
+    priority: 'media',
     negotiation: 'sin_info',
     estimated_price: '',
     max_price: '',
@@ -248,9 +250,10 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   const openNotesModal = (player: any) => {
     setNotesModalPlayer(player);
     setNotesDraft(player.notes || '');
-    setNotesEditing(!player.notes);
     setDetailsDraft({
+      position: player.position || '',
       status: player.status || 'seguimiento',
+      priority: player.priority || 'media',
       negotiation: player.negotiation || 'sin_info',
       estimated_price: player.estimated_price != null ? String(player.estimated_price) : '',
       max_price: player.max_price != null ? String(player.max_price) : '',
@@ -261,22 +264,25 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
   const closeNotesModal = () => {
     setNotesModalPlayer(null);
     setNotesDraft('');
-    setNotesEditing(false);
-    setSavingNotes(false);
-    setDetailsDraft({ status: 'seguimiento', negotiation: 'sin_info', estimated_price: '', max_price: '', agent: '' });
+    setDetailsDraft({ position: '', status: 'seguimiento', priority: 'media', negotiation: 'sin_info', estimated_price: '', max_price: '', agent: '' });
     setSavingDetails(false);
   };
 
-  const saveDetails = async () => {
+  // Guardado unificado: un solo boton guarda TODO (posicion, prioridad, estado,
+  // negociacion, agente, precios y notas) en un unico PATCH.
+  const savePlayer = async () => {
     if (!notesModalPlayer) return;
     setSavingDetails(true);
     try {
       const payload: any = {
+        position: detailsDraft.position || null,
         status: detailsDraft.status,
+        priority: detailsDraft.priority,
         negotiation: detailsDraft.negotiation,
         agent: detailsDraft.agent || null,
         estimated_price: detailsDraft.estimated_price ? parseFloat(detailsDraft.estimated_price) : null,
         max_price: detailsDraft.max_price ? parseFloat(detailsDraft.max_price) : null,
+        notes: notesDraft,
       };
       const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
         method: 'PATCH',
@@ -287,121 +293,28 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
         body: JSON.stringify(payload)
       });
       if (response.ok) {
+        // Actualizar el objeto del jugador y propagar a las copias en la cancha (formation)
         Object.assign(notesModalPlayer, payload);
+        setFormation(prev => {
+          const next: {[key: string]: any[]} = {};
+          for (const [pos, players] of Object.entries(prev)) {
+            next[pos] = players.map((p: any) =>
+              p.id === notesModalPlayer.id ? { ...p, ...payload } : p
+            );
+          }
+          return next;
+        });
         if (onPlayerUpdated) onPlayerUpdated();
+        closeNotesModal();
       } else {
         const err = await response.json().catch(() => null);
-        alert(err?.detail || 'Error al guardar los detalles');
+        alert(err?.detail || 'Error al guardar los cambios');
       }
     } catch (error) {
-      console.error('Error saving details:', error);
-      alert('Error al guardar los detalles');
+      console.error('Error saving player:', error);
+      alert('Error al guardar los cambios');
     } finally {
       setSavingDetails(false);
-    }
-  };
-
-  const saveNotes = async () => {
-    if (!notesModalPlayer) return;
-    setSavingNotes(true);
-    try {
-      const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ notes: notesDraft })
-      });
-      if (response.ok) {
-        notesModalPlayer.notes = notesDraft;
-        if (onPlayerUpdated) onPlayerUpdated();
-        setNotesEditing(false);
-      } else {
-        alert('Error al guardar la informacion');
-      }
-    } catch (error) {
-      console.error('Error saving notes:', error);
-      alert('Error al guardar la informacion');
-    } finally {
-      setSavingNotes(false);
-    }
-  };
-
-  const updatePlayerPosition = async (newPosition: string) => {
-    if (!notesModalPlayer) return;
-    const previous = notesModalPlayer.position;
-    if (previous === newPosition) return;
-
-    notesModalPlayer.position = newPosition;
-    setFormation(prev => {
-      const next: {[key: string]: any[]} = {};
-      for (const [pos, players] of Object.entries(prev)) {
-        next[pos] = players.map((p: any) =>
-          p.id === notesModalPlayer.id ? { ...p, position: newPosition } : p
-        );
-      }
-      return next;
-    });
-
-    try {
-      const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ position: newPosition })
-      });
-      if (response.ok) {
-        if (onPlayerUpdated) onPlayerUpdated();
-      } else {
-        notesModalPlayer.position = previous;
-        alert('Error al actualizar posicion');
-      }
-    } catch (error) {
-      console.error('Error updating position:', error);
-      notesModalPlayer.position = previous;
-      alert('Error al actualizar posicion');
-    }
-  };
-
-  const updatePriority = async (newPriority: 'alta' | 'media' | 'baja') => {
-    if (!notesModalPlayer) return;
-    const previous = notesModalPlayer.priority;
-    if (previous === newPriority) return;
-
-    // Update local state optimistically (mutate prop & also propagate to formation copies)
-    notesModalPlayer.priority = newPriority;
-    setFormation(prev => {
-      const next: {[key: string]: any[]} = {};
-      for (const [pos, players] of Object.entries(prev)) {
-        next[pos] = players.map((p: any) =>
-          p.id === notesModalPlayer.id ? { ...p, priority: newPriority } : p
-        );
-      }
-      return next;
-    });
-
-    try {
-      const response = await fetch(`${API_URL}/api/markets/players/${notesModalPlayer.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ priority: newPriority })
-      });
-      if (response.ok) {
-        if (onPlayerUpdated) onPlayerUpdated();
-      } else {
-        notesModalPlayer.priority = previous;
-        alert('Error al actualizar prioridad');
-      }
-    } catch (error) {
-      console.error('Error updating priority:', error);
-      notesModalPlayer.priority = previous;
-      alert('Error al actualizar prioridad');
     }
   };
 
@@ -1328,8 +1241,8 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                   Posicion
                 </label>
                 <select
-                  value={notesModalPlayer.position || ''}
-                  onChange={(e) => updatePlayerPosition(e.target.value)}
+                  value={detailsDraft.position}
+                  onChange={(e) => setDetailsDraft(prev => ({ ...prev, position: e.target.value }))}
                   className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none cursor-pointer"
                 >
                   <option value="">Sin posicion asignada</option>
@@ -1392,12 +1305,12 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                 </label>
                 <div className="flex gap-2">
                   {(['alta', 'media', 'baja'] as const).map(level => {
-                    const active = notesModalPlayer.priority === level;
+                    const active = detailsDraft.priority === level;
                     const color = getPriorityColor(level);
                     return (
                       <button
                         key={level}
-                        onClick={() => updatePriority(level)}
+                        onClick={() => setDetailsDraft(prev => ({ ...prev, priority: level }))}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all border-2"
                         style={{
                           background: active ? color : `${color}20`,
@@ -1417,13 +1330,6 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                   <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium">
                     Detalles
                   </label>
-                  <button
-                    onClick={saveDetails}
-                    disabled={savingDetails}
-                    className="px-3 py-1.5 bg-accent hover:bg-accent-dark text-white rounded-md text-xs cursor-pointer font-semibold transition-colors disabled:opacity-50"
-                  >
-                    {savingDetails ? 'Guardando...' : 'Guardar Detalles'}
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
@@ -1513,60 +1419,31 @@ const MarketPitchView: React.FC<MarketPitchViewProps> = ({ marketPlayers, market
                 Informacion del jugador
               </label>
 
-              {notesEditing ? (
-                <textarea
-                  value={notesDraft}
-                  onChange={(e) => setNotesDraft(e.target.value)}
-                  placeholder="Escribi informacion sobre el jugador (caracteristicas, contacto, condiciones, etc.)..."
-                  rows={8}
-                  autoFocus
-                  className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none resize-y min-h-[200px]"
-                />
-              ) : (
-                <div className="p-3 bg-surface border border-border-strong rounded-md text-sm text-text whitespace-pre-wrap min-h-[200px]">
-                  {notesModalPlayer.notes || (
-                    <span className="text-text-muted italic">Sin informacion cargada todavia.</span>
-                  )}
-                </div>
-              )}
+              <textarea
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                placeholder="Escribi informacion sobre el jugador (caracteristicas, contacto, condiciones, etc.)..."
+                rows={8}
+                className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none resize-y min-h-[200px]"
+              />
 
               </div>
 
               <div className="flex gap-3 px-6 py-4 justify-end shrink-0 border-t border-border-strong bg-card rounded-b-xl">
                 <button
                   onClick={closeNotesModal}
-                  className="px-4 py-2.5 bg-white/8 text-text-secondary border border-border rounded-lg text-sm cursor-pointer hover:bg-white/12 transition-colors"
+                  disabled={savingDetails}
+                  className="px-4 py-2.5 bg-white/8 text-text-secondary border border-border rounded-lg text-sm cursor-pointer hover:bg-white/12 transition-colors disabled:opacity-50"
                 >
-                  Cerrar
+                  Cancelar
                 </button>
-                {notesEditing ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        setNotesDraft(notesModalPlayer.notes || '');
-                        setNotesEditing(false);
-                      }}
-                      disabled={savingNotes}
-                      className="px-4 py-2.5 bg-white/8 text-text-secondary border border-border rounded-lg text-sm cursor-pointer hover:bg-white/12 transition-colors disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={saveNotes}
-                      disabled={savingNotes}
-                      className="px-4 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm cursor-pointer font-semibold transition-colors disabled:opacity-50"
-                    >
-                      {savingNotes ? 'Guardando...' : 'Guardar'}
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setNotesEditing(true)}
-                    className="px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm cursor-pointer font-semibold transition-colors"
-                  >
-                    Editar
-                  </button>
-                )}
+                <button
+                  onClick={savePlayer}
+                  disabled={savingDetails}
+                  className="px-4 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm cursor-pointer font-semibold transition-colors disabled:opacity-50"
+                >
+                  {savingDetails ? 'Guardando...' : 'Guardar cambios'}
+                </button>
               </div>
             </div>
           </div>

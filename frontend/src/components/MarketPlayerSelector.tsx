@@ -28,6 +28,7 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
     max_price: '',
     notes: '',
     status: 'seguimiento',
+    negotiation: 'sin_info',
     position: '',
     agent: ''
   });
@@ -107,6 +108,7 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
       current_team: selectedPlayer.team || selectedPlayer.current_team || '',
       status: playerForm.status,
       priority: playerForm.priority,
+      negotiation: playerForm.negotiation,
       estimated_price: playerForm.estimated_price ? parseFloat(playerForm.estimated_price) : null,
       max_price: playerForm.max_price ? parseFloat(playerForm.max_price) : null,
       notes: playerForm.notes,
@@ -146,6 +148,7 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
       max_price: '',
       notes: '',
       status: 'seguimiento',
+      negotiation: 'sin_info',
       position: '',
       agent: ''
     });
@@ -359,7 +362,7 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
                   Prioridad
@@ -388,6 +391,21 @@ const MarketPlayerSelector: React.FC<MarketPlayerSelectorProps> = ({
                   <option value="negociando">Negociando</option>
                   <option value="descartado">Descartado</option>
                   <option value="fichado">Fichado</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-widest text-text-muted font-medium mb-2">
+                  Negociación
+                </label>
+                <select
+                  value={playerForm.negotiation}
+                  onChange={(e) => setPlayerForm({...playerForm, negotiation: e.target.value})}
+                  className="w-full p-3 bg-surface border border-border-strong rounded-md text-sm text-text focus:border-accent/50 focus:outline-none"
+                >
+                  <option value="sin_info">Sin info</option>
+                  <option value="viable">Viable</option>
+                  <option value="compleja">Compleja</option>
                 </select>
               </div>
             </div>
