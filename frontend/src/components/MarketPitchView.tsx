@@ -45,7 +45,6 @@ const POSITION_CATEGORIES: { key: string; label: string; match: string[] }[] = [
   { key: 'lat_l',  label: 'Laterales Izquierdos', match: ['lateral izquierdo', 'left back'] },
   { key: 'cb_r',   label: 'Centrales Derechos',   match: ['central derecho', 'right centre back', 'right center back'] },
   { key: 'cb_l',   label: 'Centrales Izquierdos', match: ['central izquierdo', 'left centre back', 'left center back'] },
-  { key: 'cb',     label: 'Centrales',            match: ['central', 'centre back', 'center back'] },
   { key: 'vol_c',  label: 'Volantes Centrales',   match: ['volante central', 'defensive midfielder'] },
   { key: 'vol_i',  label: 'Volantes Internos',    match: ['volante interno', 'central midfielder'] },
   { key: 'vol_a',  label: 'Volantes por Afuera',  match: ['volante por afuera', 'wide midfielder', 'right midfielder', 'left midfielder'] },
