@@ -3,6 +3,7 @@ import { scoutingService } from '../services/api';
 import MarketEditor from './MarketEditor';
 import MarketPlayerSelector from './MarketPlayerSelector';
 import MarketPitchView from './MarketPitchView';
+import MarketShareModal from './MarketShareModal';
 
 import { API_URL } from '../config';
 
@@ -14,6 +15,8 @@ interface Market {
   end_date: string;
   notes?: string;
   created_at: string;
+  created_by?: string;
+  club_id?: string;
 }
 
 interface MarketSystemProps {
@@ -47,6 +50,11 @@ const MarketSystem: React.FC<MarketSystemProps> = ({ onOpenInforme }) => {
   const [activeView, setActiveView] = useState<'list' | 'detail'>('list');
   const [showEditMarket, setShowEditMarket] = useState(false);
   const [marketToEdit, setMarketToEdit] = useState<Market | null>(null);
+  const [shareMarket, setShareMarket] = useState<Market | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
+
+  const canManageMarket = (m: Market) =>
+    !!currentUser && (['admin', 'head_scout'].includes(currentUser.role) || m.created_by === currentUser.id);
 
   const [marketForm, setMarketForm] = useState({
     name: '',
@@ -69,6 +77,13 @@ const MarketSystem: React.FC<MarketSystemProps> = ({ onOpenInforme }) => {
 
   useEffect(() => {
     loadMarkets();
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch(`${API_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => (r.ok ? r.json() : null))
+        .then(u => u && setCurrentUser({ id: u.id, role: u.role }))
+        .catch(() => {});
+    }
   }, []);
 
   const loadMarkets = async () => {
@@ -269,6 +284,18 @@ const MarketSystem: React.FC<MarketSystemProps> = ({ onOpenInforme }) => {
                   )}
                 </div>
                 <div className="flex gap-2 items-center">
+                  {canManageMarket(market) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareMarket(market);
+                      }}
+                      className="px-3 py-1.5 bg-accent/15 text-accent rounded-md text-xs font-medium cursor-pointer hover:bg-accent/25 transition-colors"
+                      title="Compartir mercado con otros usuarios"
+                    >
+                      Compartir
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -459,6 +486,13 @@ const MarketSystem: React.FC<MarketSystemProps> = ({ onOpenInforme }) => {
             setShowEditMarket(false);
             setMarketToEdit(null);
           }}
+        />
+      )}
+
+      {shareMarket && (
+        <MarketShareModal
+          market={shareMarket}
+          onClose={() => setShareMarket(null)}
         />
       )}
     </div>

@@ -1877,17 +1877,36 @@ async def get_manual_players_filters(current_user: dict = Depends(get_current_us
 
 @app.get("/api/markets")
 async def get_markets(current_user: dict = Depends(get_current_user)):
-    """Obtener mercados según permisos del usuario"""
+    """Obtener mercados según permisos del usuario.
+    - admin / head_scout: TODOS los mercados del club.
+    - scout / viewer: los que crearon ELLOS + los COMPARTIDOS con ellos (market_shares)."""
     try:
         if current_user["role"] in ["admin", "head_scout"]:
-            # Admin y Head Scout ven TODOS los mercados del club
-            query = supabase.table('markets').select("*").eq('club_id', current_user['club_id']).order('created_at', desc=True)
-        else:
-            # Scout y Viewer solo ven mercados que ELLOS crearon
-            query = supabase.table('markets').select("*").eq('created_by', current_user['id']).order('created_at', desc=True)
-        
-        result = query.execute()
-        return result.data or []
+            result = supabase.table('markets').select("*") \
+                .eq('club_id', current_user['club_id']) \
+                .order('created_at', desc=True).execute()
+            return result.data or []
+
+        uid = current_user['id']
+        own = supabase.table('markets').select("*").eq('created_by', uid).execute().data or []
+
+        # Guard: si la tabla market_shares aun no existe, no romper (scout sigue viendo los propios)
+        shared_ids = []
+        try:
+            shares = supabase.table('market_shares').select("market_id").eq('scout_id', uid).execute().data or []
+            shared_ids = [s['market_id'] for s in shares]
+        except Exception as e:
+            logger.warning(f"market_shares no disponible todavia: {e}")
+        shared = []
+        if shared_ids:
+            shared = supabase.table('markets').select("*").in_('id', shared_ids).execute().data or []
+
+        # Merge sin duplicados (por id), ordenado por created_at desc
+        by_id = {m['id']: m for m in own}
+        for m in shared:
+            by_id[m['id']] = m
+        merged = sorted(by_id.values(), key=lambda m: m.get('created_at') or '', reverse=True)
+        return merged
     except Exception as e:
         logger.error(f"Error getting markets: {e}")
         return []
@@ -2042,6 +2061,10 @@ async def delete_market(market_id: str, current_user: dict = Depends(get_current
                 raise HTTPException(status_code=403, detail="No tenes permiso sobre este mercado")
 
         supabase.table('market_players').delete().eq('market_id', market_id).execute()
+        try:
+            supabase.table('market_shares').delete().eq('market_id', market_id).execute()
+        except Exception as e:
+            logger.warning(f"No se pudieron borrar market_shares (tabla ausente?): {e}")
         supabase.table('markets').delete().eq('id', market_id).execute()
         return {"message": "Mercado eliminado"}
     except HTTPException:
@@ -2049,7 +2072,80 @@ async def delete_market(market_id: str, current_user: dict = Depends(get_current
     except Exception as e:
         logger.error(f"Error deleting market: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+# ========== COMPARTIR MERCADO (market_shares) ==========
+def _get_market_or_404(market_id: str):
+    existing = supabase.table('markets').select('*').eq('id', market_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Mercado no encontrado")
+    return existing.data[0]
+
+def _can_manage_market(market: dict, current_user: dict) -> bool:
+    """Quien puede gestionar compartidos: admin/head_scout del club, o el creador del mercado."""
+    role = current_user.get("role")
+    if role in ("admin", "head_scout"):
+        return market.get("club_id") == current_user.get("club_id")
+    return market.get("created_by") == current_user.get("id")
+
+@app.get("/api/markets/{market_id}/shares")
+async def list_market_shares(market_id: str, current_user: dict = Depends(get_current_user)):
+    """Devuelve los IDs de scouts con los que está compartido el mercado."""
+    try:
+        market = _get_market_or_404(market_id)
+        if not _can_manage_market(market, current_user):
+            raise HTTPException(status_code=403, detail="No tenes permiso sobre este mercado")
+        rows = supabase.table('market_shares').select("scout_id").eq('market_id', market_id).execute().data or []
+        return [r['scout_id'] for r in rows]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing market shares: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/markets/{market_id}/shares")
+async def add_market_share(market_id: str, payload: dict, current_user: dict = Depends(get_current_user)):
+    """Compartir el mercado con un scout (mismo club)."""
+    try:
+        scout_id = payload.get("scout_id")
+        if not scout_id:
+            raise HTTPException(status_code=400, detail="Falta scout_id")
+        market = _get_market_or_404(market_id)
+        if not _can_manage_market(market, current_user):
+            raise HTTPException(status_code=403, detail="No tenes permiso sobre este mercado")
+
+        scout = supabase.table('scouts').select('id,club_id').eq('id', scout_id).execute().data
+        if not scout:
+            raise HTTPException(status_code=400, detail="El usuario no existe")
+        if scout[0].get('club_id') != market.get('club_id'):
+            raise HTTPException(status_code=400, detail="No podes compartir con un usuario de otro club")
+
+        supabase.table('market_shares').upsert(
+            {"market_id": market_id, "scout_id": scout_id},
+            on_conflict="market_id,scout_id"
+        ).execute()
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding market share: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/markets/{market_id}/shares/{scout_id}")
+async def remove_market_share(market_id: str, scout_id: str, current_user: dict = Depends(get_current_user)):
+    """Dejar de compartir el mercado con un scout."""
+    try:
+        market = _get_market_or_404(market_id)
+        if not _can_manage_market(market, current_user):
+            raise HTTPException(status_code=403, detail="No tenes permiso sobre este mercado")
+        supabase.table('market_shares').delete() \
+            .eq('market_id', market_id).eq('scout_id', scout_id).execute()
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing market share: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ========== ENDPOINT PARA JUGADORES MANUALES ==========
