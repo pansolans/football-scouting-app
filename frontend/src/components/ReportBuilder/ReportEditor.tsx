@@ -45,6 +45,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
 
   const [activePage, setActivePage] = useState(0);
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+  const [clipboardBlock, setClipboardBlock] = useState<ReportBlock | null>(null);
   const [interaction, setInteraction] = useState<{
     type: 'move' | 'resize';
     blockId: string;
@@ -533,6 +534,55 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
     }
     setSelectedBlock(newBlock.id);
   };
+
+  // Copiar / pegar bloques entre paginas (portapapeles interno del editor).
+  // Guarda un clon profundo; al pegar, crea un bloque nuevo con id propio en la
+  // pagina activa, MANTENIENDO posicion/tamano (util para repetir una barra/logo).
+  const copyBlock = (block: ReportBlock) => {
+    setClipboardBlock({
+      ...block,
+      content: JSON.parse(JSON.stringify(block.content ?? {})),
+      style: block.style ? { ...block.style } : undefined,
+    });
+  };
+
+  const pasteBlock = () => {
+    if (!clipboardBlock) return;
+    const bs = clipboardBlock.style || DEFAULT_BLOCK_STYLE;
+    const newBlock: ReportBlock = {
+      ...clipboardBlock,
+      id: crypto.randomUUID(),
+      content: JSON.parse(JSON.stringify(clipboardBlock.content ?? {})),
+      style: { ...bs },
+    };
+    if (isCoverActive) {
+      setCoverBlocks(prev => [...prev, newBlock]);
+    } else {
+      setPages(prev => prev.map((p, i) => i === activePage ? { ...p, blocks: [...p.blocks, newBlock] } : p));
+    }
+    setSelectedBlock(newBlock.id);
+  };
+
+  // Atajos Ctrl/Cmd + C / V para copiar/pegar el bloque seleccionado.
+  // No interceptar si el foco esta en un input/textarea/contenteditable (copiar texto normal).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const el = document.activeElement as HTMLElement | null;
+      const editing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+      if (editing) return;
+      const key = e.key.toLowerCase();
+      if (key === 'c' && selectedBlock) {
+        const b = currentPage.blocks.find(x => x.id === selectedBlock);
+        if (b) { copyBlock(b); e.preventDefault(); }
+      } else if (key === 'v' && clipboardBlock) {
+        pasteBlock();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedBlock, clipboardBlock, activePage, isCoverActive, pages, coverBlocks]);
 
   // ─── Interaction start ───
   const startInteraction = (e: React.PointerEvent, blockId: string, type: 'move' | 'resize') => {
@@ -1075,6 +1125,15 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
         <button onClick={addPage} className="px-3 py-2 rounded-lg text-xs font-medium cursor-pointer border border-dashed border-border-strong text-text-muted hover:text-accent hover:border-accent/30 bg-transparent transition-colors">
           + Pagina
         </button>
+        {clipboardBlock && (
+          <button
+            onClick={pasteBlock}
+            className="ml-auto px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer border border-accent/40 text-accent bg-accent/10 hover:bg-accent/20 transition-colors whitespace-nowrap"
+            title="Pegar el bloque copiado en esta hoja (misma posicion)"
+          >
+            📋 Pegar aquí ({BLOCK_LABELS[clipboardBlock.type]})
+          </button>
+        )}
       </div>
 
       <div className="flex gap-5">
@@ -1429,7 +1488,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
                     </div>
                     {isSel && (
                       <div className="flex gap-1">
-                        <button onClick={e => { e.stopPropagation(); duplicateBlock(block); }} className="text-[9px] text-white/60 hover:text-white border-none bg-transparent cursor-pointer" title="Duplicar">⧉</button>
+                        <button onClick={e => { e.stopPropagation(); copyBlock(block); }} className="text-[9px] text-white/60 hover:text-accent border-none bg-transparent cursor-pointer" title="Copiar (para pegar en otra hoja)">⎘</button>
+                        <button onClick={e => { e.stopPropagation(); duplicateBlock(block); }} className="text-[9px] text-white/60 hover:text-white border-none bg-transparent cursor-pointer" title="Duplicar en esta hoja">⧉</button>
                         <button onClick={e => { e.stopPropagation(); deleteBlock(block.id); }} className="text-[9px] text-white/60 hover:text-red-400 border-none bg-transparent cursor-pointer" title="Eliminar">✕</button>
                       </div>
                     )}
