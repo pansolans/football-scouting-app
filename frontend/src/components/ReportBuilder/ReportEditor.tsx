@@ -27,7 +27,7 @@ const BLOCK_SIZES: Record<BlockType, { w: number; h: number }> = {
   header: { w: 90, h: 8 },
   text: { w: 88, h: 18 },
   image: { w: 70, h: 35 },
-  video: { w: 60, h: 8 },
+  video: { w: 45, h: 7 },
   stats_table: { w: 88, h: 40 },
   divider: { w: 90, h: 1.5 },
   shape: { w: 40, h: 10 },
@@ -844,8 +844,15 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
             return block.content?.url
               ? `<div style="width:100%;height:100%;background-image:url(${block.content.url});background-size:contain;background-position:center;background-repeat:no-repeat;border-radius:${px(8)};"></div>`
               : '';
-          case 'video':
-            return block.content?.url ? `<div style="padding:${px(8)} ${px(12)};background:rgba(255,255,255,0.05);border-radius:${px(6)};"><p style="color:#9ca3af;font-size:${px(12)};margin:0;">Video: ${block.content.url}</p></div>` : '';
+          case 'video': {
+            if (!block.content?.url) return '';
+            const vLabel = (block.content.caption && block.content.caption.trim()) || 'Ver video';
+            // Se dibuja como boton; el hipervinculo clickeable se agrega aparte con pdf.link() en exportPdf.
+            return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:${px(8)};background:rgba(0,191,99,0.15);border:${px(1.5)} solid rgba(0,191,99,0.5);border-radius:${px(8)};box-sizing:border-box;">
+              <span style="color:#00bf63;font-size:${px(14)};line-height:1;">&#9654;</span>
+              <span style="color:#00bf63;font-weight:600;font-size:${px(13)};">${vLabel}</span>
+            </div>`;
+          }
           case 'stats_table': {
             const svg = buildRadarSvg();
             if (!svg) return `<p style="color:#6b7280;font-size:${px(12)};margin:0;">Sin datos</p>`;
@@ -987,6 +994,23 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
         }
       };
 
+      // Helper: agrega hipervinculos clickeables sobre los bloques de video (botones).
+      // html2canvas rasteriza a imagen, asi que el <a> no queda clickeable: se agrega
+      // la anotacion de link de jsPDF sobre el area del boton.
+      const overlayVideoLinks = (blocks: ReportBlock[]) => {
+        for (const block of blocks) {
+          if (block.type !== 'video' || !block.content?.url) continue;
+          const raw = String(block.content.url).trim();
+          const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+          const bs = block.style || DEFAULT_BLOCK_STYLE;
+          const bx = (bs.x / 100) * pageW;
+          const by = (bs.y / 100) * pageH;
+          const bw = (bs.w / 100) * pageW;
+          const bh = (bs.h / 100) * pageH;
+          pdf.link(bx, by, bw, bh, { url });
+        }
+      };
+
       // Render cover page first if enabled
       if (hasCover) {
         container.innerHTML = buildCoverHtml();
@@ -996,6 +1020,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
         // Overlay cover image blocks at full quality
         await overlayImages(report.cover_data.blocks || []);
+        overlayVideoLinks(report.cover_data.blocks || []);
         pageNum = 1;
       }
 
@@ -1008,6 +1033,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pageW, pageH);
         // Overlay page image blocks at full quality
         await overlayImages(pages[i].blocks);
+        overlayVideoLinks(pages[i].blocks);
         pageNum++;
       }
 
