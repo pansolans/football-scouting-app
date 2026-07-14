@@ -846,7 +846,8 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
               : '';
           case 'video': {
             if (!block.content?.url) return '';
-            const vLabel = (block.content.caption && block.content.caption.trim()) || 'Ver video';
+            const vCap = (block.content.caption || '').trim();
+            const vLabel = vCap && !/https?:\/\/|www\.|\.com|\.be\b|drive\.google/i.test(vCap) ? vCap : 'Play video';
             // Se dibuja como boton; el hipervinculo clickeable se agrega aparte con pdf.link() en exportPdf.
             return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:${px(8)};background:rgba(0,191,99,0.15);border:${px(1.5)} solid rgba(0,191,99,0.5);border-radius:${px(8)};box-sizing:border-box;">
               <span style="color:#00bf63;font-size:${px(14)};line-height:1;">&#9654;</span>
@@ -1052,7 +1053,7 @@ const ReportEditor: React.FC<Props> = ({ reportId, onBack, preselectedPlayer, ma
       case 'header': return <HeaderBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.headerColor} isSelected={selectedBlock === block.id} />;
       case 'text': return <TextBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} defaultColor={theme.defaultTextColor} isSelected={selectedBlock === block.id} />;
       case 'image': return <ImageBlock content={block.content} onChange={c => updateBlock(block.id, c)} onImageLoad={(w, h) => fitBlockToImage(block.id, w, h)} readOnly={false} />;
-      case 'video': return <VideoBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
+      case 'video': return <VideoBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} isSelected={selectedBlock === block.id} />;
       case 'stats_table': return <StatsTableBlock reports={playerReports} readOnly={false} />;
       case 'divider': return <div style={{ borderTop: `3px solid ${theme.accentColor}`, width: '100%', position: 'absolute', top: '50%' }} />;
       case 'shape': return <ShapeBlock content={block.content} onChange={c => updateBlock(block.id, c)} readOnly={false} />;
